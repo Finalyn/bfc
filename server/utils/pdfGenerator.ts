@@ -111,9 +111,12 @@ export function generateOrderPDF(order: Order): Buffer {
   
   if (order.quantityNote) {
     doc.setFont("helvetica", "italic");
-    doc.text(`Note : ${order.quantityNote}`, margin + 5, yPos);
+    // Largeur disponible pour la note (toute la page)
+    const noteWidth = pageWidth - 2 * margin - 5;
+    const noteLines = doc.splitTextToSize(`Note : ${order.quantityNote}`, noteWidth);
+    doc.text(noteLines, margin + 5, yPos);
     doc.setFont("helvetica", "normal");
-    yPos += 7;
+    yPos += noteLines.length * 6 + 3;
   }
   
   doc.text(`Date de livraison souhaitée : ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, margin, yPos);
