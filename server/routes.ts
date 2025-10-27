@@ -21,6 +21,13 @@ function generateOrderCode(): string {
 
 // Middleware d'authentification
 function requireAuth(req: any, res: any, next: any) {
+  console.log('[Auth] Session check:', {
+    sessionID: req.sessionID,
+    authenticated: req.session.authenticated,
+    hasSession: !!req.session,
+    cookie: req.session.cookie
+  });
+  
   if (req.session.authenticated) {
     return next();
   }
@@ -32,8 +39,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", (req, res) => {
     const { password } = req.body;
     
+    console.log('[Login] Attempt with session:', {
+      sessionID: req.sessionID,
+      hasSession: !!req.session,
+      isProduction: !!process.env.REPLIT_DEPLOYMENT
+    });
+    
     if (password === "slf25") {
       req.session.authenticated = true;
+      console.log('[Login] Success! Session:', {
+        sessionID: req.sessionID,
+        authenticated: req.session.authenticated
+      });
       return res.json({ success: true });
     }
     
@@ -42,6 +59,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Route pour vérifier l'authentification
   app.get("/api/auth/check", (req, res) => {
+    console.log('[Auth Check]', {
+      sessionID: req.sessionID,
+      authenticated: req.session.authenticated,
+      hasSession: !!req.session
+    });
     res.json({ authenticated: !!req.session.authenticated });
   });
 
