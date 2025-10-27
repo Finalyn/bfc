@@ -137,7 +137,7 @@ export function SuccessStep({
               </div>
             </CardContent>
           </Card>
-        ) : emailError ? (
+        ) : emailError && emailError.length > 0 ? (
           <>
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -172,7 +172,7 @@ export function SuccessStep({
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-2xl">
         <div className="max-w-lg mx-auto space-y-3">
-          {emailError && !emailsSent && (
+          {emailError && emailError.length > 0 && !emailsSent && (
             <Button
               onClick={onSendEmails}
               data-testid="button-resend-emails"
