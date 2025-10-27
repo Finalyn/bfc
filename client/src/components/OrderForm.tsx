@@ -20,8 +20,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     handleSubmit,
     formState: { errors },
   } = useForm<Partial<InsertOrder>>({
-    resolver: zodResolver(insertOrderSchema.omit({ signature: true })),
+    resolver: zodResolver(insertOrderSchema.omit({ signature: true, signatureLocation: true, signatureDate: true, clientSignedName: true })),
     defaultValues: initialData || {
+      salesRepName: "",
       clientName: "",
       clientEmail: "",
       supplier: "",
@@ -55,6 +56,22 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <Card className="border-2">
             <CardContent className="p-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="salesRepName" className="text-sm font-medium">
+                  Nom du commercial <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="salesRepName"
+                  data-testid="input-sales-rep-name"
+                  {...register("salesRepName")}
+                  className="h-12 text-base"
+                  placeholder="Ex: Jean Dupont"
+                />
+                {errors.salesRepName && (
+                  <p className="text-xs text-destructive">{errors.salesRepName.message}</p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="clientName" className="text-sm font-medium">
                   Nom du client <span className="text-destructive">*</span>
