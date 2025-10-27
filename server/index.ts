@@ -6,13 +6,16 @@ import { setupVite, serveStatic, log } from "./vite";
 const app = express();
 
 // Configure session
+const isProduction = !!process.env.REPLIT_DEPLOYMENT;
+
 app.use(session({
   secret: process.env.SESSION_SECRET || "default-secret-key-change-in-production",
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProduction, // HTTPS uniquement en production (site publié)
+    sameSite: 'lax', // Permet les cookies lors des redirections
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   }
 }));

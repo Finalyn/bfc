@@ -43,3 +43,34 @@ The application follows a client-server architecture:
     -   `SMTP_PORT`: SMTP server port (recommended 587 with STARTTLS).
     -   `SMTP_USER`: SMTP authentication username.
     -   `SMTP_PASSWORD`: SMTP authentication password.
+
+## Recent Fixes (October 27, 2025)
+
+### Authentication Session Fix for Published Deployments
+**Issue**: After deploying the application to production (published site), users were unable to stay logged in. After entering the password "slf25", the page would redirect back to the login page immediately, creating an infinite loop.
+
+**Root Cause**: The session cookie configuration was using `process.env.NODE_ENV === "production"` to detect production environment, but Replit doesn't automatically set this variable when deploying. Additionally, the `sameSite` attribute was missing from cookie configuration.
+
+**Solution**:
+- Changed production detection from `NODE_ENV` to `REPLIT_DEPLOYMENT` (automatically set to `1` by Replit on published deployments)
+- Added `sameSite: 'lax'` to allow cookies during redirects
+- Set `secure: true` only when `REPLIT_DEPLOYMENT` is present (ensuring HTTPS-only cookies in production)
+
+**Configuration** (in `server/index.ts`):
+```javascript
+const isProduction = !!process.env.REPLIT_DEPLOYMENT;
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "default-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+```
+
+**Result**: Sessions now persist correctly on published deployments. Users can log in once and remain authenticated for 24 hours.
