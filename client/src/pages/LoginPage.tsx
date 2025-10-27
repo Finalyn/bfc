@@ -31,16 +31,20 @@ export default function LoginPage() {
     if (password === "slf25") {
       // Stocker dans sessionStorage (disparaît au rechargement)
       sessionStorage.setItem("authenticated", "true");
-      setLocation("/");
+      
+      // Attendre un peu pour Safari mobile (sessionStorage sync)
+      setTimeout(() => {
+        setLocation("/");
+        setIsLoading(false);
+      }, 100);
     } else {
       toast({
         title: "Accès refusé",
         description: "Mot de passe incorrect",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (

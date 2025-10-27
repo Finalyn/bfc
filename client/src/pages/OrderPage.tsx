@@ -90,23 +90,31 @@ export default function OrderPage() {
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
-    // Détecter si c'est un rechargement de page (pas une navigation normale)
-    const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    const isPageReload = navigationType?.type === 'reload';
+    // Petit délai pour Safari mobile (sessionStorage sync)
+    const checkAuth = async () => {
+      // Attendre un peu pour que sessionStorage soit synchronisé sur Safari mobile
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Détecter si c'est un rechargement de page (pas une navigation normale)
+      const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const isPageReload = navigationType?.type === 'reload';
+      
+      // Si c'est un rechargement, effacer l'authentification
+      if (isPageReload) {
+        sessionStorage.removeItem("authenticated");
+      }
+      
+      // Vérifier l'authentification
+      const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+      
+      if (!isAuthenticated) {
+        setLocation("/login");
+      }
+      
+      setIsCheckingAuth(false);
+    };
     
-    // Si c'est un rechargement, effacer l'authentification
-    if (isPageReload) {
-      sessionStorage.removeItem("authenticated");
-    }
-    
-    // Vérifier l'authentification
-    const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
-    
-    if (!isAuthenticated) {
-      setLocation("/login");
-    }
-    
-    setIsCheckingAuth(false);
+    checkAuth();
   }, [setLocation]);
 
   // Afficher un loader pendant la vérification
