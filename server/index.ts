@@ -1,14 +1,30 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Configure session
+// Configure session store avec PostgreSQL
 const isProduction = !!process.env.REPLIT_DEPLOYMENT;
+const PgSession = connectPgSimple(session);
+
+// Créer un pool de connexion PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Créer le store de sessions PostgreSQL
+const sessionStore = new PgSession({
+  pool: pool,
+  tableName: 'session', // Nom de la table pour les sessions
+  createTableIfMissing: true, // Crée automatiquement la table si elle n'existe pas
+});
 
 app.use(session({
+  store: sessionStore, // Utilise PostgreSQL au lieu de MemoryStore
   secret: process.env.SESSION_SECRET || "default-secret-key-change-in-production",
   resave: false,
   saveUninitialized: false,
