@@ -33,7 +33,10 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 15;
   
-  // Commercial
+  // Sauvegarder la position de départ pour la signature à droite
+  const startYPos = yPos;
+  
+  // Commercial (colonne gauche)
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.text("COMMERCIAL", margin, yPos);
@@ -44,7 +47,7 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.text(`${order.salesRepName}`, margin, yPos);
   yPos += 15;
   
-  // Informations client
+  // Informations client (colonne gauche)
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.text("INFORMATIONS CLIENT", margin, yPos);
@@ -55,7 +58,41 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.text(`Client : ${order.clientName}`, margin, yPos);
   yPos += 7;
   doc.text(`Email : ${order.clientEmail}`, margin, yPos);
-  yPos += 15;
+  yPos += 7;
+  
+  // Signature (colonne droite - à côté des infos client)
+  const signatureX = pageWidth / 2 + 10;
+  let signatureY = startYPos;
+  
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("SIGNATURE DU CLIENT", signatureX, signatureY);
+  signatureY += 10;
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Nom : ${order.clientSignedName}`, signatureX, signatureY);
+  signatureY += 6;
+  doc.text(`Lieu : ${order.signatureLocation}`, signatureX, signatureY);
+  signatureY += 6;
+  doc.text(`Date : ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, signatureX, signatureY);
+  signatureY += 10;
+  
+  if (order.signature) {
+    try {
+      doc.addImage(order.signature, "PNG", signatureX, signatureY, 70, 35);
+      signatureY += 40;
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de la signature:", error);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "italic");
+      doc.text("Signature capturée", signatureX, signatureY);
+      signatureY += 10;
+    }
+  }
+  
+  // Continuer après la zone la plus basse (signature ou infos client)
+  yPos = Math.max(yPos, signatureY) + 10;
   
   // Détails de la commande
   doc.setFontSize(14);
@@ -82,7 +119,7 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.text(`Date de livraison souhaitée : ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, margin, yPos);
   yPos += 15;
   
-  // Remarques
+  // Remarques (sur toute la largeur, en dessous)
   if (order.remarks) {
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -91,37 +128,11 @@ export function generateOrderPDF(order: Order): Buffer {
     
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    const remarksLines = doc.splitTextToSize(order.remarks, pageWidth - 2 * margin);
+    // Largeur disponible pour les remarques (toute la page)
+    const remarksWidth = pageWidth - 2 * margin;
+    const remarksLines = doc.splitTextToSize(order.remarks, remarksWidth);
     doc.text(remarksLines, margin, yPos);
-    yPos += remarksLines.length * 7 + 10;
-  }
-  
-  // Signature
-  yPos = Math.max(yPos, 200);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("SIGNATURE DU CLIENT", margin, yPos);
-  yPos += 10;
-  
-  // Informations de signature
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Nom et prénom : ${order.clientSignedName}`, margin, yPos);
-  yPos += 7;
-  doc.text(`Lieu : ${order.signatureLocation}`, margin, yPos);
-  yPos += 7;
-  doc.text(`Date : ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, margin, yPos);
-  yPos += 12;
-  
-  if (order.signature) {
-    try {
-      doc.addImage(order.signature, "PNG", margin, yPos, 80, 40);
-    } catch (error) {
-      console.error("Erreur lors de l'ajout de la signature:", error);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "italic");
-      doc.text("Signature capturée", margin, yPos);
-    }
+    yPos += remarksLines.length * 6 + 10;
   }
   
   // Pied de page

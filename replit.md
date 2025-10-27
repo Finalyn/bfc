@@ -103,8 +103,8 @@ if (!isAuthenticated) {
   - Signature canvas (inchangé)
 
 **Impact sur les documents** :
-- **PDF** : Section "COMMERCIAL" ajoutée en haut avec le nom du commercial. Section "SIGNATURE DU CLIENT" enrichie avec nom et prénom, lieu, et date avant l'image de signature.
-- **Excel** : Section "COMMERCIAL" ajoutée avec le nom du commercial. Section "SIGNATURE DU CLIENT" enrichie avec les mêmes informations détaillées.
+- **PDF** : Layout en 2 colonnes - colonne gauche pour commercial et client, colonne droite pour la signature (nom, lieu, date, image). Les détails de commande et remarques s'affichent en dessous sur toute la largeur pour éviter tout chevauchement.
+- **Excel** : Layout en 4 colonnes (A-B pour gauche, C-D pour droite). Commercial et client dans les colonnes A-B, signature dans les colonnes C-D. Les remarques fusionnent les 4 colonnes pour occuper toute la largeur.
 - **Page de révision** : Affiche le nom du commercial en premier, puis tous les détails de signature (nom, lieu, date formatée en français).
 
 **Validation** :
