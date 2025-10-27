@@ -54,7 +54,7 @@ export async function sendOrderEmails(
         </div>
         
         <p>Vous trouverez le bon de commande en pièce jointe.</p>
-        <p>Cordialement,<br/>L'équipe Finalyn</p>
+        <p>Bien cordialement,<br/>L'équipe BFC</p>
       </div>
     `,
     attachments: [
