@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 
-const AGENCY_EMAIL = "jacktoutsimplesurpc@gmail.com";
+const AGENCY_EMAIL = "slf@orange.fr";
 const FROM_EMAIL = process.env.SMTP_USER || "jack@finalyn.com";
 
 export async function sendOrderEmails(
