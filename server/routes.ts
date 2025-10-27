@@ -58,15 +58,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emailError = error.message || "Erreur lors de l'envoi des emails";
       }
 
-      const response = {
+      res.json({
         orderCode,
         pdfUrl: `/api/orders/${orderCode}/pdf`,
         excelUrl: `/api/orders/${orderCode}/excel`,
         emailsSent,
         emailError,
-      };
-      console.log("Order generated successfully:", JSON.stringify(response));
-      res.json(response);
+      });
     } catch (error: any) {
       console.error("Erreur lors de la génération de la commande:", error);
       res.status(400).json({ 

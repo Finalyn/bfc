@@ -83,6 +83,8 @@ client/
 │   │   ├── SignatureStep.tsx (Capture de signature)
 │   │   ├── ReviewStep.tsx (Révision)
 │   │   └── SuccessStep.tsx (Téléchargement et envoi)
+│   ├── lib/
+│   │   └── queryClient.ts (Configuration TanStack Query + apiRequest)
 │   ├── pages/
 │   │   └── OrderPage.tsx (Orchestration des étapes)
 │   └── App.tsx
@@ -182,6 +184,40 @@ Renvoie les emails (en cas d'échec de l'envoi automatique).
 - Le design est mobile-first et responsive
 - Validation côté client et serveur avec Zod
 - Gestion d'erreurs complète avec toasts
+- **Important**: `apiRequest` dans `queryClient.ts` parse automatiquement les réponses JSON
+
+## Corrections de bugs appliquées (27 octobre 2025)
+
+### Bug critique résolu: Numéro de commande non affiché
+**Problème**: Le numéro de commande n'apparaissait pas dans l'interface après génération, même si le serveur renvoyait correctement les données.
+
+**Cause**: La fonction `apiRequest` dans `client/src/lib/queryClient.ts` retournait l'objet `Response` brut au lieu de parser le JSON.
+
+**Solution**: Modifié `apiRequest` pour:
+- Changer le type de retour de `Promise<Response>` à `Promise<T>`
+- Ajouter `return await res.json()` au lieu de `return res`
+- Ajouter un paramètre générique `<T = any>` pour le typage
+
+### Bug corrigé: État d'envoi d'email bloqué
+**Problème**: L'interface restait bloquée sur "Envoi en cours..." même après échec SMTP, au lieu d'afficher l'erreur et le bouton de renvoi.
+
+**Cause**: La logique de condition dans `SuccessStep.tsx` vérifiait `emailError ?` qui retournait `false` pour une chaîne vide `""`.
+
+**Solution**: Modifié les conditions pour vérifier `emailError && emailError.length > 0` afin de correctement détecter la présence d'une erreur.
+
+## Tests end-to-end
+
+L'application a été testée avec Playwright et valide les scénarios suivants:
+- ✅ Saisie complète du formulaire avec validation
+- ✅ Capture de signature tactile
+- ✅ Révision des informations
+- ✅ Génération de commande avec numéro unique
+- ✅ Affichage correct du numéro de commande (format CMD-YYYY-MMDD-XXXX)
+- ✅ Téléchargement PDF et Excel
+- ✅ Gestion des erreurs d'envoi d'email avec option de renvoi manuel
+- ✅ Réinitialisation pour nouvelle commande
+
+**Note**: L'envoi SMTP peut échouer en environnement de développement si le serveur SMTP n'est pas accessible. C'est un comportement normal et attendu. L'application gère correctement cette situation en affichant l'erreur et en proposant un renvoi manuel.
 
 ## Développement futur
 
