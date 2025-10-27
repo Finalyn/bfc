@@ -1,42 +1,21 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import ws from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Configure session store avec PostgreSQL
+// Session simple et temporaire
 const isProduction = !!process.env.REPLIT_DEPLOYMENT;
-const PgSession = connectPgSimple(session);
-
-// Configure WebSocket pour Neon (nécessaire pour Node.js)
-neonConfig.webSocketConstructor = ws;
-
-// Créer un pool de connexion PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-// Créer le store de sessions PostgreSQL
-const sessionStore = new PgSession({
-  pool: pool,
-  tableName: 'session', // Nom de la table pour les sessions
-  createTableIfMissing: true, // Crée automatiquement la table si elle n'existe pas
-});
 
 app.use(session({
-  store: sessionStore, // Utilise PostgreSQL au lieu de MemoryStore
-  secret: process.env.SESSION_SECRET || "default-secret-key-change-in-production",
+  secret: process.env.SESSION_SECRET || "default-secret-key",
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: isProduction, // HTTPS uniquement en production (site publié)
-    sameSite: 'lax', // Permet les cookies lors des redirections
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: isProduction,
+    sameSite: 'lax',
   }
 }));
 

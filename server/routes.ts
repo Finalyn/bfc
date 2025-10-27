@@ -21,13 +21,6 @@ function generateOrderCode(): string {
 
 // Middleware d'authentification
 function requireAuth(req: any, res: any, next: any) {
-  console.log('[Auth] Session check:', {
-    sessionID: req.sessionID,
-    authenticated: req.session.authenticated,
-    hasSession: !!req.session,
-    cookie: req.session.cookie
-  });
-  
   if (req.session.authenticated) {
     return next();
   }
@@ -35,47 +28,20 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Route de login
+  // Route de login simple
   app.post("/api/auth/login", (req, res) => {
     const { password } = req.body;
     
-    console.log('[Login] Attempt with session:', {
-      sessionID: req.sessionID,
-      hasSession: !!req.session,
-      isProduction: !!process.env.REPLIT_DEPLOYMENT
-    });
-    
     if (password === "slf25") {
       req.session.authenticated = true;
-      
-      // Force la sauvegarde de la session avant de répondre
-      req.session.save((err) => {
-        if (err) {
-          console.error('[Login] Session save error:', err);
-          return res.status(500).json({ message: "Erreur de session" });
-        }
-        
-        console.log('[Login] Success! Session saved:', {
-          sessionID: req.sessionID,
-          authenticated: req.session.authenticated
-        });
-        
-        return res.json({ success: true });
-      });
-    } else {
-      return res.status(401).json({ message: "Mot de passe incorrect" });
+      return res.json({ success: true });
     }
+    
+    return res.status(401).json({ message: "Mot de passe incorrect" });
   });
 
   // Route pour vérifier l'authentification
   app.get("/api/auth/check", (req, res) => {
-    console.log('[Auth Check]', {
-      sessionID: req.sessionID,
-      authenticated: req.session.authenticated,
-      hasSession: !!req.session,
-      cookies: req.headers.cookie,
-      isProduction: !!process.env.REPLIT_DEPLOYMENT
-    });
     res.json({ authenticated: !!req.session.authenticated });
   });
 
