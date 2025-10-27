@@ -22,11 +22,11 @@ The application follows a client-server architecture:
 ### Feature Specifications
 - **Authentication**: Simple session-based authentication with a hardcoded password ("slf25"). Session temporaire sans persistance (redemander à chaque rechargement de page).
 - **Order Form (4 steps)**:
-    1.  **Form Input**: Captures client name/email, supplier, product theme, quantity, delivery date, and remarks.
-    2.  **E-Signature**: HTML5 canvas for touch signature capture, with clear and mandatory validation.
-    3.  **Review**: Displays a comprehensive summary of the order before generation.
+    1.  **Form Input**: Captures sales rep name, client name/email, supplier, product theme, quantity, delivery date, and remarks.
+    2.  **E-Signature**: HTML5 canvas for touch signature capture with enhanced information: signature location, signature date (pre-filled), client written name, and the visual signature itself. All fields are mandatory and validated.
+    3.  **Review**: Displays a comprehensive summary of the order including sales rep name, all client information, and complete signature details (name, location, date) before generation.
     4.  **Success & Dispatch**: Shows a unique order number (CMD-YYYY-MMDD-XXXX), enables direct PDF/Excel downloads, triggers automatic email sending, and offers a manual re-send option and a "New Order" button.
-- **Automatic Generation**: Upon order submission, a unique order code is generated. A PDF is created containing all order details and the signature image. An Excel file is generated with structured data and the signature image. Two emails are automatically dispatched: one with the PDF to the client, and another with both PDF and Excel to the BFC agency. All dates and times in generated documents and emails are in "Europe/Paris" timezone. The signature is embedded as an image in both PDF and Excel.
+- **Automatic Generation**: Upon order submission, a unique order code is generated. A PDF is created containing all order details including sales rep name, complete signature information (client name, location, date) and the signature image. An Excel file is generated with structured data including all new fields and the signature image. Two emails are automatically dispatched: one with the PDF to the client, and another with both PDF and Excel to the BFC agency. All dates and times in generated documents and emails are in "Europe/Paris" timezone. The signature is embedded as an image in both PDF and Excel.
 - **Data Storage**: All order data is stored in-memory using JavaScript Maps for simplicity.
 
 ### System Design Choices
@@ -88,3 +88,35 @@ if (!isAuthenticated) {
 ```
 
 **Résultat** : Authentication fonctionnelle, simple, sans persistance, exactement comme demandé.
+
+### Enhanced Commercial and Signature Fields (October 27, 2025)
+**Changements** : Ajout de champs commerciaux et de signature enrichis pour une meilleure traçabilité.
+
+**Nouveaux champs** :
+- **Étape 1 - Formulaire** :
+  - `salesRepName` : Nom du commercial (champ requis, validation Zod)
+  
+- **Étape 2 - Signature** :
+  - `signatureLocation` : Lieu de signature (champ texte requis)
+  - `signatureDate` : Date de signature (pré-remplie avec la date du jour, modifiable, requise)
+  - `clientSignedName` : Nom écrit du client (champ texte requis pour confirmation d'identité)
+  - Signature canvas (inchangé)
+
+**Impact sur les documents** :
+- **PDF** : Section "COMMERCIAL" ajoutée en haut avec le nom du commercial. Section "SIGNATURE DU CLIENT" enrichie avec nom et prénom, lieu, et date avant l'image de signature.
+- **Excel** : Section "COMMERCIAL" ajoutée avec le nom du commercial. Section "SIGNATURE DU CLIENT" enrichie avec les mêmes informations détaillées.
+- **Page de révision** : Affiche le nom du commercial en premier, puis tous les détails de signature (nom, lieu, date formatée en français).
+
+**Validation** :
+- Tous les nouveaux champs utilisent React Hook Form avec validation Zod
+- Champs requis avec messages d'erreur appropriés en français
+- Date de signature pré-remplie avec `formatInTimeZone` pour Europe/Paris
+
+**Fichiers modifiés** :
+- `shared/schema.ts` : Ajout des 4 nouveaux champs au schéma Order
+- `client/src/components/OrderForm.tsx` : Ajout du champ salesRepName
+- `client/src/components/SignatureStep.tsx` : Ajout des 3 champs de signature
+- `client/src/components/ReviewStep.tsx` : Affichage des nouvelles informations
+- `client/src/pages/OrderPage.tsx` : Gestion du passage des données de signature
+- `server/utils/pdfGenerator.ts` : Génération PDF avec nouvelles sections
+- `server/utils/excelGenerator.ts` : Génération Excel avec nouvelles sections
