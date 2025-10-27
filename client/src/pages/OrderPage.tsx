@@ -92,7 +92,9 @@ export default function OrderPage() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch("/api/auth/check");
+        const response = await fetch("/api/auth/check", {
+          credentials: 'include' // Important : envoie les cookies de session
+        });
         const data = await response.json();
         
         if (!data.authenticated) {

@@ -74,3 +74,18 @@ app.use(session({
 ```
 
 **Result**: Sessions now persist correctly on published deployments. Users can log in once and remain authenticated for 24 hours.
+
+### Authentication Check Missing Credentials
+**Issue**: After successful login on the published site, users were immediately redirected back to the login page, even though the session was created successfully.
+
+**Root Cause**: In `OrderPage.tsx`, the authentication check used a direct `fetch("/api/auth/check")` call without the `credentials: 'include'` option. On published sites, this prevented session cookies from being sent with the request, causing the server to return `authenticated: false`.
+
+**Solution**:
+Changed the fetch call in `OrderPage.tsx` to include credentials:
+```javascript
+const response = await fetch("/api/auth/check", {
+  credentials: 'include' // Sends session cookies
+});
+```
+
+**Result**: After login, users can now access the order creation page correctly on the published site.
