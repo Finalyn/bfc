@@ -29,27 +29,10 @@ export default function LoginPage() {
 
     // Vérification simple du mot de passe
     if (password === "slf25") {
-      try {
-        // Stocker dans sessionStorage (disparaît au rechargement)
-        sessionStorage.setItem("authenticated", "true");
-        
-        // Forcer la synchronisation pour Safari mobile
-        const testValue = sessionStorage.getItem("authenticated");
-        console.log("Auth set to:", testValue);
-        
-        // Utiliser window.location.href pour Safari mobile (plus fiable que setLocation)
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 150);
-      } catch (error) {
-        console.error("SessionStorage error:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de se connecter. Réessayez.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-      }
+      // Stocker dans sessionStorage
+      sessionStorage.setItem("authenticated", "true");
+      // Redirection simple
+      window.location.href = "/";
     } else {
       toast({
         title: "Accès refusé",
