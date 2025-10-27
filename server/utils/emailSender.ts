@@ -12,14 +12,23 @@ export async function sendOrderEmails(
   excelBuffer: Buffer,
   clientEmail: string
 ): Promise<void> {
+  const smtpPort = parseInt(process.env.SMTP_PORT || "587");
+  
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_PORT === "465",
+    port: smtpPort,
+    secure: smtpPort === 465,
+    requireTLS: smtpPort === 587,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 
   const orderDate = format(new Date(order.createdAt), "d MMMM yyyy", { locale: fr });
