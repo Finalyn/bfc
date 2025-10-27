@@ -129,8 +129,14 @@ export default function OrderPage() {
     setCurrentStep("signature");
   };
 
-  const handleSignatureNext = (signature: string) => {
-    setOrderData({ ...orderData, signature });
+  const handleSignatureNext = (signatureData: { signature: string; signatureLocation: string; signatureDate: string; clientSignedName: string }) => {
+    setOrderData({ 
+      ...orderData, 
+      signature: signatureData.signature,
+      signatureLocation: signatureData.signatureLocation,
+      signatureDate: signatureData.signatureDate,
+      clientSignedName: signatureData.clientSignedName
+    });
     setCurrentStep("review");
   };
 
