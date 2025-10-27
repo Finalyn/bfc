@@ -47,14 +47,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     if (password === "slf25") {
       req.session.authenticated = true;
-      console.log('[Login] Success! Session:', {
-        sessionID: req.sessionID,
-        authenticated: req.session.authenticated
+      
+      // Force la sauvegarde de la session avant de répondre
+      req.session.save((err) => {
+        if (err) {
+          console.error('[Login] Session save error:', err);
+          return res.status(500).json({ message: "Erreur de session" });
+        }
+        
+        console.log('[Login] Success! Session saved:', {
+          sessionID: req.sessionID,
+          authenticated: req.session.authenticated
+        });
+        
+        return res.json({ success: true });
       });
-      return res.json({ success: true });
+    } else {
+      return res.status(401).json({ message: "Mot de passe incorrect" });
     }
-    
-    return res.status(401).json({ message: "Mot de passe incorrect" });
   });
 
   // Route pour vérifier l'authentification
@@ -62,7 +72,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('[Auth Check]', {
       sessionID: req.sessionID,
       authenticated: req.session.authenticated,
-      hasSession: !!req.session
+      hasSession: !!req.session,
+      cookies: req.headers.cookie,
+      isProduction: !!process.env.REPLIT_DEPLOYMENT
     });
     res.json({ authenticated: !!req.session.authenticated });
   });
