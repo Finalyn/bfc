@@ -17,9 +17,10 @@ Application web mobile pour les commerciaux permettant de saisir des commandes d
 ### Backend (Express + TypeScript)
 - **Server**: Express.js
 - **PDF Generation**: jsPDF
-- **Excel Generation**: xlsx
+- **Excel Generation**: ExcelJS (supporte les images)
 - **Email**: Nodemailer avec SMTP
 - **Storage**: In-memory (Map)
+- **Timezone**: date-fns-tz (Europe/Paris)
 
 ## Fonctionnalités MVP
 
@@ -52,12 +53,16 @@ Application web mobile pour les commerciaux permettant de saisir des commandes d
 ## Génération automatique
 
 Lors de la génération d'une commande:
-1. Création du numéro unique (CMD-YYYY-MMDD-XXXX)
-2. Génération du PDF avec toutes les informations et la signature
-3. Génération du fichier Excel avec les données structurées
+1. Création du numéro unique (CMD-YYYY-MMDD-XXXX) basé sur le fuseau horaire de Paris
+2. Génération du PDF avec toutes les informations et la signature en image
+3. Génération du fichier Excel avec les données structurées **et l'image de signature**
 4. **Envoi automatique de 2 emails**:
    - Au client: PDF du bon de commande
    - À l'agence BFC: PDF + Excel
+
+**Notes importantes :**
+- Toutes les dates et heures utilisent le fuseau horaire **Europe/Paris** (UTC+1/UTC+2)
+- La signature est incluse comme **image** dans le PDF et l'Excel (pas de texte)
 
 ## Configuration
 
@@ -241,6 +246,37 @@ Renvoie les emails (en cas d'échec de l'envoi automatique).
 - Basculé sur Ethereal Email pour tests en développement
 
 **Résultat**: Emails maintenant envoyés avec succès via Ethereal Email (test) et prêt pour production avec n'importe quel serveur SMTP.
+
+## Améliorations appliquées (27 octobre 2025)
+
+### Ajout de l'image de signature dans l'Excel
+**Objectif**: Afficher la signature comme une vraie image dans le fichier Excel au lieu d'un texte.
+
+**Changements**:
+- Remplacé la bibliothèque `xlsx` par `ExcelJS` qui supporte l'insertion d'images
+- Modifié `server/utils/excelGenerator.ts` pour convertir la signature base64 en buffer PNG
+- Inséré l'image dans le fichier Excel (200x100px)
+- La fonction `generateOrderExcel()` est maintenant asynchrone
+
+**Résultat**: Les fichiers Excel contiennent maintenant une image visible de la signature du client, identique à celle du PDF.
+
+### Correction du fuseau horaire pour Paris
+**Objectif**: Toutes les dates et heures doivent utiliser le fuseau horaire Europe/Paris (UTC+1 ou UTC+2) au lieu de UTC.
+
+**Changements**:
+- Installé la bibliothèque `date-fns-tz`
+- Modifié tous les générateurs pour utiliser `formatInTimeZone()` avec "Europe/Paris":
+  - `server/utils/excelGenerator.ts`
+  - `server/utils/pdfGenerator.ts`
+  - `server/utils/emailSender.ts`
+- Modifié `server/routes.ts` pour utiliser `toZonedTime()` dans `generateOrderCode()`
+
+**Résultat**: Tous les documents (PDF, Excel, emails) et le numéro de commande reflètent maintenant l'heure exacte de Paris, pas UTC.
+
+### Changement de l'email de l'agence BFC
+**Changement**: L'email de destination de l'agence BFC a été modifié de `jack@finalyn.com` à `jacktoutsimplesurpc@gmail.com`.
+
+**Raison**: Avec le serveur de test Ethereal Email, tous les emails capturés (client + agence) sont visibles au même endroit en se connectant avec `jacktoutsimplesurpc@gmail.com` sur https://ethereal.email.
 
 ## Tests end-to-end
 
