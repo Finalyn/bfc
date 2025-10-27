@@ -5,7 +5,7 @@ import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
 import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
@@ -29,7 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order: Order = {
         ...validatedData,
         orderCode,
-        createdAt: new Date().toISOString(),
+        createdAt: formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd'T'HH:mm:ssXXX"),
       };
 
       // Générer les fichiers

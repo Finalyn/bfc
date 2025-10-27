@@ -261,17 +261,24 @@ Renvoie les emails (en cas d'échec de l'envoi automatique).
 **Résultat**: Les fichiers Excel contiennent maintenant une image visible de la signature du client, identique à celle du PDF.
 
 ### Correction du fuseau horaire pour Paris
-**Objectif**: Toutes les dates et heures doivent utiliser le fuseau horaire Europe/Paris (UTC+1 ou UTC+2) au lieu de UTC.
+**Objectif**: Toutes les dates et heures doivent utiliser le fuseau horaire Europe/Paris (UTC+1 ou UTC+2) **partout** dans l'application.
 
 **Changements**:
 - Installé la bibliothèque `date-fns-tz`
 - Modifié tous les générateurs pour utiliser `formatInTimeZone()` avec "Europe/Paris":
-  - `server/utils/excelGenerator.ts`
-  - `server/utils/pdfGenerator.ts`
-  - `server/utils/emailSender.ts`
-- Modifié `server/routes.ts` pour utiliser `toZonedTime()` dans `generateOrderCode()`
+  - `server/utils/excelGenerator.ts` : Toutes les dates affichées
+  - `server/utils/pdfGenerator.ts` : Toutes les dates affichées
+  - `server/utils/emailSender.ts` : Toutes les dates dans les emails
+- Modifié `server/routes.ts` pour :
+  - `generateOrderCode()` : utilise `toZonedTime()` pour le numéro
+  - `createdAt` : utilise `formatInTimeZone(..., "Europe/Paris", "yyyy-MM-dd'T'HH:mm:ssXXX")` pour stocker avec l'offset
 
-**Résultat**: Tous les documents (PDF, Excel, emails) et le numéro de commande reflètent maintenant l'heure exacte de Paris, pas UTC.
+**Format du createdAt** : ISO 8601 avec offset (exemple: `2025-10-27T13:54:30+01:00` au lieu de `2025-10-27T12:54:30Z`)
+
+**Résultat**: 
+- ✅ Tous les documents (PDF, Excel, emails) affichent l'heure de Paris
+- ✅ Le numéro de commande est basé sur la date de Paris
+- ✅ Le timestamp `createdAt` est stocké avec l'offset de Paris (+01:00 ou +02:00)
 
 ### Changement de l'email de l'agence BFC
 **Changement**: L'email de destination de l'agence BFC a été modifié de `jack@finalyn.com` à `jacktoutsimplesurpc@gmail.com`.
