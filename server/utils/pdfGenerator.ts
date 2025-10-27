@@ -33,6 +33,17 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 15;
   
+  // Commercial
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("COMMERCIAL", margin, yPos);
+  yPos += 10;
+  
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${order.salesRepName}`, margin, yPos);
+  yPos += 15;
+  
   // Informations client
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -91,6 +102,16 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFont("helvetica", "bold");
   doc.text("SIGNATURE DU CLIENT", margin, yPos);
   yPos += 10;
+  
+  // Informations de signature
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Nom et prénom : ${order.clientSignedName}`, margin, yPos);
+  yPos += 7;
+  doc.text(`Lieu : ${order.signatureLocation}`, margin, yPos);
+  yPos += 7;
+  doc.text(`Date : ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, margin, yPos);
+  yPos += 12;
   
   if (order.signature) {
     try {
