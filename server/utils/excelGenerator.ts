@@ -32,6 +32,16 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   worksheet.getCell(`A${currentRow}`).font = { bold: true };
   currentRow += 2;
   
+  // Commercial
+  worksheet.getCell(`A${currentRow}`).value = "COMMERCIAL";
+  worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
+  currentRow++;
+  
+  worksheet.getCell(`A${currentRow}`).value = "Nom du commercial";
+  worksheet.getCell(`B${currentRow}`).value = order.salesRepName;
+  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+  currentRow += 2;
+  
   // Informations client
   worksheet.getCell(`A${currentRow}`).value = "INFORMATIONS CLIENT";
   worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
@@ -89,9 +99,24 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   }
   
   // Signature
-  worksheet.getCell(`A${currentRow}`).value = "SIGNATURE";
+  worksheet.getCell(`A${currentRow}`).value = "SIGNATURE DU CLIENT";
   worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
   currentRow++;
+  
+  worksheet.getCell(`A${currentRow}`).value = "Nom et prénom";
+  worksheet.getCell(`B${currentRow}`).value = order.clientSignedName;
+  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+  currentRow++;
+  
+  worksheet.getCell(`A${currentRow}`).value = "Lieu";
+  worksheet.getCell(`B${currentRow}`).value = order.signatureLocation;
+  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+  currentRow++;
+  
+  worksheet.getCell(`A${currentRow}`).value = "Date";
+  worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
+  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+  currentRow += 2;
   
   // Ajouter l'image de signature
   if (order.signature) {
