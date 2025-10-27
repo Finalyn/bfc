@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 const AGENCY_EMAIL = "jack@finalyn.com";
-const FROM_EMAIL = "contact@finalyn.com";
+const FROM_EMAIL = "jack@finalyn.com";
 
 export async function sendOrderEmails(
   order: Order,
