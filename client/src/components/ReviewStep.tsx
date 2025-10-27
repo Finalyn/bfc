@@ -55,6 +55,18 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
             <div className="flex items-start gap-3">
               <User className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Commercial</p>
+                <p className="text-base font-medium text-foreground" data-testid="text-sales-rep-name">
+                  {orderData.salesRepName}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-start gap-3">
+              <User className="w-5 h-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
                 <p className="text-sm font-medium text-muted-foreground">Client</p>
                 <p className="text-base font-medium text-foreground" data-testid="text-client-name">
                   {orderData.clientName}
@@ -149,8 +161,13 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
                 ✓
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Signature</p>
-                <Badge variant="secondary" className="mt-1">
+                <p className="text-sm font-medium text-muted-foreground">Signature client</p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-foreground"><span className="font-medium">Nom:</span> {orderData.clientSignedName}</p>
+                  <p className="text-sm text-foreground"><span className="font-medium">Lieu:</span> {orderData.signatureLocation}</p>
+                  <p className="text-sm text-foreground"><span className="font-medium">Date:</span> {format(new Date(orderData.signatureDate), "d MMMM yyyy", { locale: fr })}</p>
+                </div>
+                <Badge variant="secondary" className="mt-2">
                   Signature capturée
                 </Badge>
               </div>
