@@ -1,7 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { Pool } from "@neondatabase/serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -10,6 +11,9 @@ const app = express();
 // Configure session store avec PostgreSQL
 const isProduction = !!process.env.REPLIT_DEPLOYMENT;
 const PgSession = connectPgSimple(session);
+
+// Configure WebSocket pour Neon (nécessaire pour Node.js)
+neonConfig.webSocketConstructor = ws;
 
 // Créer un pool de connexion PostgreSQL
 const pool = new Pool({
