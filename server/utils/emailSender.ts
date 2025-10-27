@@ -3,7 +3,7 @@ import { type Order } from "@shared/schema";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-const AGENCY_EMAIL = "jack@finalyn.com";
+const AGENCY_EMAIL = "jacktoutsimplesurpc@gmail.com";
 const FROM_EMAIL = process.env.SMTP_USER || "jack@finalyn.com";
 
 export async function sendOrderEmails(

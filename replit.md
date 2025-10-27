@@ -74,7 +74,7 @@ Lors de la génération d'une commande:
 - **Expéditeur dynamique**: Utilise automatiquement `SMTP_USER` comme adresse d'expédition
 - **Destinataires**:
   - Client: email saisi dans le formulaire
-  - Agence BFC: jack@finalyn.com
+  - Agence BFC: jacktoutsimplesurpc@gmail.com
 
 **Notes importantes**:
 - Ethereal Email est un service de test qui capture les emails sans les délivrer réellement
