@@ -73,9 +73,16 @@ export default function LoginPage() {
                 placeholder="Entrez le mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isLoading) {
+                    e.preventDefault();
+                    handleSubmit(e as any);
+                  }
+                }}
                 className="h-12 text-base"
                 disabled={isLoading}
-                autoFocus
+                autoComplete="off"
+                enterKeyHint="go"
               />
             </div>
 
