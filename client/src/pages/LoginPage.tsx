@@ -27,18 +27,20 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    try {
-      await apiRequest("POST", "/api/auth/login", { password });
+    // Vérification simple du mot de passe
+    if (password === "slf25") {
+      // Stocker dans sessionStorage (disparaît au rechargement)
+      sessionStorage.setItem("authenticated", "true");
       setLocation("/");
-    } catch (error: any) {
+    } else {
       toast({
         title: "Accès refusé",
         description: "Mot de passe incorrect",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   return (

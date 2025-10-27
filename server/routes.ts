@@ -19,34 +19,9 @@ function generateOrderCode(): string {
   return `CMD-${year}-${month}${day}-${sequence}`;
 }
 
-// Middleware d'authentification
-function requireAuth(req: any, res: any, next: any) {
-  if (req.session.authenticated) {
-    return next();
-  }
-  return res.status(401).json({ message: "Non authentifié" });
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Route de login simple
-  app.post("/api/auth/login", (req, res) => {
-    const { password } = req.body;
-    
-    if (password === "slf25") {
-      req.session.authenticated = true;
-      return res.json({ success: true });
-    }
-    
-    return res.status(401).json({ message: "Mot de passe incorrect" });
-  });
-
-  // Route pour vérifier l'authentification
-  app.get("/api/auth/check", (req, res) => {
-    res.json({ authenticated: !!req.session.authenticated });
-  });
-
   // Générer une commande avec PDF et Excel
-  app.post("/api/orders/generate", requireAuth, async (req, res) => {
+  app.post("/api/orders/generate", async (req, res) => {
     try {
       const validatedData = insertOrderSchema.parse(req.body);
       
@@ -100,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Télécharger le PDF
-  app.get("/api/orders/:orderCode/pdf", requireAuth, (req, res) => {
+  app.get("/api/orders/:orderCode/pdf", (req, res) => {
     const { orderCode } = req.params;
     const files = fileStorage.get(orderCode);
 
@@ -114,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Télécharger l'Excel
-  app.get("/api/orders/:orderCode/excel", requireAuth, (req, res) => {
+  app.get("/api/orders/:orderCode/excel", (req, res) => {
     const { orderCode } = req.params;
     const files = fileStorage.get(orderCode);
 
@@ -131,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Envoyer les emails
-  app.post("/api/orders/send-emails", requireAuth, async (req, res) => {
+  app.post("/api/orders/send-emails", async (req, res) => {
     try {
       const { orderCode, clientEmail } = req.body;
 

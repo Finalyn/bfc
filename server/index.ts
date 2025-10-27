@@ -1,30 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
-import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-
-// Session simple et temporaire
-const isProduction = !!process.env.REPLIT_DEPLOYMENT;
-
-app.use(session({
-  secret: process.env.SESSION_SECRET || "default-secret-key",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: 'lax',
-  }
-}));
-
-// Extend session types
-declare module 'express-session' {
-  interface SessionData {
-    authenticated?: boolean;
-  }
-}
 
 declare module 'http' {
   interface IncomingMessage {

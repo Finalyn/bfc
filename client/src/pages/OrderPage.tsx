@@ -90,24 +90,23 @@ export default function OrderPage() {
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const response = await fetch("/api/auth/check", {
-          credentials: 'include' // Important : envoie les cookies de session
-        });
-        const data = await response.json();
-        
-        if (!data.authenticated) {
-          setLocation("/login");
-        }
-      } catch (error) {
-        setLocation("/login");
-      } finally {
-        setIsCheckingAuth(false);
-      }
+    // Détecter si c'est un rechargement de page (pas une navigation normale)
+    const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    const isPageReload = navigationType?.type === 'reload';
+    
+    // Si c'est un rechargement, effacer l'authentification
+    if (isPageReload) {
+      sessionStorage.removeItem("authenticated");
     }
     
-    checkAuth();
+    // Vérifier l'authentification
+    const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+    
+    if (!isAuthenticated) {
+      setLocation("/login");
+    }
+    
+    setIsCheckingAuth(false);
   }, [setLocation]);
 
   // Afficher un loader pendant la vérification

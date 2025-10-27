@@ -46,5 +46,45 @@ The application follows a client-server architecture:
 
 ## Recent Changes (October 27, 2025)
 
-### Simplified Authentication (October 27, 2025)
-**Solution**: Authentication simplifiée avec sessions temporaires en mémoire (MemoryStore). Les sessions ne persistent pas au rechargement - l'utilisateur doit entrer le mot de passe "slf25" à chaque fois. C'est voulu pour garder la sécurité simple sans complexité de base de données.
+### Authentication Ultra-Simplifiée - Client-Side Only (October 27, 2025)
+**Solution**: Authentication 100% côté client sans base de données ni sessions serveur.
+
+**Comment ça marche** :
+- L'utilisateur entre "slf25" sur /login
+- Le mot de passe est vérifié dans le navigateur (pas d'appel serveur)
+- Un flag `authenticated: true` est stocké dans `sessionStorage`
+- L'utilisateur peut naviguer dans l'application
+- **Au rechargement de la page** : le flag est automatiquement effacé via détection de `performance.navigation.type === 'reload'`
+- L'utilisateur est redirigé vers /login et doit réentrer le mot de passe
+
+**Avantages** :
+- ✅ Aucune base de données nécessaire
+- ✅ Aucune session serveur
+- ✅ Fonctionne parfaitement avec déploiements multi-instances
+- ✅ Aucun warning "MemoryStore"
+- ✅ Ultra-simple et rapide
+- ✅ Session temporaire : rechargement = reconnexion requise
+
+**Code technique** :
+```javascript
+// Login (client/src/pages/LoginPage.tsx)
+if (password === "slf25") {
+  sessionStorage.setItem("authenticated", "true");
+  setLocation("/");
+}
+
+// Vérification (client/src/pages/OrderPage.tsx)
+const navigationType = performance.getEntriesByType('navigation')[0];
+const isPageReload = navigationType?.type === 'reload';
+
+if (isPageReload) {
+  sessionStorage.removeItem("authenticated"); // Efface au rechargement
+}
+
+const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+if (!isAuthenticated) {
+  setLocation("/login");
+}
+```
+
+**Résultat** : Authentication fonctionnelle, simple, sans persistance, exactement comme demandé.
