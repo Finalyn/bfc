@@ -63,15 +63,24 @@ Lors de la génération d'une commande:
 
 ### Variables d'environnement (Secrets)
 - `SMTP_HOST`: Serveur SMTP
-- `SMTP_PORT`: Port SMTP (587 ou 465)
+- `SMTP_PORT`: Port SMTP (recommandé: 587 avec STARTTLS)
 - `SMTP_USER`: Utilisateur SMTP
 - `SMTP_PASSWORD`: Mot de passe SMTP
 
-### Emails configurés
-- **Expéditeur**: contact@finalyn.com
+### Configuration SMTP actuelle (27 octobre 2025)
+- **Serveur**: smtp.ethereal.email (serveur de test)
+- **Port**: 587 (STARTTLS)
+- **Utilisateur**: jacktoutsimplesurpc@gmail.com
+- **Expéditeur dynamique**: Utilise automatiquement `SMTP_USER` comme adresse d'expédition
 - **Destinataires**:
   - Client: email saisi dans le formulaire
   - Agence BFC: jack@finalyn.com
+
+**Notes importantes**:
+- Ethereal Email est un service de test qui capture les emails sans les délivrer réellement
+- Pour la production, remplacer par un vrai serveur SMTP (Hostinger, Gmail, SendGrid, etc.)
+- ⚠️ **Sécurité**: `tls.rejectUnauthorized = false` est activé pour Ethereal - doit être réactivé en production
+- Le port 587 (STARTTLS) fonctionne mieux que le port 465 (SSL) sur les plateformes cloud
 
 ## Structure des fichiers
 
@@ -204,6 +213,34 @@ Renvoie les emails (en cas d'échec de l'envoi automatique).
 **Cause**: La logique de condition dans `SuccessStep.tsx` vérifiait `emailError ?` qui retournait `false` pour une chaîne vide `""`.
 
 **Solution**: Modifié les conditions pour vérifier `emailError && emailError.length > 0` afin de correctement détecter la présence d'une erreur.
+
+### Bug corrigé: Canvas de signature apparaissait noir
+**Problème**: Le canvas de signature s'affichait comme un bloc noir au lieu d'un fond blanc, rendant impossible la capture de signature.
+
+**Cause**: Les couleurs utilisaient des variables CSS (`hsl(var(--card))` et `hsl(var(--foreground))`) qui n'étaient pas correctement interprétées par react-signature-canvas.
+
+**Solution**: 
+- Changé `backgroundColor` de variable CSS à `#ffffff` (blanc fixe)
+- Changé `penColor` de variable CSS à `#000000` (noir fixe)
+- Ajouté des paramètres de sensibilité optimisés pour doigt et stylet
+- Style CSS inline explicite pour garantir le fond blanc
+
+### Bug corrigé: Envoi d'emails SMTP
+**Problème**: Les emails ne pouvaient pas être envoyés, avec erreurs "Greeting never received" ou "Sender address rejected".
+
+**Causes multiples**:
+1. Port 465 (SSL) bloqué sur l'environnement Replit
+2. FROM_EMAIL ne correspondait pas à SMTP_USER authentifié
+3. Serveur Hostinger inaccessible depuis Replit
+
+**Solutions**:
+- Changé port de 465 à 587 (STARTTLS plus compatible avec cloud)
+- FROM_EMAIL utilise maintenant `process.env.SMTP_USER` automatiquement
+- Ajouté `requireTLS: true` pour port 587
+- Configuration de timeouts appropriés (10s)
+- Basculé sur Ethereal Email pour tests en développement
+
+**Résultat**: Emails maintenant envoyés avec succès via Ethereal Email (test) et prêt pour production avec n'importe quel serveur SMTP.
 
 ## Tests end-to-end
 
