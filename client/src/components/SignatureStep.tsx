@@ -66,7 +66,7 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
 
             <div className="relative">
               <div
-                className={`border-2 rounded-xl overflow-hidden bg-card ${
+                className={`border-2 rounded-xl overflow-hidden ${
                   isEmpty ? "border-dashed" : "border-solid"
                 }`}
                 style={{ touchAction: "none" }}
@@ -75,15 +75,20 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
                   ref={signatureRef}
                   canvasProps={{
                     className: "w-full h-64 touch-none",
-                    "data-testid": "canvas-signature",
+                    style: { backgroundColor: "#ffffff" },
                   }}
                   onEnd={handleSignatureEnd}
-                  backgroundColor="hsl(var(--card))"
-                  penColor="hsl(var(--foreground))"
+                  backgroundColor="#ffffff"
+                  penColor="#000000"
+                  dotSize={2}
+                  minWidth={1}
+                  maxWidth={3}
+                  velocityFilterWeight={0.7}
+                  data-testid="canvas-signature"
                 />
                 {isEmpty && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <p className="text-muted-foreground text-sm">Signez ici</p>
+                    <p className="text-gray-400 text-sm">Signez ici avec votre doigt</p>
                   </div>
                 )}
               </div>
