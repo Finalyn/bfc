@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { type InsertOrder, type Order } from "@shared/schema";
 import { OrderForm } from "@/components/OrderForm";
@@ -19,11 +20,13 @@ interface GeneratedOrder {
 }
 
 export default function OrderPage() {
+  const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState<Step>("form");
   const [orderData, setOrderData] = useState<Partial<InsertOrder>>({});
   const [generatedOrder, setGeneratedOrder] = useState<GeneratedOrder | null>(null);
   const [emailsSent, setEmailsSent] = useState(false);
   const [emailError, setEmailError] = useState<string>("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const { toast } = useToast();
 
   const generateOrderMutation = useMutation({
@@ -84,6 +87,38 @@ export default function OrderPage() {
       });
     },
   });
+
+  // Vérifier l'authentification au chargement
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const response = await fetch("/api/auth/check");
+        const data = await response.json();
+        
+        if (!data.authenticated) {
+          setLocation("/login");
+        }
+      } catch (error) {
+        setLocation("/login");
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    }
+    
+    checkAuth();
+  }, [setLocation]);
+
+  // Afficher un loader pendant la vérification
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Vérification...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleFormNext = (data: Partial<InsertOrder>) => {
     setOrderData({ ...orderData, ...data });

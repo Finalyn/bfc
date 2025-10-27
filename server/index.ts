@@ -1,8 +1,28 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Configure session
+app.use(session({
+  secret: process.env.SESSION_SECRET || "default-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  }
+}));
+
+// Extend session types
+declare module 'express-session' {
+  interface SessionData {
+    authenticated?: boolean;
+  }
+}
 
 declare module 'http' {
   interface IncomingMessage {
