@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { type Order } from "@shared/schema";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { formatInTimeZone } from "date-fns-tz";
 
 const AGENCY_EMAIL = "jacktoutsimplesurpc@gmail.com";
 const FROM_EMAIL = process.env.SMTP_USER || "jack@finalyn.com";
@@ -31,7 +32,7 @@ export async function sendOrderEmails(
     socketTimeout: 10000,
   });
 
-  const orderDate = format(new Date(order.createdAt), "d MMMM yyyy", { locale: fr });
+  const orderDate = formatInTimeZone(new Date(order.createdAt), "Europe/Paris", "d MMMM yyyy", { locale: fr });
 
   // Email au client
   const clientMailOptions = {
@@ -49,7 +50,7 @@ export async function sendOrderEmails(
           <p style="margin: 5px 0;"><strong>Date :</strong> ${orderDate}</p>
           <p style="margin: 5px 0;"><strong>Produit :</strong> ${order.productTheme}</p>
           <p style="margin: 5px 0;"><strong>Quantité :</strong> ${order.quantity}</p>
-          <p style="margin: 5px 0;"><strong>Livraison souhaitée :</strong> ${format(new Date(order.deliveryDate), "d MMMM yyyy", { locale: fr })}</p>
+          <p style="margin: 5px 0;"><strong>Livraison souhaitée :</strong> ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}</p>
         </div>
         
         <p>Vous trouverez le bon de commande en pièce jointe.</p>
@@ -86,7 +87,7 @@ export async function sendOrderEmails(
           <p style="margin: 5px 0;"><strong>Produit :</strong> ${order.productTheme}</p>
           <p style="margin: 5px 0;"><strong>Quantité :</strong> ${order.quantity}</p>
           ${order.quantityNote ? `<p style="margin: 5px 0;"><strong>Note :</strong> ${order.quantityNote}</p>` : ""}
-          <p style="margin: 5px 0;"><strong>Livraison souhaitée :</strong> ${format(new Date(order.deliveryDate), "d MMMM yyyy", { locale: fr })}</p>
+          <p style="margin: 5px 0;"><strong>Livraison souhaitée :</strong> ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}</p>
         </div>
         
         ${order.remarks ? `

@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import { type Order } from "@shared/schema";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { formatInTimeZone } from "date-fns-tz";
 
 export function generateOrderPDF(order: Order): Buffer {
   const doc = new jsPDF();
@@ -23,7 +24,7 @@ export function generateOrderPDF(order: Order): Buffer {
   
   yPos += 15;
   doc.setFontSize(10);
-  doc.text(`Date : ${format(new Date(order.createdAt), "d MMMM yyyy", { locale: fr })}`, pageWidth / 2, yPos, { align: "center" });
+  doc.text(`Date : ${formatInTimeZone(new Date(order.createdAt), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, pageWidth / 2, yPos, { align: "center" });
   
   yPos += 20;
   
@@ -67,7 +68,7 @@ export function generateOrderPDF(order: Order): Buffer {
     yPos += 7;
   }
   
-  doc.text(`Date de livraison souhaitée : ${format(new Date(order.deliveryDate), "d MMMM yyyy", { locale: fr })}`, margin, yPos);
+  doc.text(`Date de livraison souhaitée : ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}`, margin, yPos);
   yPos += 15;
   
   // Remarques
@@ -107,7 +108,7 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFontSize(9);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(128, 128, 128);
-  doc.text(`Document généré le ${format(new Date(), "d MMMM yyyy à HH:mm", { locale: fr })}`, pageWidth / 2, footerY, { align: "center" });
+  doc.text(`Document généré le ${formatInTimeZone(new Date(), "Europe/Paris", "d MMMM yyyy à HH:mm", { locale: fr })}`, pageWidth / 2, footerY, { align: "center" });
   
   return Buffer.from(doc.output("arraybuffer"));
 }

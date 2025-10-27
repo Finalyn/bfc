@@ -5,15 +5,16 @@ import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
 import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
 
 function generateOrderCode(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+  const parisTime = toZonedTime(new Date(), "Europe/Paris");
+  const year = parisTime.getFullYear();
+  const month = String(parisTime.getMonth() + 1).padStart(2, "0");
+  const day = String(parisTime.getDate()).padStart(2, "0");
   const sequence = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
   return `CMD-${year}-${month}${day}-${sequence}`;
 }
@@ -33,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Générer les fichiers
       const pdfBuffer = generateOrderPDF(order);
-      const excelBuffer = generateOrderExcel(order);
+      const excelBuffer = await generateOrderExcel(order);
 
       // Stocker les fichiers en mémoire
       fileStorage.set(orderCode, {
