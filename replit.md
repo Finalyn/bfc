@@ -89,3 +89,64 @@ const response = await fetch("/api/auth/check", {
 ```
 
 **Result**: After login, users can now access the order creation page correctly on the published site.
+
+### Session Storage Migration to PostgreSQL (October 27, 2025)
+**Issue**: Even with session cookies properly configured, authentication still failed on published deployments. Users would successfully log in but be immediately redirected back to the login page. Server logs showed:
+- Session IDs changing between requests (`z6bGR-i-mBKCthWRIlm-g1Isw2_BjEF3` → `eS173Gl_KZvFcsMS5dBBTaXx9EQxo-Bi`)
+- `cookies: undefined` on subsequent requests
+- `authenticated: undefined` even after successful login
+- Warning: "MemoryStore is not designed for a production environment"
+
+**Root Cause**: 
+1. Published Replit deployments use **multiple server instances** for scalability
+2. Sessions stored in MemoryStore exist only in the RAM of a single server instance
+3. When a user logs in on Server A, the session is stored only in that server's memory
+4. Subsequent requests may route to Server B, which has no record of the session
+5. This caused sessions to appear "lost" even though they were correctly saved
+
+**Solution**:
+Migrated from in-memory session storage to PostgreSQL-backed persistent storage:
+
+1. **Created PostgreSQL database** using Replit's built-in database service
+2. **Configured connect-pg-simple** to store sessions in the database instead of memory:
+   ```javascript
+   import connectPgSimple from "connect-pg-simple";
+   import { Pool, neonConfig } from "@neondatabase/serverless";
+   import ws from "ws";
+
+   // Configure WebSocket for Neon (required for Node.js)
+   neonConfig.webSocketConstructor = ws;
+
+   const pool = new Pool({
+     connectionString: process.env.DATABASE_URL,
+   });
+
+   const sessionStore = new PgSession({
+     pool: pool,
+     tableName: 'session',
+     createTableIfMissing: true,
+   });
+
+   app.use(session({
+     store: sessionStore, // PostgreSQL instead of MemoryStore
+     // ... other config
+   }));
+   ```
+3. **Added WebSocket configuration** for Neon database connectivity (`neonConfig.webSocketConstructor = ws`)
+4. **Forced session save** in login endpoint to ensure session is written to database before responding
+
+**Benefits**:
+- ✅ Sessions persist across all server instances
+- ✅ Sessions survive server restarts
+- ✅ Scales horizontally with multiple servers
+- ✅ Production-ready session management
+- ✅ No more "MemoryStore" warnings
+
+**Testing Results**:
+End-to-end test confirmed:
+- ✅ Login with "slf25" succeeds
+- ✅ User redirected to order page
+- ✅ **Page reload maintains authentication** (session persists)
+- ✅ User stays logged in across requests
+
+**Result**: Sessions now persist reliably on published deployments. Users remain authenticated across all server instances and page reloads.
