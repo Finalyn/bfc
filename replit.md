@@ -120,3 +120,48 @@ if (!isAuthenticated) {
 - `client/src/pages/OrderPage.tsx` : Gestion du passage des données de signature
 - `server/utils/pdfGenerator.ts` : Génération PDF avec nouvelles sections
 - `server/utils/excelGenerator.ts` : Génération Excel avec nouvelles sections
+
+## Recent Changes (November 05, 2025)
+
+### Autocomplete Integration with Excel Database (November 05, 2025)
+**Changements** : Intégration complète de l'autocomplete basée sur les données Excel pour faciliter la saisie des commandes.
+
+**Données chargées** :
+- **18 commerciaux** : Chargés depuis la feuille "BASE COMMERCIAUX" du fichier `server/data.xlsx`
+- **5692 clients** : Chargés depuis la feuille "BASE CLIENTS" avec nom et ville
+- **7 fournisseurs** : Chargés depuis la feuille "BASE FOURNISSEURS"
+- **54 thèmes** : Chargés depuis la feuille "BASE THEMES"
+
+**Nouvelle architecture** :
+- **Module `server/dataLoader.ts`** : Charge et parse le fichier Excel au démarrage du serveur
+- **API Endpoints** :
+  - `GET /api/data/commerciaux` : Liste des commerciaux avec raison sociale et nom
+  - `GET /api/data/clients` : Liste des clients avec code, nom, ville et email
+  - `GET /api/data/fournisseurs` : Liste des fournisseurs avec nom complet et nom court
+  - `GET /api/data/themes` : Liste des thèmes par fournisseur
+- **Composant `Combobox`** : Composant shadcn avec recherche et sélection
+- **Mapping fournisseurs** : Résolution du mapping entre noms longs (FOURNISSEURS) et noms courts (THEMES)
+
+**Fonctionnalités** :
+1. **Sélection du commercial** : Combobox avec recherche sur 18 commerciaux
+2. **Sélection du client** : Combobox avec recherche sur 5692 clients, auto-remplissage du nom et email
+3. **Sélection du fournisseur** : Combobox avec 7 fournisseurs, déclenche le filtrage des thèmes
+4. **Sélection du thème** : Combobox dynamique filtrée par le fournisseur sélectionné (54 thèmes au total)
+
+**Mapping fournisseurs** :
+Le système gère automatiquement le mapping entre les noms longs et courts :
+- "B DIS BOISSELLERIE DISTRIBUTION" (FOURNISSEURS) → "BDIS" (THEMES)
+- "NAYATS" (FOURNISSEURS) → "NAYAT" (THEMES)
+- Autres fournisseurs : noms identiques dans les deux feuilles
+
+**Points techniques** :
+- Interface `Fournisseur` avec champ `nomCourt` pour le mapping
+- Constante `FOURNISSEUR_MAPPING` dans `dataLoader.ts`
+- Filtrage des thèmes basé sur `nomCourt` pour garantir la cohérence
+- Option de saisie manuelle pour les clients si besoin
+
+**Fichiers créés/modifiés** :
+- **Nouveau** : `server/dataLoader.ts` - Module de chargement des données Excel
+- **Nouveau** : `client/src/components/ui/combobox.tsx` - Composant d'autocomplete
+- **Modifié** : `client/src/components/OrderForm.tsx` - Intégration des Combobox
+- **Modifié** : `server/routes.ts` - Ajout des endpoints API de données
