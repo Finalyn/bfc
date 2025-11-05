@@ -6,6 +6,7 @@ import { generateOrderExcel } from "./utils/excelGenerator";
 import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
+import { data } from "./dataLoader";
 
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
@@ -134,6 +135,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: error.message || "Erreur lors de l'envoi des emails" 
       });
+    }
+  });
+
+  // Routes pour les données de référence
+  app.get("/api/data/commerciaux", (req, res) => {
+    res.json(data.commerciaux);
+  });
+
+  app.get("/api/data/clients", (req, res) => {
+    res.json(data.clients);
+  });
+
+  app.get("/api/data/fournisseurs", (req, res) => {
+    res.json(data.fournisseurs);
+  });
+
+  app.get("/api/data/themes", (req, res) => {
+    const { fournisseur } = req.query;
+    if (fournisseur) {
+      const filtered = data.themes.filter(t => t.fournisseur === fournisseur);
+      res.json(filtered);
+    } else {
+      res.json(data.themes);
     }
   });
 
