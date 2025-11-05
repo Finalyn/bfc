@@ -40,6 +40,7 @@ export interface Client {
 export interface Fournisseur {
   id: string;
   nom: string;
+  nomCourt: string; // Nom utilisé dans les thèmes
   adresse: string;
   codePostal: string;
   ville: string;
@@ -63,6 +64,17 @@ export interface DatabaseData {
 }
 
 let cachedData: DatabaseData | null = null;
+
+// Mapping manuel des noms de fournisseurs (nom complet -> nom court pour thèmes)
+const FOURNISSEUR_MAPPING: Record<string, string> = {
+  "B DIS BOISSELLERIE DISTRIBUTION": "BDIS",
+  "SIROCO": "SIROCO",
+  "VDH": "VDH",
+  "COTTREAU": "COTTREAU",
+  "NAYATS": "NAYAT", // Attention: "NAYATS" dans Fournisseurs, "NAYAT" dans Themes
+  "MAEVA": "MAEVA",
+  "VENT D'OUEST": "VENT D'OUEST",
+};
 
 export function loadExcelData(): DatabaseData {
   if (cachedData) {
@@ -122,17 +134,21 @@ export function loadExcelData(): DatabaseData {
   const fournisseurs: Fournisseur[] = fournisseursRaw
     .slice(1) // Sauter la ligne d'en-têtes
     .filter(row => row && row[0]) // Filtrer les lignes vides
-    .map((row, index) => ({
-      id: `four-${index}`,
-      nom: row[0] || "",
-      adresse: row[1] || "",
-      codePostal: String(row[2] || ""),
-      ville: row[3] || "",
-      tel: row[4] || "",
-      portable: row[5] || "",
-      mail: row[6] || "",
-      web: row[7] || "",
-    }));
+    .map((row, index) => {
+      const nom = row[0] || "";
+      return {
+        id: `four-${index}`,
+        nom,
+        nomCourt: FOURNISSEUR_MAPPING[nom] || nom, // Utiliser le mapping ou le nom complet si pas trouvé
+        adresse: row[1] || "",
+        codePostal: String(row[2] || ""),
+        ville: row[3] || "",
+        tel: row[4] || "",
+        portable: row[5] || "",
+        mail: row[6] || "",
+        web: row[7] || "",
+      };
+    });
 
   // Charger les thèmes
   const themesSheet = workbook.Sheets["BASE THEMES"];

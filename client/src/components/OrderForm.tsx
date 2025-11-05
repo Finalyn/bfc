@@ -48,9 +48,14 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const { data: fournisseurs = [] } = useQuery<any[]>({ queryKey: ["/api/data/fournisseurs"] });
   const { data: allThemes = [] } = useQuery<any[]>({ queryKey: ["/api/data/themes"] });
 
-  // Filtrer les thèmes par fournisseur sélectionné
-  const themes = selectedFournisseur
-    ? allThemes.filter(t => t.fournisseur === selectedFournisseur)
+  // Trouver le nomCourt du fournisseur sélectionné pour filtrer les thèmes
+  const selectedFournisseurCourt = selectedFournisseur
+    ? fournisseurs.find(f => f.nom === selectedFournisseur)?.nomCourt
+    : null;
+
+  // Filtrer les thèmes par fournisseur sélectionné (utiliser nomCourt)
+  const themes = selectedFournisseurCourt
+    ? allThemes.filter(t => t.fournisseur === selectedFournisseurCourt)
     : allThemes;
 
   // Options pour les combobox
