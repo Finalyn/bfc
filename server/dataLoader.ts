@@ -1,6 +1,7 @@
 import XLSX from "xlsx";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,7 +82,28 @@ export function loadExcelData(): DatabaseData {
     return cachedData;
   }
 
-  const filePath = path.join(__dirname, "data.xlsx");
+  // Essayer plusieurs chemins pour trouver data.xlsx
+  // En dev: server/data.xlsx depuis __dirname
+  // En prod: server/data.xlsx depuis la racine du projet
+  const possiblePaths = [
+    path.join(__dirname, "data.xlsx"),           // Dev: depuis le dossier courant
+    path.join(process.cwd(), "server", "data.xlsx"), // Prod: depuis la racine
+    path.join(__dirname, "..", "data.xlsx"),     // Au cas où dist/ est utilisé
+  ];
+
+  let filePath = "";
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      filePath = testPath;
+      console.log(`✅ Fichier Excel trouvé: ${testPath}`);
+      break;
+    }
+  }
+
+  if (!filePath) {
+    throw new Error(`❌ Fichier data.xlsx introuvable. Chemins testés: ${possiblePaths.join(", ")}`);
+  }
+
   const workbook = XLSX.readFile(filePath);
 
   // Charger les commerciaux
