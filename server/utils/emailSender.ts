@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { type Order } from "@shared/schema";
+import { type Order, type ThemeSelection } from "@shared/schema";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -32,7 +32,13 @@ export async function sendOrderEmails(
     socketTimeout: 10000,
   });
 
-  const orderDate = formatInTimeZone(new Date(order.createdAt), "Europe/Paris", "d MMMM yyyy", { locale: fr });
+  const orderDate = formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
+  
+  const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+  const themesHtml = themeSelections
+    .filter(t => t.quantity || t.deliveryDate)
+    .map(t => `<li>${t.theme} - Qté: ${t.quantity || "N/A"}${t.deliveryDate ? ` - Livr: ${format(new Date(t.deliveryDate), "dd/MM/yyyy")}` : ""}</li>`)
+    .join("");
 
   // Email au client
   const clientMailOptions = {
@@ -41,20 +47,32 @@ export async function sendOrderEmails(
     subject: `Votre bon de commande n° ${order.orderCode} – ${orderDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Votre bon de commande</h2>
-        <p>Bonjour <strong>${order.clientName}</strong>,</p>
+        <h2 style="color: #003366;">Votre bon de commande BDIS 2026</h2>
+        <p>Bonjour <strong>${order.responsableName}</strong>,</p>
         <p>Nous vous confirmons la réception de votre commande.</p>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Numéro de commande :</strong> ${order.orderCode}</p>
           <p style="margin: 5px 0;"><strong>Date :</strong> ${orderDate}</p>
-          <p style="margin: 5px 0;"><strong>Produit :</strong> ${order.productTheme}</p>
-          <p style="margin: 5px 0;"><strong>Quantité :</strong> ${order.quantity}</p>
-          <p style="margin: 5px 0;"><strong>Livraison souhaitée :</strong> ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}</p>
+          <p style="margin: 5px 0;"><strong>Commercial :</strong> ${order.salesRepName}</p>
+        </div>
+        
+        ${themesHtml ? `
+        <div style="background-color: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Thèmes commandés</h3>
+          <ul style="margin: 0; padding-left: 20px;">${themesHtml}</ul>
+        </div>
+        ` : ""}
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Adresse de livraison</h3>
+          <p style="margin: 5px 0;">${order.livraisonEnseigne}</p>
+          <p style="margin: 5px 0;">${order.livraisonAdresse}</p>
+          <p style="margin: 5px 0;">${order.livraisonCpVille}</p>
         </div>
         
         <p>Vous trouverez le bon de commande en pièce jointe.</p>
-        <p>Bien cordialement,<br/>L'équipe BFC</p>
+        <p>Bien cordialement,<br/>L'équipe BDIS</p>
       </div>
     `,
     attachments: [
@@ -65,29 +83,52 @@ export async function sendOrderEmails(
     ],
   };
 
-  // Email à l'agence BFC
+  // Email à l'agence
   const agencyMailOptions = {
     from: FROM_EMAIL,
     to: AGENCY_EMAIL,
-    subject: `Commande n° ${order.orderCode} – ${order.clientName} – ${orderDate}`,
+    subject: `Commande n° ${order.orderCode} – ${order.livraisonEnseigne} – ${orderDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Nouvelle commande reçue</h2>
+        <h2 style="color: #003366;">Nouvelle commande BDIS 2026</h2>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Informations client</h3>
-          <p style="margin: 5px 0;"><strong>Nom :</strong> ${order.clientName}</p>
-          <p style="margin: 5px 0;"><strong>Email :</strong> ${order.clientEmail}</p>
+          <h3 style="margin-top: 0;">Informations générales</h3>
+          <p style="margin: 5px 0;"><strong>Numéro :</strong> ${order.orderCode}</p>
+          <p style="margin: 5px 0;"><strong>Date :</strong> ${orderDate}</p>
+          <p style="margin: 5px 0;"><strong>Commercial :</strong> ${order.salesRepName}</p>
         </div>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Détails de la commande</h3>
-          <p style="margin: 5px 0;"><strong>Numéro :</strong> ${order.orderCode}</p>
-          <p style="margin: 5px 0;"><strong>Fournisseur :</strong> ${order.supplier}</p>
-          <p style="margin: 5px 0;"><strong>Produit :</strong> ${order.productTheme}</p>
-          <p style="margin: 5px 0;"><strong>Quantité :</strong> ${order.quantity}</p>
-          ${order.quantityNote ? `<p style="margin: 5px 0;"><strong>Note :</strong> ${order.quantityNote}</p>` : ""}
-          <p style="margin: 5px 0;"><strong>Livraison souhaitée :</strong> ${formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr })}</p>
+          <h3 style="margin-top: 0;">Responsable</h3>
+          <p style="margin: 5px 0;"><strong>Nom :</strong> ${order.responsableName}</p>
+          <p style="margin: 5px 0;"><strong>Tél :</strong> ${order.responsableTel}</p>
+          <p style="margin: 5px 0;"><strong>Email :</strong> ${order.responsableEmail}</p>
+        </div>
+        
+        ${themesHtml ? `
+        <div style="background-color: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Thèmes commandés</h3>
+          <ul style="margin: 0; padding-left: 20px;">${themesHtml}</ul>
+        </div>
+        ` : ""}
+        
+        <div style="display: flex; gap: 20px; margin: 20px 0;">
+          <div style="flex: 1; background-color: #f3f4f6; padding: 15px; border-radius: 8px;">
+            <h3 style="margin-top: 0;">Livraison</h3>
+            <p style="margin: 5px 0;">${order.livraisonEnseigne}</p>
+            <p style="margin: 5px 0;">${order.livraisonAdresse}</p>
+            <p style="margin: 5px 0;">${order.livraisonCpVille}</p>
+            ${order.livraisonHoraires ? `<p style="margin: 5px 0;">Horaires: ${order.livraisonHoraires}</p>` : ""}
+            <p style="margin: 5px 0;">Hayon: ${order.livraisonHayon ? "Oui" : "Non"}</p>
+          </div>
+          <div style="flex: 1; background-color: #f3f4f6; padding: 15px; border-radius: 8px;">
+            <h3 style="margin-top: 0;">Facturation</h3>
+            <p style="margin: 5px 0;">${order.facturationRaisonSociale}</p>
+            <p style="margin: 5px 0;">${order.facturationAdresse}</p>
+            <p style="margin: 5px 0;">${order.facturationCpVille}</p>
+            <p style="margin: 5px 0;">Mode: ${order.facturationMode}</p>
+          </div>
         </div>
         
         ${order.remarks ? `
@@ -96,6 +137,12 @@ export async function sendOrderEmails(
           <p style="margin: 0;">${order.remarks}</p>
         </div>
         ` : ""}
+        
+        <div style="background-color: ${order.cgvAccepted ? '#d4edda' : '#f8d7da'}; padding: 10px 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${order.cgvAccepted ? '#28a745' : '#dc3545'};">
+          <p style="margin: 0; font-weight: bold; color: ${order.cgvAccepted ? '#155724' : '#721c24'};">
+            CGV : ${order.cgvAccepted ? '✓ Acceptées' : '✗ Non acceptées'}
+          </p>
+        </div>
         
         <p>Les documents (PDF et Excel) sont en pièce jointe.</p>
       </div>

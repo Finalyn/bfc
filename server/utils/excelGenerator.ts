@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { type Order } from "@shared/schema";
+import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -8,81 +8,189 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Commande");
   
-  // Définir la largeur des colonnes (4 colonnes pour layout avec signature à droite)
   worksheet.columns = [
-    { width: 25 },  // A - Labels colonne gauche
-    { width: 35 },  // B - Valeurs colonne gauche
-    { width: 25 },  // C - Labels colonne droite (signature)
-    { width: 35 }   // D - Valeurs colonne droite (signature)
+    { width: 20 },
+    { width: 25 },
+    { width: 12 },
+    { width: 12 },
+    { width: 20 },
+    { width: 25 },
+    { width: 12 },
+    { width: 12 }
   ];
   
   let currentRow = 1;
   
   // Titre
-  worksheet.getCell(`A${currentRow}`).value = "BON DE COMMANDE";
-  worksheet.getCell(`A${currentRow}`).font = { size: 16, bold: true };
+  worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+  const titleCell = worksheet.getCell(`A${currentRow}`);
+  titleCell.value = "BON DE COMMANDE 2026";
+  titleCell.font = { size: 18, bold: true, color: { argb: "FF003366" } };
+  titleCell.alignment = { horizontal: "center" };
   currentRow += 2;
-  
-  // Informations de commande
-  worksheet.getCell(`A${currentRow}`).value = "Numéro de commande";
-  worksheet.getCell(`B${currentRow}`).value = order.orderCode;
+
+  // En-tête
+  worksheet.getCell(`A${currentRow}`).value = "DATE";
   worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Date de création";
-  worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(order.createdAt), "Europe/Paris", "d MMMM yyyy", { locale: fr });
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+  worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "dd/MM/yyyy");
+  worksheet.getCell(`C${currentRow}`).value = "COMMERCIAL";
+  worksheet.getCell(`C${currentRow}`).font = { bold: true };
+  worksheet.getCell(`D${currentRow}`).value = order.salesRepName;
+  worksheet.getCell(`F${currentRow}`).value = `Réf: ${order.orderCode}`;
+  worksheet.getCell(`F${currentRow}`).font = { bold: true };
   currentRow += 2;
-  
-  // Sauvegarder la ligne de départ pour la signature à droite
-  const startRow = currentRow;
-  
-  // Commercial (colonne gauche)
-  worksheet.getCell(`A${currentRow}`).value = "COMMERCIAL";
-  worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
+
+  // Contacts
+  worksheet.getCell(`A${currentRow}`).value = "RESPONSABLE";
+  worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 11 };
+  worksheet.getCell(`E${currentRow}`).value = "SERVICE COMPTABILITÉ";
+  worksheet.getCell(`E${currentRow}`).font = { bold: true, size: 11 };
   currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Nom du commercial";
-  worksheet.getCell(`B${currentRow}`).value = order.salesRepName;
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+
+  worksheet.getCell(`A${currentRow}`).value = "Nom";
+  worksheet.getCell(`B${currentRow}`).value = order.responsableName;
+  worksheet.getCell(`E${currentRow}`).value = "Tel.";
+  worksheet.getCell(`F${currentRow}`).value = order.comptaTel || "";
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "Tel.";
+  worksheet.getCell(`B${currentRow}`).value = order.responsableTel;
+  worksheet.getCell(`E${currentRow}`).value = "E-mail";
+  worksheet.getCell(`F${currentRow}`).value = order.comptaEmail || "";
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "E-mail";
+  worksheet.getCell(`B${currentRow}`).value = order.responsableEmail;
   currentRow += 2;
-  
-  // Informations client (colonne gauche)
-  worksheet.getCell(`A${currentRow}`).value = "INFORMATIONS CLIENT";
-  worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
+
+  // Thèmes
+  const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+
+  // En-têtes des tableaux de thèmes
+  worksheet.getCell(`A${currentRow}`).value = "TOUTE L'ANNEE";
+  worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  worksheet.getCell(`A${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+  worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+
+  worksheet.getCell(`E${currentRow}`).value = "SAISONNIER";
+  worksheet.getCell(`E${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  worksheet.getCell(`E${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE67E22" } };
+  worksheet.mergeCells(`E${currentRow}:H${currentRow}`);
   currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Nom du client";
-  worksheet.getCell(`B${currentRow}`).value = order.clientName;
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+
+  // Sous-en-têtes
+  worksheet.getCell(`A${currentRow}`).value = "THEME";
+  worksheet.getCell(`B${currentRow}`).value = "";
+  worksheet.getCell(`C${currentRow}`).value = "QTE";
+  worksheet.getCell(`D${currentRow}`).value = "Date livr.";
+  worksheet.getCell(`E${currentRow}`).value = "THEME";
+  worksheet.getCell(`F${currentRow}`).value = "";
+  worksheet.getCell(`G${currentRow}`).value = "QTE";
+  worksheet.getCell(`H${currentRow}`).value = "Date livr.";
+  ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {
+    worksheet.getCell(`${col}${currentRow}`).font = { bold: true, size: 9 };
+    worksheet.getCell(`${col}${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+  });
   currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Email";
-  worksheet.getCell(`B${currentRow}`).value = order.clientEmail;
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  
-  // Signature (colonne droite - à côté des infos client)
-  let signatureRow = startRow;
-  worksheet.getCell(`C${signatureRow}`).value = "SIGNATURE DU CLIENT";
-  worksheet.getCell(`C${signatureRow}`).font = { size: 12, bold: true };
-  signatureRow++;
-  
-  worksheet.getCell(`C${signatureRow}`).value = "Nom et prénom";
-  worksheet.getCell(`D${signatureRow}`).value = order.clientSignedName;
-  worksheet.getCell(`C${signatureRow}`).font = { bold: true };
-  signatureRow++;
-  
-  worksheet.getCell(`C${signatureRow}`).value = "Lieu";
-  worksheet.getCell(`D${signatureRow}`).value = order.signatureLocation;
-  worksheet.getCell(`C${signatureRow}`).font = { bold: true };
-  signatureRow++;
-  
-  worksheet.getCell(`C${signatureRow}`).value = "Date";
-  worksheet.getCell(`D${signatureRow}`).value = formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
-  worksheet.getCell(`C${signatureRow}`).font = { bold: true };
-  signatureRow++;
-  
-  // Ajouter l'image de signature dans la colonne droite
+
+  // Lignes des thèmes
+  const maxThemes = Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length);
+  for (let i = 0; i < maxThemes; i++) {
+    const toutAnnee = THEMES_TOUTE_ANNEE[i];
+    const saisonnier = THEMES_SAISONNIER[i];
+
+    if (toutAnnee) {
+      worksheet.getCell(`A${currentRow}`).value = toutAnnee;
+      worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+      const selection = themeSelections.find(t => t.theme === toutAnnee && t.category === "TOUTE_ANNEE");
+      if (selection?.quantity) worksheet.getCell(`C${currentRow}`).value = selection.quantity;
+      if (selection?.deliveryDate) worksheet.getCell(`D${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
+    }
+
+    if (saisonnier) {
+      worksheet.getCell(`E${currentRow}`).value = saisonnier;
+      worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
+      const selection = themeSelections.find(t => t.theme === saisonnier && t.category === "SAISONNIER");
+      if (selection?.quantity) worksheet.getCell(`G${currentRow}`).value = selection.quantity;
+      if (selection?.deliveryDate) worksheet.getCell(`H${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
+    }
+
+    // Bordures
+    ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {
+      worksheet.getCell(`${col}${currentRow}`).border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" }
+      };
+    });
+
+    currentRow++;
+  }
+  currentRow++;
+
+  // Livraison et Facturation
+  worksheet.getCell(`A${currentRow}`).value = "LIVRAISON";
+  worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 11 };
+  worksheet.getCell(`E${currentRow}`).value = "FACTURATION";
+  worksheet.getCell(`E${currentRow}`).font = { bold: true, size: 11 };
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "Enseigne";
+  worksheet.getCell(`B${currentRow}`).value = order.livraisonEnseigne;
+  worksheet.getCell(`E${currentRow}`).value = "Raison sociale";
+  worksheet.getCell(`F${currentRow}`).value = order.facturationRaisonSociale;
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "Adresse";
+  worksheet.getCell(`B${currentRow}`).value = order.livraisonAdresse;
+  worksheet.getCell(`E${currentRow}`).value = "Adresse";
+  worksheet.getCell(`F${currentRow}`).value = order.facturationAdresse;
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "CP / Ville";
+  worksheet.getCell(`B${currentRow}`).value = order.livraisonCpVille;
+  worksheet.getCell(`E${currentRow}`).value = "CP / Ville";
+  worksheet.getCell(`F${currentRow}`).value = order.facturationCpVille;
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "Horaires";
+  worksheet.getCell(`B${currentRow}`).value = order.livraisonHoraires || "";
+  worksheet.getCell(`E${currentRow}`).value = "Mode règlement";
+  worksheet.getCell(`F${currentRow}`).value = order.facturationMode;
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "Hayon";
+  worksheet.getCell(`B${currentRow}`).value = order.livraisonHayon ? "Oui" : "Non";
+  currentRow += 2;
+
+  // Remarques
+  if (order.remarks) {
+    worksheet.getCell(`A${currentRow}`).value = "REMARQUES";
+    worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 11 };
+    currentRow++;
+    worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+    worksheet.getCell(`A${currentRow}`).value = order.remarks;
+    worksheet.getCell(`A${currentRow}`).alignment = { wrapText: true };
+    currentRow += 2;
+  }
+
+  // Signature
+  worksheet.getCell(`A${currentRow}`).value = "SIGNATURE CLIENT";
+  worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 11 };
+  currentRow++;
+
+  worksheet.getCell(`A${currentRow}`).value = "Nom";
+  worksheet.getCell(`B${currentRow}`).value = order.clientSignedName;
+  worksheet.getCell(`C${currentRow}`).value = "Lieu";
+  worksheet.getCell(`D${currentRow}`).value = order.signatureLocation;
+  worksheet.getCell(`E${currentRow}`).value = "Date";
+  worksheet.getCell(`F${currentRow}`).value = formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy");
+  worksheet.getCell(`G${currentRow}`).value = "CGV";
+  worksheet.getCell(`H${currentRow}`).value = order.cgvAccepted ? "ACCEPTÉES" : "Non acceptées";
+  worksheet.getCell(`H${currentRow}`).font = { bold: true, color: { argb: order.cgvAccepted ? "FF008000" : "FFFF0000" } };
+  currentRow++;
+
   if (order.signature) {
     const base64Data = order.signature.replace(/^data:image\/png;base64,/, "");
     const imageBuffer = Buffer.from(base64Data, "base64");
@@ -92,69 +200,19 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
       extension: "png",
     });
     
-    // Insérer l'image dans la colonne droite (colonne C-D)
     worksheet.addImage(imageId, {
-      tl: { col: 2, row: signatureRow },
-      ext: { width: 180, height: 90 }
+      tl: { col: 0, row: currentRow },
+      ext: { width: 200, height: 80 }
     });
-    
-    signatureRow += 5;
+    currentRow += 5;
   }
-  
-  // Continuer après la zone la plus basse
-  currentRow = Math.max(currentRow, signatureRow) + 2;
-  
-  // Détails de la commande
-  worksheet.getCell(`A${currentRow}`).value = "DÉTAILS DE LA COMMANDE";
-  worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
-  currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Fournisseur";
-  worksheet.getCell(`B${currentRow}`).value = order.supplier;
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Thématique produit";
-  worksheet.getCell(`B${currentRow}`).value = order.productTheme;
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  currentRow++;
-  
-  worksheet.getCell(`A${currentRow}`).value = "Quantité";
-  worksheet.getCell(`B${currentRow}`).value = order.quantity;
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  currentRow++;
-  
-  if (order.quantityNote) {
-    worksheet.getCell(`A${currentRow}`).value = "Note sur la quantité";
-    worksheet.getCell(`B${currentRow}`).value = order.quantityNote;
-    worksheet.getCell(`A${currentRow}`).font = { bold: true };
-    currentRow++;
-  }
-  
-  worksheet.getCell(`A${currentRow}`).value = "Date de livraison souhaitée";
-  worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(order.deliveryDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  currentRow += 2;
-  
-  // Remarques (sur toute la largeur)
-  if (order.remarks) {
-    worksheet.getCell(`A${currentRow}`).value = "REMARQUES";
-    worksheet.getCell(`A${currentRow}`).font = { size: 12, bold: true };
-    currentRow++;
-    
-    // Fusionner les cellules pour les remarques sur toute la largeur
-    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
-    worksheet.getCell(`A${currentRow}`).value = order.remarks;
-    worksheet.getCell(`A${currentRow}`).alignment = { wrapText: true, vertical: 'top' };
-    currentRow += 2;
-  }
-  
+
   currentRow++;
   worksheet.getCell(`A${currentRow}`).value = "Document généré le";
-  worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(), "Europe/Paris", "d MMMM yyyy à HH:mm", { locale: fr });
-  worksheet.getCell(`A${currentRow}`).font = { bold: true };
-  
-  // Générer le buffer
+  worksheet.getCell(`A${currentRow}`).font = { italic: true, size: 9 };
+  worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(), "Europe/Paris", "dd/MM/yyyy à HH:mm");
+  worksheet.getCell(`B${currentRow}`).font = { italic: true, size: 9 };
+
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }

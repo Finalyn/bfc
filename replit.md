@@ -1,7 +1,7 @@
 # Application de Gestion de Commandes Commerciales
 
 ## Overview
-This project is a mobile-first web application designed for sales representatives. Its primary purpose is to streamline the order management process by enabling sales reps to capture orders directly from clients, obtain electronic signatures, automatically generate essential documents (PDF and Excel), and send automated email notifications. The application aims to enhance efficiency in commercial operations by providing a robust, user-friendly tool for on-site order processing.
+This project is a mobile-first web application designed for sales representatives to streamline the order management process. It enables sales reps to capture orders directly from clients, obtain electronic signatures, automatically generate essential documents (PDF and Excel) based on the BDIS 2026 template, and send automated email notifications. The application aims to enhance efficiency in commercial operations by providing a robust, user-friendly tool for on-site order processing, focusing on the specific needs of BDIS.
 
 ## User Preferences
 I prefer clear and concise communication. For any significant changes or new features, please provide a high-level overview of the proposed solution before diving into implementation details. When suggesting code, prioritize readability and maintainability. I value iterative development, so small, reviewable changes are preferred over large, monolithic updates. Please ensure all dates and times displayed and processed throughout the application adhere to the "Europe/Paris" timezone. Do not make changes to the existing file structure in `client/` and `server/`.
@@ -9,159 +9,40 @@ I prefer clear and concise communication. For any significant changes or new fea
 ## System Architecture
 
 ### UI/UX Decisions
-The application features a mobile-first, responsive design.
-- **Color Scheme**: Primary Blue (`#2563eb`), Destructive Red, Muted Gray.
+The application features a mobile-first, responsive design with a specific BDIS 2026 template implementation.
+- **Color Scheme**: Primary Blue (`#2563eb`), Destructive Red, Muted Gray, with BDIS-specific colors for document generation (blue `#003366`, orange `#E67E22`).
 - **Typography**: Roboto font (400, 500, 700 weights); 24px bold titles, 14px medium labels, 16px inputs.
-- **Components**: Inputs are 48px high, buttons are 56px high for comfortable touch targets. Cards feature a 2px border and border-radius. Consistent `p-4`, `p-6` spacing is used.
+- **Components**: Inputs are 48px high, buttons are 56px high. Cards feature a 2px border and border-radius. Consistent `p-4`, `p-6` spacing. The form is structured into 4 sections: General Info, Contacts, Themes, Delivery/Invoicing, with a double-column layout for themes.
 
 ### Technical Implementations
-The application follows a client-server architecture:
-- **Frontend**: Built with React and TypeScript, using Vite for tooling. Wouter handles routing, TanStack Query v5 manages state, and React Hook Form with Zod provides form validation. UI components are styled with Shadcn UI and Tailwind CSS. React Signature Canvas is used for electronic signature capture.
-- **Backend**: An Express.js server in TypeScript handles API requests. It uses `express-session` for authentication, `jsPDF` for PDF generation, `ExcelJS` for Excel generation (including signature images), and `Nodemailer` for email services. Data is stored in-memory using JavaScript Maps. `date-fns-tz` ensures all date/time operations are handled in the "Europe/Paris" timezone.
+The application uses a client-server architecture.
+- **Frontend**: React with TypeScript, Vite, Wouter for routing, TanStack Query v5 for state, React Hook Form with Zod for validation, Shadcn UI and Tailwind CSS for styling, and React Signature Canvas for e-signatures. Autocomplete features leverage a custom `Combobox` component.
+- **Backend**: Express.js server in TypeScript. It utilizes `express-session` for authentication, `jsPDF` for PDF generation, `ExcelJS` for Excel generation (including signature images), `Nodemailer` for email services, and `date-fns-tz` for "Europe/Paris" timezone handling. Data is stored in-memory using JavaScript Maps. A `dataLoader.ts` module parses `data.xlsx` for autocomplete data.
 
 ### Feature Specifications
-- **Authentication**: Simple session-based authentication with a hardcoded password ("slf25"). Session temporaire sans persistance (redemander à chaque rechargement de page).
+- **Authentication**: Client-side session-based authentication with a hardcoded password ("slf25"). Sessions are temporary and cleared upon page reload.
 - **Order Form (4 steps)**:
-    1.  **Form Input**: Captures sales rep name, client name/email, supplier, product theme, quantity, delivery date, and remarks.
-    2.  **E-Signature**: HTML5 canvas for touch signature capture with enhanced information: signature location, signature date (pre-filled), client written name, and the visual signature itself. All fields are mandatory and validated.
-    3.  **Review**: Displays a comprehensive summary of the order including sales rep name, all client information, and complete signature details (name, location, date) before generation.
-    4.  **Success & Dispatch**: Shows a unique order number (CMD-YYYY-MMDD-XXXX), enables direct PDF/Excel downloads, triggers automatic email sending, and offers a manual re-send option and a "New Order" button.
-- **Automatic Generation**: Upon order submission, a unique order code is generated. A PDF is created containing all order details including sales rep name, complete signature information (client name, location, date) and the signature image. An Excel file is generated with structured data including all new fields and the signature image. Two emails are automatically dispatched: one with the PDF to the client, and another with both PDF and Excel to the BFC agency (jack@finalyn.com). All dates and times in generated documents and emails are in "Europe/Paris" timezone. The signature is embedded as an image in both PDF and Excel.
-- **Data Storage**: All order data is stored in-memory using JavaScript Maps for simplicity.
+    1.  **Form Input**: Captures `orderDate`, `salesRepName`, client info, `responsableName`, `responsableTel`, `responsableEmail`, optional `comptaTel`, `comptaEmail`, `themeSelections` (TOUTE_ANNEE and SAISONNIER categories with quantity and delivery date), `livraisonEnseigne`, `livraisonAdresse`, `livraisonCpVille`, `livraisonHoraires`, `livraisonHayon`, `facturationRaisonSociale`, `facturationAdresse`, `facturationCpVille`, `facturationMode` (VIREMENT/CHEQUE/LCR), `facturationRib`, and `cgvAccepted`. Autocomplete is integrated for sales reps, clients, suppliers, and themes using data from `data.xlsx`.
+    2.  **E-Signature**: HTML5 canvas for signature capture, `signatureLocation`, `signatureDate` (pre-filled), and `clientSignedName`.
+    3.  **Review**: Comprehensive summary of all captured order details.
+    4.  **Success & Dispatch**: Displays a unique order number, enables PDF/Excel downloads, triggers automatic email sending, and offers manual re-send and "New Order" options.
+- **Automatic Generation**: Generates a unique order code, a PDF containing all order details and signature based on the BDIS 2026 template, and an Excel file with structured data including the signature image. All dates are in "Europe/Paris" timezone.
+- **Email Dispatch**: Two automated emails: one to the client with the PDF, and another to `jack@finalyn.com` with both PDF and Excel, including detailed order information.
+- **Data Storage**: All order data is stored in-memory using JavaScript Maps.
 
 ### System Design Choices
-- **Validation**: Client-side and server-side validation using Zod.
+- **Validation**: Client-side and server-side validation using Zod for all form fields, including the mandatory `cgvAccepted` checkbox.
 - **Error Handling**: Comprehensive error management with toast notifications.
-- **API Interaction**: `apiRequest` utility automatically parses JSON responses.
+- **API Interaction**: `apiRequest` utility for JSON response parsing.
+- **Excel Data Integration**: `dataLoader.ts` module loads commercial, client, supplier, and theme data from an Excel file at server startup, providing API endpoints for frontend autocomplete functionality.
 
 ## External Dependencies
 
-- **SMTP Service**: Configured to use an external SMTP server for sending emails. Currently uses `smtp.ethereal.email` for testing purposes.
+- **SMTP Service**: Configured to use an external SMTP server for sending emails, currently `smtp.ethereal.email` for testing.
 - **Environment Variables (Secrets)**:
     -   `SESSION_SECRET`: For session cookie signing.
     -   `SMTP_HOST`: SMTP server address.
-    -   `SMTP_PORT`: SMTP server port (recommended 587 with STARTTLS).
+    -   `SMTP_PORT`: SMTP server port.
     -   `SMTP_USER`: SMTP authentication username.
     -   `SMTP_PASSWORD`: SMTP authentication password.
-
-## Recent Changes (October 27, 2025)
-
-### Authentication Ultra-Simplifiée - Client-Side Only (October 27, 2025)
-**Solution**: Authentication 100% côté client sans base de données ni sessions serveur.
-
-**Comment ça marche** :
-- L'utilisateur entre "slf25" sur /login
-- Le mot de passe est vérifié dans le navigateur (pas d'appel serveur)
-- Un flag `authenticated: true` est stocké dans `sessionStorage`
-- L'utilisateur peut naviguer dans l'application
-- **Au rechargement de la page** : le flag est automatiquement effacé via détection de `performance.navigation.type === 'reload'`
-- L'utilisateur est redirigé vers /login et doit réentrer le mot de passe
-
-**Avantages** :
-- ✅ Aucune base de données nécessaire
-- ✅ Aucune session serveur
-- ✅ Fonctionne parfaitement avec déploiements multi-instances
-- ✅ Aucun warning "MemoryStore"
-- ✅ Ultra-simple et rapide
-- ✅ Session temporaire : rechargement = reconnexion requise
-
-**Code technique** :
-```javascript
-// Login (client/src/pages/LoginPage.tsx)
-if (password === "slf25") {
-  sessionStorage.setItem("authenticated", "true");
-  setLocation("/");
-}
-
-// Vérification (client/src/pages/OrderPage.tsx)
-const navigationType = performance.getEntriesByType('navigation')[0];
-const isPageReload = navigationType?.type === 'reload';
-
-if (isPageReload) {
-  sessionStorage.removeItem("authenticated"); // Efface au rechargement
-}
-
-const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
-if (!isAuthenticated) {
-  setLocation("/login");
-}
-```
-
-**Résultat** : Authentication fonctionnelle, simple, sans persistance, exactement comme demandé.
-
-### Enhanced Commercial and Signature Fields (October 27, 2025)
-**Changements** : Ajout de champs commerciaux et de signature enrichis pour une meilleure traçabilité.
-
-**Nouveaux champs** :
-- **Étape 1 - Formulaire** :
-  - `salesRepName` : Nom du commercial (champ requis, validation Zod)
-  
-- **Étape 2 - Signature** :
-  - `signatureLocation` : Lieu de signature (champ texte requis)
-  - `signatureDate` : Date de signature (pré-remplie avec la date du jour, modifiable, requise)
-  - `clientSignedName` : Nom écrit du client (champ texte requis pour confirmation d'identité)
-  - Signature canvas (inchangé)
-
-**Impact sur les documents** :
-- **PDF** : Layout en 2 colonnes - colonne gauche pour commercial et client, colonne droite pour la signature (nom, lieu, date, image). Les détails de commande et remarques s'affichent en dessous sur toute la largeur pour éviter tout chevauchement.
-- **Excel** : Layout en 4 colonnes (A-B pour gauche, C-D pour droite). Commercial et client dans les colonnes A-B, signature dans les colonnes C-D. Les remarques fusionnent les 4 colonnes pour occuper toute la largeur.
-- **Page de révision** : Affiche le nom du commercial en premier, puis tous les détails de signature (nom, lieu, date formatée en français).
-
-**Validation** :
-- Tous les nouveaux champs utilisent React Hook Form avec validation Zod
-- Champs requis avec messages d'erreur appropriés en français
-- Date de signature pré-remplie avec `formatInTimeZone` pour Europe/Paris
-
-**Fichiers modifiés** :
-- `shared/schema.ts` : Ajout des 4 nouveaux champs au schéma Order
-- `client/src/components/OrderForm.tsx` : Ajout du champ salesRepName
-- `client/src/components/SignatureStep.tsx` : Ajout des 3 champs de signature
-- `client/src/components/ReviewStep.tsx` : Affichage des nouvelles informations
-- `client/src/pages/OrderPage.tsx` : Gestion du passage des données de signature
-- `server/utils/pdfGenerator.ts` : Génération PDF avec nouvelles sections
-- `server/utils/excelGenerator.ts` : Génération Excel avec nouvelles sections
-
-## Recent Changes (November 05, 2025)
-
-### Autocomplete Integration with Excel Database (November 05, 2025)
-**Changements** : Intégration complète de l'autocomplete basée sur les données Excel pour faciliter la saisie des commandes.
-
-**Données chargées** :
-- **18 commerciaux** : Chargés depuis la feuille "BASE COMMERCIAUX" du fichier `server/data.xlsx`
-- **5692 clients** : Chargés depuis la feuille "BASE CLIENTS" avec nom et ville
-- **7 fournisseurs** : Chargés depuis la feuille "BASE FOURNISSEURS"
-- **54 thèmes** : Chargés depuis la feuille "BASE THEMES"
-
-**Nouvelle architecture** :
-- **Module `server/dataLoader.ts`** : Charge et parse le fichier Excel au démarrage du serveur
-- **API Endpoints** :
-  - `GET /api/data/commerciaux` : Liste des commerciaux avec raison sociale et nom
-  - `GET /api/data/clients` : Liste des clients avec code, nom, ville et email
-  - `GET /api/data/fournisseurs` : Liste des fournisseurs avec nom complet et nom court
-  - `GET /api/data/themes` : Liste des thèmes par fournisseur
-- **Composant `Combobox`** : Composant shadcn avec recherche et sélection
-- **Mapping fournisseurs** : Résolution du mapping entre noms longs (FOURNISSEURS) et noms courts (THEMES)
-
-**Fonctionnalités** :
-1. **Sélection du commercial** : Combobox avec recherche sur 18 commerciaux
-2. **Sélection du client** : Combobox avec recherche sur 5692 clients, auto-remplissage du nom et email
-3. **Sélection du fournisseur** : Combobox avec 7 fournisseurs, déclenche le filtrage des thèmes
-4. **Sélection du thème** : Combobox dynamique filtrée par le fournisseur sélectionné (54 thèmes au total)
-
-**Mapping fournisseurs** :
-Le système gère automatiquement le mapping entre les noms longs et courts :
-- "B DIS BOISSELLERIE DISTRIBUTION" (FOURNISSEURS) → "BDIS" (THEMES)
-- "NAYATS" (FOURNISSEURS) → "NAYAT" (THEMES)
-- Autres fournisseurs : noms identiques dans les deux feuilles
-
-**Points techniques** :
-- Interface `Fournisseur` avec champ `nomCourt` pour le mapping
-- Constante `FOURNISSEUR_MAPPING` dans `dataLoader.ts`
-- Filtrage des thèmes basé sur `nomCourt` pour garantir la cohérence
-- Option de saisie manuelle pour les clients si besoin
-
-**Fichiers créés/modifiés** :
-- **Nouveau** : `server/dataLoader.ts` - Module de chargement des données Excel
-- **Nouveau** : `client/src/components/ui/combobox.tsx` - Composant d'autocomplete
-- **Modifié** : `client/src/components/OrderForm.tsx` - Intégration des Combobox
-- **Modifié** : `server/routes.ts` - Ajout des endpoints API de données
+- **data.xlsx**: An Excel file located in the server directory, used as a database for autocomplete features (commercials, clients, suppliers, themes).

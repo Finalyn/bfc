@@ -1,22 +1,102 @@
 import { z } from "zod";
 
-// Schema pour une commande
+// Liste des thèmes disponibles
+export const THEMES_TOUTE_ANNEE = [
+  "MENAGER / PATISSERIE",
+  "FOIRE TOP VENTE",
+  "BRICOLAGE",
+  "RANGEMENT / ENTRETIEN",
+  "HIGH TECH",
+  "CHAUSSETTES",
+  "SENTEUR",
+  "COLORIAGE",
+  "SPORT",
+  "ANIMAUX",
+  "SUPPORTER",
+] as const;
+
+export const THEMES_SAISONNIER = [
+  "JARDIN",
+  "PÂQUES",
+  "BARBECUE",
+  "MAILLOT DE BAIN",
+  "JOUETS ÉTÉ",
+  "CITRONNELLE",
+  "RENTREE DES CLASSES",
+  "HALLOWEEN",
+  "TEXTILE HIVER",
+  "CHAUSSETTES HIVER",
+  "NOEL",
+  "DECO DE TABLE",
+] as const;
+
+// Schema pour une sélection de thème
+export const themeSelectionSchema = z.object({
+  theme: z.string(),
+  category: z.enum(["TOUTE_ANNEE", "SAISONNIER"]),
+  quantity: z.string().optional(),
+  deliveryDate: z.string().optional(),
+});
+
+export type ThemeSelection = z.infer<typeof themeSelectionSchema>;
+
+// Schema pour une commande BDIS 2026
 export const orderSchema = z.object({
   orderCode: z.string(),
+  orderDate: z.string().min(1, "La date est requise"),
+  
+  // Commercial
   salesRepName: z.string().min(1, "Le nom du commercial est requis"),
-  clientName: z.string().min(1, "Le nom du client est requis"),
-  clientEmail: z.string().email("Email invalide"),
-  supplier: z.string().min(1, "Le fournisseur est requis"),
-  productTheme: z.string().min(1, "La thématique produit est requise"),
-  quantity: z.string().min(1, "La quantité est requise"),
-  quantityNote: z.string().optional(),
-  deliveryDate: z.string().min(1, "La date de livraison est requise"),
+  
+  // Responsable magasin
+  responsableName: z.string().min(1, "Le nom du responsable est requis"),
+  responsableTel: z.string().min(1, "Le téléphone du responsable est requis"),
+  responsableEmail: z.string().email("Email responsable invalide"),
+  
+  // Service comptabilité (optionnel)
+  comptaTel: z.string().optional(),
+  comptaEmail: z.string().optional(),
+  
+  // Thèmes sélectionnés (JSON array)
+  themeSelections: z.string(), // JSON stringified array of ThemeSelection
+  
+  // Livraison
+  livraisonEnseigne: z.string().min(1, "L'enseigne est requise"),
+  livraisonAdresse: z.string().min(1, "L'adresse de livraison est requise"),
+  livraisonCpVille: z.string().min(1, "Le CP/Ville de livraison est requis"),
+  livraisonHoraires: z.string().optional(),
+  livraisonHayon: z.boolean(),
+  
+  // Facturation
+  facturationRaisonSociale: z.string().min(1, "La raison sociale est requise"),
+  facturationAdresse: z.string().min(1, "L'adresse de facturation est requise"),
+  facturationCpVille: z.string().min(1, "Le CP/Ville de facturation est requis"),
+  facturationMode: z.enum(["VIREMENT", "CHEQUE", "LCR"]),
+  facturationRib: z.boolean().optional(),
+  
+  // Remarques
   remarks: z.string().optional(),
+  
+  // CGV
+  cgvAccepted: z.boolean().refine(val => val === true, { message: "Vous devez accepter les CGV" }),
+  
+  // Signature client (Le Magasin)
   signature: z.string().min(1, "La signature est requise"),
   signatureLocation: z.string().min(1, "Le lieu de signature est requis"),
   signatureDate: z.string().min(1, "La date de signature est requise"),
-  clientSignedName: z.string().min(1, "Le nom écrit du client est requis"),
+  clientSignedName: z.string().min(1, "Le nom du signataire est requis"),
+  
+  // Métadonnées
   createdAt: z.string(),
+  
+  // Champs legacy pour compatibilité (seront supprimés)
+  clientName: z.string().optional(),
+  clientEmail: z.string().optional(),
+  supplier: z.string().optional(),
+  productTheme: z.string().optional(),
+  quantity: z.string().optional(),
+  quantityNote: z.string().optional(),
+  deliveryDate: z.string().optional(),
 });
 
 export const insertOrderSchema = orderSchema.omit({ 
