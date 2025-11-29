@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           order,
           pdfBuffer,
           excelBuffer,
-          order.clientEmail
+          order.clientEmail || order.responsableEmail
         );
         emailsSent = true;
       } catch (error: any) {

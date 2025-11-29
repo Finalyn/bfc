@@ -10,10 +10,27 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ClipboardList, ArrowRight, Building2, Truck, FileText, User } from "lucide-react";
+import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useQuery } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
+
+interface Client {
+  id: string;
+  code: string;
+  nom: string;
+  adresse1: string;
+  adresse2: string;
+  codePostal: string;
+  ville: string;
+  pays: string;
+  interloc: string;
+  tel: string;
+  portable: string;
+  fax: string;
+  mail: string;
+  displayName: string;
+}
 
 const formSchema = z.object({
   orderDate: z.string().min(1, "La date est requise"),
@@ -84,11 +101,45 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   });
 
   const { data: commerciaux = [] } = useQuery<any[]>({ queryKey: ["/api/data/commerciaux"] });
+  const { data: clients = [] } = useQuery<Client[]>({ queryKey: ["/api/data/clients"] });
 
   const commerciauxOptions: ComboboxOption[] = commerciaux.map(c => ({
     value: c.displayName,
     label: c.displayName,
   }));
+
+  const clientsOptions: ComboboxOption[] = clients.map(c => ({
+    value: c.id,
+    label: c.displayName,
+  }));
+
+  const handleClientSelect = (clientId: string) => {
+    const selectedClient = clients.find(c => c.id === clientId);
+    if (selectedClient) {
+      const adresseComplete = selectedClient.adresse2 
+        ? `${selectedClient.adresse1}, ${selectedClient.adresse2}`
+        : selectedClient.adresse1;
+      const cpVille = `${selectedClient.codePostal} ${selectedClient.ville}`.trim();
+      
+      setValue("livraisonEnseigne", selectedClient.nom);
+      setValue("livraisonAdresse", adresseComplete);
+      setValue("livraisonCpVille", cpVille);
+      
+      setValue("facturationRaisonSociale", selectedClient.nom);
+      setValue("facturationAdresse", adresseComplete);
+      setValue("facturationCpVille", cpVille);
+      
+      if (selectedClient.interloc) {
+        setValue("responsableName", selectedClient.interloc);
+      }
+      if (selectedClient.tel || selectedClient.portable) {
+        setValue("responsableTel", selectedClient.portable || selectedClient.tel);
+      }
+      if (selectedClient.mail) {
+        setValue("responsableEmail", selectedClient.mail);
+      }
+    }
+  };
 
   const updateThemeSelection = (theme: string, category: "TOUTE_ANNEE" | "SAISONNIER", field: "quantity" | "deliveryDate", value: string) => {
     setThemeSelections(prev => {
@@ -194,6 +245,30 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     )}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Sélection Client (pré-remplissage) */}
+            <Card className="border-2 border-primary/30 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Store className="w-5 h-5" />
+                  Sélection du client
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Sélectionnez un client existant pour pré-remplir les informations de livraison et facturation
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Combobox
+                  options={clientsOptions}
+                  value=""
+                  onValueChange={handleClientSelect}
+                  placeholder="Rechercher un client..."
+                  searchPlaceholder="Tapez le nom ou la ville..."
+                  emptyText="Aucun client trouvé"
+                  testId="select-client"
+                />
               </CardContent>
             </Card>
 
