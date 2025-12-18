@@ -50,7 +50,6 @@ const formSchema = z.object({
   facturationCpVille: z.string().min(1, "Le CP/Ville de facturation est requis"),
   facturationMode: z.enum(["VIREMENT", "CHEQUE", "LCR"]),
   facturationRib: z.boolean().optional(),
-  cgvAccepted: z.boolean().refine(val => val === true, { message: "Vous devez accepter les CGV" }),
   remarks: z.string().optional(),
 });
 
@@ -95,7 +94,6 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       facturationCpVille: initialData?.facturationCpVille || "",
       facturationMode: initialData?.facturationMode || "VIREMENT",
       facturationRib: initialData?.facturationRib || false,
-      cgvAccepted: initialData?.cgvAccepted || false,
       remarks: initialData?.remarks || "",
     },
   });
@@ -166,7 +164,6 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     
     onNext({
       ...data,
-      cgvAccepted: data.cgvAccepted,
       themeSelections: JSON.stringify(filteredSelections),
       clientName: data.responsableName,
       clientEmail: data.responsableEmail,
@@ -616,63 +613,36 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     />
                   </div>
                   {facturationMode === "LCR" && (
-                    <Controller
-                      name="facturationRib"
-                      control={control}
-                      render={({ field }) => (
-                        <label className="flex items-center gap-2 cursor-pointer pt-2">
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-rib"
+                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                            RIB obligatoire pour le mode LCR
+                          </p>
+                          <Controller
+                            name="facturationRib"
+                            control={control}
+                            render={({ field }) => (
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-rib"
+                                />
+                                <span className="text-sm text-amber-700 dark:text-amber-300">
+                                  Je confirme joindre un RIB à cette commande
+                                </span>
+                              </label>
+                            )}
                           />
-                          <span className="text-xs text-muted-foreground">(Joindre un RIB)</span>
-                        </label>
-                      )}
-                    />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </div>
-
-            {/* CGV Info */}
-            <Card className="border-2 bg-muted/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">EXTRAIT DES CGV</CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground space-y-3">
-                <div className="space-y-1">
-                  <p>• RÈGLEMENT À 30 JOURS DATE DE FACTURE</p>
-                  <p>• Escompte de 2% pour paiement comptant</p>
-                  <p>• Port payé aller et retour à notre charge uniquement pour les box mis en surface de vente</p>
-                  <p className="text-[10px] pt-2 italic">
-                    Nous nous réservons la propriété des marchandises fournies jusqu'au dernier jour de leur parfait paiement, conformément aux dispositions de la loi n°80335 du 12 mai 1980
-                  </p>
-                </div>
-                <div className="pt-2 border-t">
-                  <Controller
-                    name="cgvAccepted"
-                    control={control}
-                    render={({ field }) => (
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-cgv"
-                          className="mt-0.5"
-                        />
-                        <span className="text-sm font-medium text-foreground">
-                          J'ai lu et j'accepte les Conditions Générales de Vente <span className="text-destructive">*</span>
-                        </span>
-                      </label>
-                    )}
-                  />
-                  {errors.cgvAccepted && (
-                    <p className="text-xs text-destructive mt-1">{errors.cgvAccepted.message}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Remarques */}
             <Card className="border-2">

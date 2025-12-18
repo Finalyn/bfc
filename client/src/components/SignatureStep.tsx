@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -15,6 +16,7 @@ interface SignatureData {
   signatureLocation: string;
   signatureDate: string;
   clientSignedName: string;
+  cgvAccepted: boolean;
 }
 
 interface SignatureStepProps {
@@ -27,13 +29,16 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string>("");
   
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, formState: { errors }, watch } = useForm({
     defaultValues: {
       signatureLocation: "",
       signatureDate: formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd"),
       clientSignedName: "",
+      cgvAccepted: false,
     },
   });
+
+  const cgvAccepted = watch("cgvAccepted");
 
   const clearSignature = () => {
     signatureRef.current?.clear();
@@ -42,6 +47,11 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
   };
 
   const onSubmit = (formData: any) => {
+    if (!formData.cgvAccepted) {
+      setError("Vous devez accepter les Conditions Générales de Vente");
+      return;
+    }
+    
     if (signatureRef.current?.isEmpty()) {
       setError("Veuillez signer avant de continuer");
       return;
@@ -54,6 +64,7 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
         signatureLocation: formData.signatureLocation,
         signatureDate: formData.signatureDate,
         clientSignedName: formData.clientSignedName,
+        cgvAccepted: formData.cgvAccepted,
       });
     }
   };
@@ -131,7 +142,51 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
+          {/* Extrait des CGV */}
+          <Card className="border-2 bg-muted/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                EXTRAIT DES CONDITIONS GÉNÉRALES DE VENTE
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground space-y-3">
+              <div className="space-y-1">
+                <p>• RÈGLEMENT À 30 JOURS DATE DE FACTURE</p>
+                <p>• Escompte de 2% pour paiement comptant</p>
+                <p>• Port payé aller et retour à notre charge uniquement pour les box mis en surface de vente</p>
+                <p className="text-[10px] pt-2 italic">
+                  Nous nous réservons la propriété des marchandises fournies jusqu'au dernier jour de leur parfait paiement, conformément aux dispositions de la loi n°80335 du 12 mai 1980
+                </p>
+              </div>
+              <div className="pt-3 border-t">
+                <Controller
+                  name="cgvAccepted"
+                  control={control}
+                  render={({ field }) => (
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-cgv"
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm font-medium text-foreground">
+                        J'ai lu et j'accepte les Conditions Générales de Vente <span className="text-destructive">*</span>
+                      </span>
+                    </label>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Zone de signature */}
+          <Card className="border-2">
+            <CardContent className="p-6 space-y-4">
               {/* Signature */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">
