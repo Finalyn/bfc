@@ -72,7 +72,7 @@ export const orderSchema = z.object({
   facturationAdresse: z.string().min(1, "L'adresse de facturation est requise"),
   facturationCpVille: z.string().min(1, "Le CP/Ville de facturation est requis"),
   facturationMode: z.enum(["VIREMENT", "CHEQUE", "LCR"]),
-  facturationRib: z.boolean().optional(),
+  facturationRib: z.string().optional(), // Numéro de RIB pour mode LCR
   
   // Remarques
   remarks: z.string().optional(),

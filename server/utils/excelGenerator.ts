@@ -162,6 +162,10 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
 
   worksheet.getCell(`A${currentRow}`).value = "Hayon";
   worksheet.getCell(`B${currentRow}`).value = order.livraisonHayon ? "Oui" : "Non";
+  if (order.facturationRib) {
+    worksheet.getCell(`E${currentRow}`).value = "RIB";
+    worksheet.getCell(`F${currentRow}`).value = order.facturationRib;
+  }
   currentRow += 2;
 
   // Remarques

@@ -49,7 +49,7 @@ const formSchema = z.object({
   facturationAdresse: z.string().min(1, "L'adresse de facturation est requise"),
   facturationCpVille: z.string().min(1, "Le CP/Ville de facturation est requis"),
   facturationMode: z.enum(["VIREMENT", "CHEQUE", "LCR"]),
-  facturationRib: z.boolean().optional(),
+  facturationRib: z.string().optional(),
   remarks: z.string().optional(),
 });
 
@@ -93,7 +93,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       facturationAdresse: initialData?.facturationAdresse || "",
       facturationCpVille: initialData?.facturationCpVille || "",
       facturationMode: initialData?.facturationMode || "VIREMENT",
-      facturationRib: initialData?.facturationRib || false,
+      facturationRib: initialData?.facturationRib || "",
       remarks: initialData?.remarks || "",
     },
   });
@@ -613,28 +613,24 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     />
                   </div>
                   {facturationMode === "LCR" && (
-                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
-                        <div className="space-y-2">
+                    <div className="mt-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
                           <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
                             RIB obligatoire pour le mode LCR
                           </p>
-                          <Controller
-                            name="facturationRib"
-                            control={control}
-                            render={({ field }) => (
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  data-testid="checkbox-rib"
-                                />
-                                <span className="text-sm text-amber-700 dark:text-amber-300">
-                                  Je confirme joindre un RIB à cette commande
-                                </span>
-                              </label>
-                            )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="facturationRib" className="text-sm text-amber-700 dark:text-amber-300">
+                            Numéro de RIB (IBAN)
+                          </Label>
+                          <Input
+                            id="facturationRib"
+                            {...register("facturationRib")}
+                            className="h-12 text-base bg-white dark:bg-background"
+                            placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                            data-testid="input-rib"
                           />
                         </div>
                       </div>

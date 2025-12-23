@@ -217,8 +217,12 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
               <p className="text-muted-foreground">{orderData.facturationCpVille}</p>
               <Badge variant="outline" className="mt-2">
                 {orderData.facturationMode}
-                {orderData.facturationRib && " (RIB joint)"}
               </Badge>
+              {orderData.facturationRib && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  RIB: {orderData.facturationRib}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -197,6 +197,10 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.text(`CP / VILLE : ${order.facturationCpVille || ""}`, margin + boxWidth + 12, facY);
   facY += 5;
   doc.text(`MODE DE RÈGLEMENT : ${order.facturationMode || ""}`, margin + boxWidth + 12, facY);
+  if (order.facturationRib) {
+    facY += 5;
+    doc.text(`RIB : ${order.facturationRib}`, margin + boxWidth + 12, facY);
+  }
 
   // CGV à droite
   const cgvX = margin + boxWidth + 12;
