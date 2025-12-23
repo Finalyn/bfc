@@ -31,6 +31,7 @@ interface ComboboxProps {
   className?: string;
   disabled?: boolean;
   testId?: string;
+  maxDisplayed?: number;
 }
 
 export function Combobox({
@@ -43,13 +44,36 @@ export function Combobox({
   className,
   disabled = false,
   testId,
+  maxDisplayed = 50,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   const selectedOption = options.find((option) => option.value === value);
 
+  const filteredOptions = React.useMemo(() => {
+    if (!search) {
+      return options.slice(0, maxDisplayed);
+    }
+    const searchLower = search.toLowerCase();
+    return options
+      .filter((option) => option.label.toLowerCase().includes(searchLower))
+      .slice(0, maxDisplayed);
+  }, [options, search, maxDisplayed]);
+
+  const hasMore = React.useMemo(() => {
+    if (!search) {
+      return options.length > maxDisplayed;
+    }
+    const searchLower = search.toLowerCase();
+    return options.filter((option) => option.label.toLowerCase().includes(searchLower)).length > maxDisplayed;
+  }, [options, search, maxDisplayed]);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) setSearch("");
+    }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -70,16 +94,20 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} className="h-12" />
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder={searchPlaceholder} 
+            className="h-12" 
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
+              {filteredOptions.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}
-                  keywords={[option.label]}
                   onSelect={() => {
                     onValueChange(option.value === value ? "" : option.value);
                     setOpen(false);
@@ -94,6 +122,11 @@ export function Combobox({
                   <span className="truncate">{option.label}</span>
                 </CommandItem>
               ))}
+              {hasMore && (
+                <div className="px-2 py-2 text-xs text-muted-foreground text-center border-t">
+                  Tapez pour affiner la recherche...
+                </div>
+              )}
             </CommandGroup>
           </CommandList>
         </Command>

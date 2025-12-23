@@ -202,7 +202,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="orderDate" className="text-sm font-medium">
                       DATE <span className="text-destructive">*</span>
@@ -282,7 +282,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <div className="space-y-2">
                       <Input
                         {...register("responsableName")}
-                        className="h-10 text-sm"
+                        className="h-11 text-base"
                         placeholder="Nom du responsable"
                         data-testid="input-responsable-name"
                       />
@@ -293,7 +293,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <div className="space-y-2">
                       <Input
                         {...register("responsableTel")}
-                        className="h-10 text-sm"
+                        className="h-11 text-base"
                         placeholder="Tél."
                         data-testid="input-responsable-tel"
                       />
@@ -305,7 +305,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                       <Input
                         type="email"
                         {...register("responsableEmail")}
-                        className="h-10 text-sm"
+                        className="h-11 text-base"
                         placeholder="E-mail"
                         data-testid="input-responsable-email"
                       />
@@ -321,7 +321,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <div className="space-y-2">
                       <Input
                         {...register("comptaTel")}
-                        className="h-10 text-sm"
+                        className="h-11 text-base"
                         placeholder="Tél."
                         data-testid="input-compta-tel"
                       />
@@ -330,7 +330,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                       <Input
                         type="email"
                         {...register("comptaEmail")}
-                        className="h-10 text-sm"
+                        className="h-11 text-base"
                         placeholder="E-mail"
                         data-testid="input-compta-email"
                       />
@@ -366,8 +366,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                               <td className="p-1.5 text-xs font-medium">{theme}</td>
                               <td className="p-1">
                                 <Input
-                                  className="h-7 text-xs text-center px-1"
+                                  className="h-9 text-sm text-center px-1"
                                   placeholder=""
+                                  inputMode="numeric"
                                   value={getThemeValue(theme, "TOUTE_ANNEE", "quantity")}
                                   onChange={(e) => updateThemeSelection(theme, "TOUTE_ANNEE", "quantity", e.target.value)}
                                   data-testid={`input-qty-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
@@ -376,7 +377,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                               <td className="p-1">
                                 <Input
                                   type="date"
-                                  className="h-7 text-xs px-1"
+                                  className="h-9 text-sm px-1"
                                   value={getThemeValue(theme, "TOUTE_ANNEE", "deliveryDate")}
                                   onChange={(e) => updateThemeSelection(theme, "TOUTE_ANNEE", "deliveryDate", e.target.value)}
                                   data-testid={`input-date-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
@@ -407,8 +408,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                               <td className="p-1.5 text-xs font-medium">{theme}</td>
                               <td className="p-1">
                                 <Input
-                                  className="h-7 text-xs text-center px-1"
+                                  className="h-9 text-sm text-center px-1"
                                   placeholder=""
+                                  inputMode="numeric"
                                   value={getThemeValue(theme, "SAISONNIER", "quantity")}
                                   onChange={(e) => updateThemeSelection(theme, "SAISONNIER", "quantity", e.target.value)}
                                   data-testid={`input-qty-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
@@ -417,7 +419,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                               <td className="p-1">
                                 <Input
                                   type="date"
-                                  className="h-7 text-xs px-1"
+                                  className="h-9 text-sm px-1"
                                   value={getThemeValue(theme, "SAISONNIER", "deliveryDate")}
                                   onChange={(e) => updateThemeSelection(theme, "SAISONNIER", "deliveryDate", e.target.value)}
                                   data-testid={`input-date-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
@@ -448,7 +450,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">ENSEIGNE</Label>
                     <Input
                       {...register("livraisonEnseigne")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Nom de l'enseigne"
                       data-testid="input-livraison-enseigne"
                     />
@@ -460,7 +462,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">ADRESSE</Label>
                     <Input
                       {...register("livraisonAdresse")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Adresse de livraison"
                       data-testid="input-livraison-adresse"
                     />
@@ -472,7 +474,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">CP / VILLE</Label>
                     <Input
                       {...register("livraisonCpVille")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Code postal et ville"
                       data-testid="input-livraison-cpville"
                     />
@@ -484,7 +486,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">Horaires de livraison</Label>
                     <Input
                       {...register("livraisonHoraires")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Ex: 8h-12h / 14h-18h"
                       data-testid="input-livraison-horaires"
                     />
@@ -536,7 +538,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">RAISON SOCIALE</Label>
                     <Input
                       {...register("facturationRaisonSociale")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Raison sociale"
                       data-testid="input-facturation-raison"
                     />
@@ -548,7 +550,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">ADRESSE</Label>
                     <Input
                       {...register("facturationAdresse")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Adresse de facturation"
                       data-testid="input-facturation-adresse"
                     />
@@ -560,7 +562,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-xs font-medium">CP / VILLE</Label>
                     <Input
                       {...register("facturationCpVille")}
-                      className="h-10 text-sm"
+                      className="h-11 text-base"
                       placeholder="Code postal et ville"
                       data-testid="input-facturation-cpville"
                     />

@@ -63,7 +63,7 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
               <div>
                 <p className="text-xs text-muted-foreground">DATE</p>
                 <p className="text-sm font-medium" data-testid="text-order-date">
