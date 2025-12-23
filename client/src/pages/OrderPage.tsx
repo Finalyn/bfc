@@ -88,6 +88,11 @@ export default function OrderPage() {
     },
   });
 
+  // Scroll en haut à chaque changement d'étape
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentStep]);
+
   // Vérifier l'authentification au chargement
   useEffect(() => {
     // Détecter si c'est un rechargement de page (pas une navigation normale)
