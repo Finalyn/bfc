@@ -138,13 +138,14 @@ export default function OrderPage() {
     setCurrentStep("signature");
   };
 
-  const handleSignatureNext = (signatureData: { signature: string; signatureLocation: string; signatureDate: string; clientSignedName: string }) => {
+  const handleSignatureNext = (signatureData: { signature: string; signatureLocation: string; signatureDate: string; clientSignedName: string; cgvAccepted: boolean }) => {
     setOrderData({ 
       ...orderData, 
       signature: signatureData.signature,
       signatureLocation: signatureData.signatureLocation,
       signatureDate: signatureData.signatureDate,
-      clientSignedName: signatureData.clientSignedName
+      clientSignedName: signatureData.clientSignedName,
+      cgvAccepted: signatureData.cgvAccepted
     });
     setCurrentStep("review");
   };
