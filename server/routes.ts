@@ -348,6 +348,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Routes admin - Export Excel
+  app.get("/api/admin/export/:entity", async (req, res) => {
+    try {
+      const { entity } = req.params;
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      
+      let sheet;
+      let filename = "";
+      
+      switch (entity) {
+        case "clients": {
+          sheet = workbook.addWorksheet("Clients");
+          sheet.columns = [
+            { header: "Code", key: "code", width: 15 },
+            { header: "Nom", key: "nom", width: 40 },
+            { header: "Adresse", key: "adresse1", width: 40 },
+            { header: "Adresse 2", key: "adresse2", width: 30 },
+            { header: "Code Postal", key: "codePostal", width: 12 },
+            { header: "Ville", key: "ville", width: 25 },
+            { header: "Interlocuteur", key: "interloc", width: 25 },
+            { header: "Téléphone", key: "tel", width: 18 },
+            { header: "Portable", key: "portable", width: 18 },
+            { header: "Email", key: "mail", width: 35 },
+          ];
+          
+          // Récupérer clients de la BDD
+          const dbClients = await db.select().from(clients);
+          const dbClientCodes = new Set(dbClients.map(c => c.code));
+          
+          // Ajouter clients BDD
+          dbClients.forEach(client => {
+            sheet!.addRow({
+              code: client.code,
+              nom: client.nom,
+              adresse1: client.adresse1,
+              adresse2: client.adresse2,
+              codePostal: client.codePostal,
+              ville: client.ville,
+              interloc: client.interloc,
+              tel: client.tel,
+              portable: client.portable,
+              mail: client.mail,
+            });
+          });
+          
+          // Ajouter clients Excel non présents en BDD
+          data.clients.forEach(client => {
+            if (!dbClientCodes.has(client.code)) {
+              sheet!.addRow({
+                code: client.code,
+                nom: client.nom,
+                adresse1: client.adresse1,
+                adresse2: client.adresse2,
+                codePostal: client.codePostal,
+                ville: client.ville,
+                interloc: client.interloc,
+                tel: client.tel,
+                portable: client.portable,
+                mail: client.mail,
+              });
+            }
+          });
+          
+          filename = "clients_export.xlsx";
+          break;
+        }
+        
+        case "themes": {
+          sheet = workbook.addWorksheet("Thèmes");
+          sheet.columns = [
+            { header: "Thème", key: "theme", width: 40 },
+            { header: "Fournisseur", key: "fournisseur", width: 25 },
+          ];
+          
+          data.themes.forEach(theme => {
+            sheet!.addRow({
+              theme: theme.theme,
+              fournisseur: theme.fournisseur || "",
+            });
+          });
+          
+          filename = "themes_export.xlsx";
+          break;
+        }
+        
+        case "commerciaux": {
+          sheet = workbook.addWorksheet("Commerciaux");
+          sheet.columns = [
+            { header: "ID", key: "id", width: 15 },
+            { header: "Nom", key: "nom", width: 40 },
+          ];
+          
+          data.commerciaux.forEach(commercial => {
+            sheet!.addRow({
+              id: commercial.id,
+              nom: commercial.nom,
+            });
+          });
+          
+          filename = "commerciaux_export.xlsx";
+          break;
+        }
+        
+        case "fournisseurs": {
+          sheet = workbook.addWorksheet("Fournisseurs");
+          sheet.columns = [
+            { header: "Code", key: "code", width: 15 },
+            { header: "Nom", key: "nom", width: 40 },
+          ];
+          
+          data.fournisseurs.forEach(fournisseur => {
+            sheet!.addRow({
+              code: fournisseur.nomCourt,
+              nom: fournisseur.nom,
+            });
+          });
+          
+          filename = "fournisseurs_export.xlsx";
+          break;
+        }
+        
+        default:
+          return res.status(400).json({ message: "Entité invalide" });
+      }
+      
+      // Style l'en-tête
+      if (sheet) {
+        sheet.getRow(1).font = { bold: true };
+        sheet.getRow(1).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF003366" },
+        };
+        sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      }
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+      
+    } catch (error: any) {
+      console.error("Erreur lors de l'export:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
