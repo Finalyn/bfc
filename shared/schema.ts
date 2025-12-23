@@ -1,4 +1,38 @@
 import { z } from "zod";
+import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+
+// Table des clients
+export const clients = pgTable("clients", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  nom: text("nom").notNull(),
+  adresse1: text("adresse1").default(""),
+  adresse2: text("adresse2").default(""),
+  codePostal: text("code_postal").default(""),
+  ville: text("ville").default(""),
+  pays: text("pays").default(""),
+  interloc: text("interloc").default(""),
+  tel: text("tel").default(""),
+  portable: text("portable").default(""),
+  fax: text("fax").default(""),
+  mail: text("mail").default(""),
+  isFromExcel: boolean("is_from_excel").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateClientSchema = insertClientSchema.partial();
+
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = z.infer<typeof insertClientSchema>;
+export type UpdateClient = z.infer<typeof updateClientSchema>;
 
 // Liste des thèmes disponibles
 export const THEMES_TOUTE_ANNEE = [

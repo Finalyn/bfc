@@ -10,10 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store } from "lucide-react";
+import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
+import { ClientModal } from "./ClientModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface Client {
   id: string;
@@ -64,6 +66,11 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [themeSelections, setThemeSelections] = useState<ThemeSelection[]>(
     initialData?.themeSelections ? JSON.parse(initialData.themeSelections) : []
   );
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [clientModalMode, setClientModalMode] = useState<"create" | "edit">("create");
+  const [selectedClientData, setSelectedClientData] = useState<Client | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const today = formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd");
 
@@ -138,6 +145,64 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       if (selectedClient.mail) {
         setValue("responsableEmail", selectedClient.mail);
       }
+
+      // Vérifier si des informations importantes manquent
+      const missingInfo = [];
+      if (!selectedClient.mail) missingInfo.push("email");
+      if (!selectedClient.tel && !selectedClient.portable) missingInfo.push("téléphone");
+      if (!selectedClient.interloc) missingInfo.push("interlocuteur");
+      
+      if (missingInfo.length > 0) {
+        setSelectedClientData(selectedClient);
+        toast({
+          title: "Informations manquantes",
+          description: `Ce client n'a pas de ${missingInfo.join(", ")}. Vous pouvez compléter ses informations.`,
+          action: (
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => {
+                setClientModalMode("edit");
+                setClientModalOpen(true);
+              }}
+            >
+              Compléter
+            </Button>
+          ),
+        });
+      }
+    }
+  };
+
+  const handleNewClient = () => {
+    setSelectedClientData(null);
+    setClientModalMode("create");
+    setClientModalOpen(true);
+  };
+
+  const handleClientModalSuccess = (client: any) => {
+    // Pré-remplir le formulaire avec le nouveau client
+    const adresseComplete = client.adresse2 
+      ? `${client.adresse1}, ${client.adresse2}`
+      : client.adresse1 || "";
+    const cpVille = `${client.codePostal || ""} ${client.ville || ""}`.trim();
+    
+    setValue("livraisonEnseigne", client.nom);
+    setValue("livraisonAdresse", adresseComplete);
+    setValue("livraisonCpVille", cpVille);
+    
+    setValue("facturationRaisonSociale", client.nom);
+    setValue("facturationAdresse", adresseComplete);
+    setValue("facturationCpVille", cpVille);
+    
+    if (client.interloc) {
+      setValue("responsableName", client.interloc);
+    }
+    if (client.tel || client.portable) {
+      setValue("responsableTel", client.portable || client.tel);
+    }
+    if (client.mail) {
+      setValue("responsableEmail", client.mail);
     }
   };
 
@@ -255,10 +320,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   Sélection du client
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Sélectionnez un client existant pour pré-remplir les informations de livraison et facturation
+                  Sélectionnez un client existant ou créez-en un nouveau
                 </p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <Combobox
                   options={clientsOptions}
                   value=""
@@ -268,6 +333,16 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   emptyText="Aucun client trouvé"
                   testId="select-client"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleNewClient}
+                  className="w-full h-11"
+                  data-testid="button-new-client"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Nouveau client
+                </Button>
               </CardContent>
             </Card>
 
@@ -676,6 +751,15 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
           </Button>
         </div>
       </div>
+
+      {/* Modale de création/modification de client */}
+      <ClientModal
+        open={clientModalOpen}
+        onOpenChange={setClientModalOpen}
+        mode={clientModalMode}
+        clientData={selectedClientData}
+        onSuccess={handleClientModalSuccess}
+      />
     </div>
   );
 }

@@ -1,12 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { insertOrderSchema, type Order } from "@shared/schema";
+import { insertOrderSchema, type Order, clients, insertClientSchema, updateClientSchema } from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
 import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
-import { data } from "./dataLoader";
+import { data, type Client as ExcelClient } from "./dataLoader";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
@@ -158,6 +160,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(filtered);
     } else {
       res.json(data.themes);
+    }
+  });
+
+  // Routes pour la gestion des clients (création/modification)
+  
+  // Récupérer tous les clients (fusionner Excel + DB)
+  app.get("/api/clients", async (req, res) => {
+    try {
+      // Récupérer les clients de la base de données
+      const dbClients = await db.select().from(clients);
+      
+      // Créer un map des clients DB par code pour fusion rapide
+      const dbClientsByCode = new Map(dbClients.map(c => [c.code, c]));
+      
+      // Fusionner : DB a priorité sur Excel
+      const mergedClients = data.clients.map(excelClient => {
+        const dbClient = dbClientsByCode.get(excelClient.code);
+        if (dbClient) {
+          // Client mis à jour en DB - utiliser les données DB
+          return {
+            id: `db-${dbClient.id}`,
+            code: dbClient.code,
+            nom: dbClient.nom,
+            adresse1: dbClient.adresse1 || "",
+            adresse2: dbClient.adresse2 || "",
+            codePostal: dbClient.codePostal || "",
+            ville: dbClient.ville || "",
+            pays: dbClient.pays || "",
+            interloc: dbClient.interloc || "",
+            tel: dbClient.tel || "",
+            portable: dbClient.portable || "",
+            fax: dbClient.fax || "",
+            mail: dbClient.mail || "",
+            displayName: `${dbClient.nom} - ${dbClient.ville || ""}`.trim(),
+            isFromDb: true,
+          };
+        }
+        return { ...excelClient, isFromDb: false };
+      });
+      
+      // Ajouter les clients DB qui ne sont pas dans Excel (nouveaux clients)
+      const excelCodes = new Set(data.clients.map(c => c.code));
+      const newDbClients = dbClients
+        .filter(c => !excelCodes.has(c.code))
+        .map(c => ({
+          id: `db-${c.id}`,
+          code: c.code,
+          nom: c.nom,
+          adresse1: c.adresse1 || "",
+          adresse2: c.adresse2 || "",
+          codePostal: c.codePostal || "",
+          ville: c.ville || "",
+          pays: c.pays || "",
+          interloc: c.interloc || "",
+          tel: c.tel || "",
+          portable: c.portable || "",
+          fax: c.fax || "",
+          mail: c.mail || "",
+          displayName: `${c.nom} - ${c.ville || ""}`.trim(),
+          isFromDb: true,
+        }));
+      
+      res.json([...mergedClients, ...newDbClients]);
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des clients:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Créer un nouveau client
+  app.post("/api/clients", async (req, res) => {
+    try {
+      const validatedData = insertClientSchema.parse(req.body);
+      
+      // Vérifier si le code existe déjà
+      const existing = await db.select().from(clients).where(eq(clients.code, validatedData.code));
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "Un client avec ce code existe déjà" });
+      }
+      
+      const [newClient] = await db.insert(clients).values(validatedData).returning();
+      
+      res.json({
+        id: `db-${newClient.id}`,
+        code: newClient.code,
+        nom: newClient.nom,
+        adresse1: newClient.adresse1 || "",
+        adresse2: newClient.adresse2 || "",
+        codePostal: newClient.codePostal || "",
+        ville: newClient.ville || "",
+        pays: newClient.pays || "",
+        interloc: newClient.interloc || "",
+        tel: newClient.tel || "",
+        portable: newClient.portable || "",
+        fax: newClient.fax || "",
+        mail: newClient.mail || "",
+        displayName: `${newClient.nom} - ${newClient.ville || ""}`.trim(),
+        isFromDb: true,
+      });
+    } catch (error: any) {
+      console.error("Erreur lors de la création du client:", error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Mettre à jour un client (par code)
+  app.patch("/api/clients/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const validatedData = updateClientSchema.parse(req.body);
+      
+      // Chercher si le client existe déjà en DB
+      const existing = await db.select().from(clients).where(eq(clients.code, code));
+      
+      if (existing.length > 0) {
+        // Mettre à jour le client existant
+        const [updated] = await db
+          .update(clients)
+          .set({ ...validatedData, updatedAt: new Date() })
+          .where(eq(clients.code, code))
+          .returning();
+        
+        res.json({
+          id: `db-${updated.id}`,
+          code: updated.code,
+          nom: updated.nom,
+          adresse1: updated.adresse1 || "",
+          adresse2: updated.adresse2 || "",
+          codePostal: updated.codePostal || "",
+          ville: updated.ville || "",
+          pays: updated.pays || "",
+          interloc: updated.interloc || "",
+          tel: updated.tel || "",
+          portable: updated.portable || "",
+          fax: updated.fax || "",
+          mail: updated.mail || "",
+          displayName: `${updated.nom} - ${updated.ville || ""}`.trim(),
+          isFromDb: true,
+        });
+      } else {
+        // Créer un nouveau client à partir des données Excel + modifications
+        const excelClient = data.clients.find(c => c.code === code);
+        if (!excelClient) {
+          return res.status(404).json({ message: "Client non trouvé" });
+        }
+        
+        const newClientData = {
+          code: excelClient.code,
+          nom: validatedData.nom || excelClient.nom,
+          adresse1: validatedData.adresse1 ?? excelClient.adresse1,
+          adresse2: validatedData.adresse2 ?? excelClient.adresse2,
+          codePostal: validatedData.codePostal ?? excelClient.codePostal,
+          ville: validatedData.ville ?? excelClient.ville,
+          pays: validatedData.pays ?? excelClient.pays,
+          interloc: validatedData.interloc ?? excelClient.interloc,
+          tel: validatedData.tel ?? excelClient.tel,
+          portable: validatedData.portable ?? excelClient.portable,
+          fax: validatedData.fax ?? excelClient.fax,
+          mail: validatedData.mail ?? excelClient.mail,
+          isFromExcel: true,
+        };
+        
+        const [newClient] = await db.insert(clients).values(newClientData).returning();
+        
+        res.json({
+          id: `db-${newClient.id}`,
+          code: newClient.code,
+          nom: newClient.nom,
+          adresse1: newClient.adresse1 || "",
+          adresse2: newClient.adresse2 || "",
+          codePostal: newClient.codePostal || "",
+          ville: newClient.ville || "",
+          pays: newClient.pays || "",
+          interloc: newClient.interloc || "",
+          tel: newClient.tel || "",
+          portable: newClient.portable || "",
+          fax: newClient.fax || "",
+          mail: newClient.mail || "",
+          displayName: `${newClient.nom} - ${newClient.ville || ""}`.trim(),
+          isFromDb: true,
+        });
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la mise à jour du client:", error);
+      res.status(400).json({ message: error.message });
     }
   });
 
