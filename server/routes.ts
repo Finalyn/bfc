@@ -1,14 +1,20 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { insertOrderSchema, type Order, clients, insertClientSchema, updateClientSchema } from "@shared/schema";
+import { 
+  insertOrderSchema, type Order, 
+  clients, insertClientSchema, updateClientSchema,
+  commerciaux, insertCommercialSchema,
+  fournisseurs, insertFournisseurSchema,
+  themes, insertThemeSchema
+} from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
 import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
-import { data, type Client as ExcelClient } from "./dataLoader";
+import { data, loadExcelData, type Client as ExcelClient } from "./dataLoader";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, ilike, or, sql, count, asc, desc } from "drizzle-orm";
 
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
@@ -493,6 +499,386 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error: any) {
       console.error("Erreur lors de l'export:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ======= ADMIN CRUD ROUTES WITH PAGINATION =======
+
+  // Helper function for pagination
+  const getPaginationParams = (req: any) => {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 50));
+    const search = (req.query.search as string) || "";
+    const sortField = (req.query.sortField as string) || "id";
+    const sortDir = (req.query.sortDir as string) === "desc" ? "desc" : "asc";
+    return { page, pageSize, search, sortField, sortDir, offset: (page - 1) * pageSize };
+  };
+
+  // Import Excel data to PostgreSQL
+  app.post("/api/admin/import-excel", async (req, res) => {
+    try {
+      const excelData = loadExcelData();
+      let imported = { commerciaux: 0, fournisseurs: 0, themes: 0 };
+      
+      // Import commerciaux
+      const existingCommerciaux = await db.select().from(commerciaux);
+      if (existingCommerciaux.length === 0) {
+        for (const c of excelData.commerciaux) {
+          await db.insert(commerciaux).values({ nom: c.displayName || c.nom });
+        }
+        imported.commerciaux = excelData.commerciaux.length;
+      }
+      
+      // Import fournisseurs
+      const existingFournisseurs = await db.select().from(fournisseurs);
+      if (existingFournisseurs.length === 0) {
+        for (const f of excelData.fournisseurs) {
+          await db.insert(fournisseurs).values({ nom: f.nom, nomCourt: f.nomCourt });
+        }
+        imported.fournisseurs = excelData.fournisseurs.length;
+      }
+      
+      // Import themes
+      const existingThemes = await db.select().from(themes);
+      if (existingThemes.length === 0) {
+        for (const t of excelData.themes) {
+          await db.insert(themes).values({ theme: t.theme, fournisseur: t.fournisseur });
+        }
+        imported.themes = excelData.themes.length;
+      }
+      
+      res.json({ success: true, imported });
+    } catch (error: any) {
+      console.error("Erreur import Excel:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== CLIENTS PAGINATED =====
+  app.get("/api/admin/clients", async (req, res) => {
+    try {
+      const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
+      
+      // Get DB clients
+      const dbClients = await db.select().from(clients);
+      const dbClientsByCode = new Map(dbClients.map(c => [c.code, c]));
+      
+      // Merge with Excel clients
+      let allClients = data.clients.map(excelClient => {
+        const dbClient = dbClientsByCode.get(excelClient.code);
+        if (dbClient) {
+          return {
+            id: dbClient.id,
+            code: dbClient.code,
+            nom: dbClient.nom,
+            adresse1: dbClient.adresse1 || "",
+            codePostal: dbClient.codePostal || "",
+            ville: dbClient.ville || "",
+            interloc: dbClient.interloc || "",
+            tel: dbClient.tel || "",
+            portable: dbClient.portable || "",
+            mail: dbClient.mail || "",
+          };
+        }
+        return {
+          id: 0,
+          code: excelClient.code,
+          nom: excelClient.nom,
+          adresse1: excelClient.adresse1,
+          codePostal: excelClient.codePostal,
+          ville: excelClient.ville,
+          interloc: excelClient.interloc,
+          tel: excelClient.tel,
+          portable: excelClient.portable,
+          mail: excelClient.mail,
+        };
+      });
+      
+      // Add new DB clients not in Excel
+      const excelCodes = new Set(data.clients.map(c => c.code));
+      const newDbClients = dbClients
+        .filter(c => !excelCodes.has(c.code))
+        .map(c => ({
+          id: c.id,
+          code: c.code,
+          nom: c.nom,
+          adresse1: c.adresse1 || "",
+          codePostal: c.codePostal || "",
+          ville: c.ville || "",
+          interloc: c.interloc || "",
+          tel: c.tel || "",
+          portable: c.portable || "",
+          mail: c.mail || "",
+        }));
+      
+      allClients = [...allClients, ...newDbClients];
+      
+      // Filter by search
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allClients = allClients.filter(c => 
+          c.code.toLowerCase().includes(searchLower) ||
+          c.nom.toLowerCase().includes(searchLower) ||
+          c.ville.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Sort
+      allClients.sort((a, b) => {
+        const aVal = String((a as any)[sortField] || "").toLowerCase();
+        const bVal = String((b as any)[sortField] || "").toLowerCase();
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      
+      const total = allClients.length;
+      const paginatedClients = allClients.slice(offset, offset + pageSize);
+      
+      res.json({
+        data: paginatedClients,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+      });
+    } catch (error: any) {
+      console.error("Erreur clients:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete client
+  app.delete("/api/admin/clients/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id) || id === 0) {
+        return res.status(400).json({ message: "Impossible de supprimer un client Excel" });
+      }
+      await db.delete(clients).where(eq(clients.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== COMMERCIAUX CRUD =====
+  app.get("/api/admin/commerciaux", async (req, res) => {
+    try {
+      const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
+      
+      let allCommerciaux = await db.select().from(commerciaux);
+      
+      // Fallback to Excel if empty
+      if (allCommerciaux.length === 0) {
+        allCommerciaux = data.commerciaux.map((c, i) => ({
+          id: i + 1,
+          nom: c.displayName || c.nom
+        }));
+      }
+      
+      // Filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allCommerciaux = allCommerciaux.filter(c => c.nom.toLowerCase().includes(searchLower));
+      }
+      
+      // Sort
+      allCommerciaux.sort((a, b) => {
+        const aVal = String((a as any)[sortField] || "").toLowerCase();
+        const bVal = String((b as any)[sortField] || "").toLowerCase();
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      
+      const total = allCommerciaux.length;
+      const paginated = allCommerciaux.slice(offset, offset + pageSize);
+      
+      res.json({
+        data: paginated,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/commerciaux", async (req, res) => {
+    try {
+      const validated = insertCommercialSchema.parse(req.body);
+      const [created] = await db.insert(commerciaux).values(validated).returning();
+      res.json(created);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/commerciaux/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertCommercialSchema.partial().parse(req.body);
+      const [updated] = await db.update(commerciaux).set(validated).where(eq(commerciaux.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Non trouvé" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/commerciaux/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(commerciaux).where(eq(commerciaux.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== FOURNISSEURS CRUD =====
+  app.get("/api/admin/fournisseurs", async (req, res) => {
+    try {
+      const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
+      
+      let allFournisseurs = await db.select().from(fournisseurs);
+      
+      // Fallback to Excel if empty
+      if (allFournisseurs.length === 0) {
+        allFournisseurs = data.fournisseurs.map((f, i) => ({
+          id: i + 1,
+          nom: f.nom,
+          nomCourt: f.nomCourt
+        }));
+      }
+      
+      // Filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allFournisseurs = allFournisseurs.filter(f => 
+          f.nom.toLowerCase().includes(searchLower) ||
+          f.nomCourt.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Sort
+      allFournisseurs.sort((a, b) => {
+        const aVal = String((a as any)[sortField] || "").toLowerCase();
+        const bVal = String((b as any)[sortField] || "").toLowerCase();
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      
+      const total = allFournisseurs.length;
+      const paginated = allFournisseurs.slice(offset, offset + pageSize);
+      
+      res.json({
+        data: paginated,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/fournisseurs", async (req, res) => {
+    try {
+      const validated = insertFournisseurSchema.parse(req.body);
+      const [created] = await db.insert(fournisseurs).values(validated).returning();
+      res.json(created);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/fournisseurs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertFournisseurSchema.partial().parse(req.body);
+      const [updated] = await db.update(fournisseurs).set(validated).where(eq(fournisseurs.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Non trouvé" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/fournisseurs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(fournisseurs).where(eq(fournisseurs.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== THEMES CRUD =====
+  app.get("/api/admin/themes", async (req, res) => {
+    try {
+      const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
+      
+      let allThemes = await db.select().from(themes);
+      
+      // Fallback to Excel if empty
+      if (allThemes.length === 0) {
+        allThemes = data.themes.map((t, i) => ({
+          id: i + 1,
+          theme: t.theme,
+          fournisseur: t.fournisseur
+        }));
+      }
+      
+      // Filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allThemes = allThemes.filter(t => 
+          t.theme.toLowerCase().includes(searchLower) ||
+          t.fournisseur.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Sort
+      const sortKey = sortField === "theme" || sortField === "fournisseur" ? sortField : "theme";
+      allThemes.sort((a, b) => {
+        const aVal = String((a as any)[sortKey] || "").toLowerCase();
+        const bVal = String((b as any)[sortKey] || "").toLowerCase();
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      
+      const total = allThemes.length;
+      const paginated = allThemes.slice(offset, offset + pageSize);
+      
+      res.json({
+        data: paginated,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/themes", async (req, res) => {
+    try {
+      const validated = insertThemeSchema.parse(req.body);
+      const [created] = await db.insert(themes).values(validated).returning();
+      res.json(created);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/themes/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertThemeSchema.partial().parse(req.body);
+      const [updated] = await db.update(themes).set(validated).where(eq(themes.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Non trouvé" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/themes/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(themes).where(eq(themes.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
