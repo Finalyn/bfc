@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -101,15 +101,17 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const { data: commerciaux = [] } = useQuery<any[]>({ queryKey: ["/api/data/commerciaux"] });
   const { data: clients = [] } = useQuery<Client[]>({ queryKey: ["/api/data/clients"] });
 
-  const commerciauxOptions: ComboboxOption[] = commerciaux.map(c => ({
-    value: c.displayName,
-    label: c.displayName,
-  }));
+  const commerciauxOptions = useMemo<ComboboxOption[]>(() => 
+    commerciaux.map(c => ({
+      value: c.displayName,
+      label: c.displayName,
+    })), [commerciaux]);
 
-  const clientsOptions: ComboboxOption[] = clients.map(c => ({
-    value: c.id,
-    label: c.displayName,
-  }));
+  const clientsOptions = useMemo<ComboboxOption[]>(() => 
+    clients.map(c => ({
+      value: c.id,
+      label: c.displayName,
+    })), [clients]);
 
   const handleClientSelect = (clientId: string) => {
     const selectedClient = clients.find(c => c.id === clientId);
