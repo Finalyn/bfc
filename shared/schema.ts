@@ -148,3 +148,44 @@ export const emailConfigSchema = z.object({
 });
 
 export type EmailConfig = z.infer<typeof emailConfigSchema>;
+
+// Table des commerciaux
+export const commerciaux = pgTable("commerciaux", {
+  id: serial("id").primaryKey(),
+  nom: text("nom").notNull(),
+});
+
+export const insertCommercialSchema = createInsertSchema(commerciaux).omit({
+  id: true,
+});
+
+export type Commercial = typeof commerciaux.$inferSelect;
+export type InsertCommercial = z.infer<typeof insertCommercialSchema>;
+
+// Table des fournisseurs
+export const fournisseurs = pgTable("fournisseurs", {
+  id: serial("id").primaryKey(),
+  nom: text("nom").notNull(),
+  nomCourt: text("nom_court").notNull(),
+});
+
+export const insertFournisseurSchema = createInsertSchema(fournisseurs).omit({
+  id: true,
+});
+
+export type Fournisseur = typeof fournisseurs.$inferSelect;
+export type InsertFournisseur = z.infer<typeof insertFournisseurSchema>;
+
+// Table des thèmes
+export const themes = pgTable("themes", {
+  id: serial("id").primaryKey(),
+  theme: text("theme").notNull(),
+  fournisseur: text("fournisseur").notNull(),
+});
+
+export const insertThemeSchema = createInsertSchema(themes).omit({
+  id: true,
+});
+
+export type Theme = typeof themes.$inferSelect;
+export type InsertTheme = z.infer<typeof insertThemeSchema>;
