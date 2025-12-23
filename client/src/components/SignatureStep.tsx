@@ -22,9 +22,11 @@ interface SignatureData {
 interface SignatureStepProps {
   onNext: (data: SignatureData) => void;
   onBack: () => void;
+  stepNumber?: number;
+  totalSteps?: number;
 }
 
-export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
+export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }: SignatureStepProps) {
   const signatureRef = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string>("");
@@ -84,7 +86,7 @@ export function SignatureStep({ onNext, onBack }: SignatureStepProps) {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Signature Client</h1>
-              <p className="text-sm text-muted-foreground">Étape 2/4 - Signature</p>
+              <p className="text-sm text-muted-foreground">Étape {stepNumber}/{totalSteps} - Signature</p>
             </div>
           </div>
         </div>

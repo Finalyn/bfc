@@ -9,7 +9,7 @@ import { SuccessStep } from "@/components/SuccessStep";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-type Step = "form" | "signature" | "review" | "success";
+type Step = "form" | "preview" | "signature" | "review" | "success";
 
 interface GeneratedOrder {
   orderCode: string;
@@ -131,6 +131,10 @@ export default function OrderPage() {
 
   const handleFormNext = (data: Partial<InsertOrder>) => {
     setOrderData({ ...orderData, ...data });
+    setCurrentStep("preview");
+  };
+
+  const handlePreviewNext = () => {
     setCurrentStep("signature");
   };
 
@@ -168,18 +172,33 @@ export default function OrderPage() {
       {currentStep === "form" && (
         <OrderForm onNext={handleFormNext} initialData={orderData} />
       )}
+      {currentStep === "preview" && orderData.salesRepName && (
+        <ReviewStep
+          orderData={orderData}
+          onBack={() => setCurrentStep("form")}
+          onNext={handlePreviewNext}
+          isPreview={true}
+          stepNumber={2}
+          totalSteps={5}
+        />
+      )}
       {currentStep === "signature" && (
         <SignatureStep
           onNext={handleSignatureNext}
-          onBack={() => setCurrentStep("form")}
+          onBack={() => setCurrentStep("preview")}
+          stepNumber={3}
+          totalSteps={5}
         />
       )}
-      {currentStep === "review" && orderData.clientName && (
+      {currentStep === "review" && orderData.signature && (
         <ReviewStep
-          orderData={orderData as InsertOrder}
+          orderData={orderData}
           onBack={() => setCurrentStep("signature")}
           onGenerate={handleGenerate}
           isGenerating={generateOrderMutation.isPending}
+          isPreview={false}
+          stepNumber={4}
+          totalSteps={5}
         />
       )}
       {currentStep === "success" && generatedOrder && (

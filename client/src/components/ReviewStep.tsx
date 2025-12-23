@@ -27,11 +27,24 @@ import { fr } from "date-fns/locale";
 interface ReviewStepProps {
   orderData: any;
   onBack: () => void;
-  onGenerate: () => void;
-  isGenerating: boolean;
+  onGenerate?: () => void;
+  onNext?: () => void;
+  isGenerating?: boolean;
+  isPreview?: boolean;
+  stepNumber?: number;
+  totalSteps?: number;
 }
 
-export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: ReviewStepProps) {
+export function ReviewStep({ 
+  orderData, 
+  onBack, 
+  onGenerate, 
+  onNext,
+  isGenerating = false, 
+  isPreview = false,
+  stepNumber = 3,
+  totalSteps = 4
+}: ReviewStepProps) {
   const themeSelections: ThemeSelection[] = orderData.themeSelections 
     ? JSON.parse(orderData.themeSelections) 
     : [];
@@ -48,8 +61,12 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
               <FileCheck className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Révision</h1>
-              <p className="text-sm text-muted-foreground">Étape 3/4 - Vérification</p>
+              <h1 className="text-2xl font-bold text-foreground">
+                {isPreview ? "Vérification" : "Confirmation finale"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Étape {stepNumber}/{totalSteps} - {isPreview ? "Vérifiez les informations" : "Prêt à générer"}
+              </p>
             </div>
           </div>
         </div>
@@ -244,46 +261,60 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
           </Card>
         )}
 
-        {/* Signature */}
-        <Card className="border-2 mb-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-              Signature client
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">Nom</p>
-                <p className="font-medium">{orderData.clientSignedName}</p>
+        {/* Signature - uniquement si pas en preview */}
+        {!isPreview && orderData.signature && (
+          <Card className="border-2 mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+                Signature client
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Nom</p>
+                  <p className="font-medium">{orderData.clientSignedName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Lieu</p>
+                  <p className="font-medium">{orderData.signatureLocation}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">
+                    {format(new Date(orderData.signatureDate), "d MMM yyyy", { locale: fr })}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Lieu</p>
-                <p className="font-medium">{orderData.signatureLocation}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Date</p>
-                <p className="font-medium">
-                  {format(new Date(orderData.signatureDate), "d MMM yyyy", { locale: fr })}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <Badge variant="secondary">Signature capturée</Badge>
-              {orderData.cgvAccepted && (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  CGV acceptées
-                </Badge>
+              {orderData.signature && (
+                <div className="mt-3 p-2 bg-muted/30 rounded-md">
+                  <img 
+                    src={orderData.signature} 
+                    alt="Signature du client" 
+                    className="max-h-20 mx-auto"
+                  />
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex gap-2 pt-1">
+                <Badge variant="secondary">Signature capturée</Badge>
+                {orderData.cgvAccepted && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    CGV acceptées
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-2 bg-muted/30">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground text-center">
-              En cliquant sur "Générer", un bon de commande PDF et un fichier Excel seront créés automatiquement.
+              {isPreview 
+                ? "Vérifiez les informations ci-dessus avant de passer à la signature."
+                : "En cliquant sur \"Générer\", un bon de commande PDF et un fichier Excel seront créés automatiquement."
+              }
             </p>
           </CardContent>
         </Card>
@@ -293,7 +324,7 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
         <div className="max-w-2xl mx-auto flex gap-3">
           <Button
             onClick={onBack}
-            data-testid="button-back-to-signature"
+            data-testid="button-back"
             variant="outline"
             className="h-14 px-6"
             disabled={isGenerating}
@@ -301,25 +332,37 @@ export function ReviewStep({ orderData, onBack, onGenerate, isGenerating }: Revi
             <ArrowLeft className="w-5 h-5 mr-2" />
             Retour
           </Button>
-          <Button
-            onClick={onGenerate}
-            data-testid="button-generate-order"
-            className="flex-1 h-14 text-base font-medium"
-            size="lg"
-            disabled={isGenerating}
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Génération en cours...
-              </>
-            ) : (
-              <>
-                Générer la commande
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </>
-            )}
-          </Button>
+          {isPreview ? (
+            <Button
+              onClick={onNext}
+              data-testid="button-continue-to-signature"
+              className="flex-1 h-14 text-base font-medium"
+              size="lg"
+            >
+              Continuer vers la signature
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={onGenerate}
+              data-testid="button-generate-order"
+              className="flex-1 h-14 text-base font-medium"
+              size="lg"
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Génération en cours...
+                </>
+              ) : (
+                <>
+                  Générer la commande
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
