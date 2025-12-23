@@ -644,6 +644,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create client
+  app.post("/api/admin/clients", async (req, res) => {
+    try {
+      const validated = insertClientSchema.parse(req.body);
+      const [created] = await db.insert(clients).values(validated).returning();
+      res.json(created);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Update client
+  app.patch("/api/admin/clients/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (id === 0) {
+        // For Excel-sourced clients, create a new DB entry with their data
+        const validated = insertClientSchema.parse(req.body);
+        const [created] = await db.insert(clients).values(validated).returning();
+        return res.json(created);
+      }
+      const validated = updateClientSchema.parse(req.body);
+      const [updated] = await db.update(clients).set(validated).where(eq(clients.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Non trouvé" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Delete client
   app.delete("/api/admin/clients/:id", async (req, res) => {
     try {
