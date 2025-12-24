@@ -359,7 +359,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { entity } = req.params;
       const ExcelJS = await import("exceljs");
-      const workbook = new ExcelJS.Workbook();
+      const Workbook = ExcelJS.default?.Workbook || ExcelJS.Workbook;
+      const workbook = new Workbook();
       
       let sheet;
       let filename = "";
