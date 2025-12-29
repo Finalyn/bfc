@@ -181,6 +181,7 @@ export default function AdminDashboard() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [calendarEventType, setCalendarEventType] = useState<"all" | "order" | "delivery">("all");
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -1083,12 +1084,13 @@ export default function AdminDashboard() {
                       const [year, month] = calendarMonth.split('-').map(Number);
                       const newDate = new Date(year, month - 2);
                       setCalendarMonth(`${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`);
+                      setSelectedCalendarDate(null);
                     }}
                     data-testid="button-prev-month"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <h2 className="text-lg font-semibold min-w-[140px] text-center" data-testid="calendar-month-display">
+                  <h2 className="text-lg font-semibold min-w-[140px] text-center capitalize" data-testid="calendar-month-display">
                     {new Date(calendarMonth + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                   </h2>
                   <Button
@@ -1099,6 +1101,7 @@ export default function AdminDashboard() {
                       const [year, month] = calendarMonth.split('-').map(Number);
                       const newDate = new Date(year, month);
                       setCalendarMonth(`${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`);
+                      setSelectedCalendarDate(null);
                     }}
                     data-testid="button-next-month"
                   >
@@ -1117,40 +1120,118 @@ export default function AdminDashboard() {
                 </Select>
               </div>
 
-              <Card>
-                <CardContent className="p-0">
-                  {calendarLoading ? (
-                    <div className="p-8 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                    </div>
-                  ) : calendarEvents.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucun événement ce mois</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {(() => {
-                        const groupedByDate: { [key: string]: CalendarEvent[] } = {};
-                        calendarEvents.forEach(event => {
-                          if (!groupedByDate[event.date]) {
-                            groupedByDate[event.date] = [];
+              {calendarLoading ? (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                </div>
+              ) : (
+                <>
+                  <Card>
+                    <CardContent className="p-2 sm:p-4">
+                      <div className="grid grid-cols-7 gap-1 mb-2">
+                        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
+                          <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {(() => {
+                          const [year, month] = calendarMonth.split('-').map(Number);
+                          const firstDay = new Date(year, month - 1, 1);
+                          const lastDay = new Date(year, month, 0);
+                          const daysInMonth = lastDay.getDate();
+                          let startDayOfWeek = firstDay.getDay();
+                          startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+                          
+                          const eventsByDate: { [key: string]: CalendarEvent[] } = {};
+                          calendarEvents.forEach(event => {
+                            if (!eventsByDate[event.date]) eventsByDate[event.date] = [];
+                            eventsByDate[event.date].push(event);
+                          });
+                          
+                          const cells = [];
+                          for (let i = 0; i < startDayOfWeek; i++) {
+                            cells.push(<div key={`empty-${i}`} className="aspect-square" />);
                           }
-                          groupedByDate[event.date].push(event);
-                        });
-                        
-                        return Object.entries(groupedByDate).map(([date, events]) => (
-                          <div key={date} className="p-3 sm:p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="bg-primary text-primary-foreground rounded-lg px-3 py-1 text-sm font-medium">
-                                {new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                              </div>
-                              <Badge variant="secondary" className="text-xs">
-                                {events.length} événement{events.length > 1 ? 's' : ''}
-                              </Badge>
-                            </div>
+                          
+                          const today = new Date().toISOString().split('T')[0];
+                          
+                          for (let day = 1; day <= daysInMonth; day++) {
+                            const dateStr = `${calendarMonth}-${String(day).padStart(2, '0')}`;
+                            const dayEvents = eventsByDate[dateStr] || [];
+                            const orderCount = dayEvents.filter(e => e.type === 'order').length;
+                            const deliveryCount = dayEvents.filter(e => e.type === 'delivery').length;
+                            const isToday = dateStr === today;
+                            const isSelected = dateStr === selectedCalendarDate;
+                            
+                            cells.push(
+                              <button
+                                key={day}
+                                onClick={() => setSelectedCalendarDate(dateStr === selectedCalendarDate ? null : dateStr)}
+                                className={`aspect-square p-1 rounded-lg border text-center flex flex-col items-center justify-start transition-colors ${
+                                  isSelected 
+                                    ? 'bg-primary text-primary-foreground border-primary' 
+                                    : isToday 
+                                      ? 'bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700' 
+                                      : dayEvents.length > 0 
+                                        ? 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700' 
+                                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                                data-testid={`calendar-day-${dateStr}`}
+                              >
+                                <span className={`text-sm font-medium ${isSelected ? '' : isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                                  {day}
+                                </span>
+                                {dayEvents.length > 0 && (
+                                  <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
+                                    {orderCount > 0 && (
+                                      <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-blue-200' : 'bg-blue-500'}`} title={`${orderCount} commande(s)`} />
+                                    )}
+                                    {deliveryCount > 0 && (
+                                      <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-green-200' : 'bg-green-500'}`} title={`${deliveryCount} livraison(s)`} />
+                                    )}
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          }
+                          
+                          return cells;
+                        })()}
+                      </div>
+                      <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          Commandes
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          Livraisons
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedCalendarDate && (
+                    <Card>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold">
+                            {new Date(selectedCalendarDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          </h3>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedCalendarDate(null)}>
+                            <ChevronUp className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        {(() => {
+                          const dayEvents = calendarEvents.filter(e => e.date === selectedCalendarDate);
+                          if (dayEvents.length === 0) {
+                            return <p className="text-sm text-muted-foreground">Aucun événement ce jour</p>;
+                          }
+                          return (
                             <div className="space-y-2">
-                              {events.map(event => (
+                              {dayEvents.map(event => (
                                 <div 
                                   key={event.id} 
                                   className={`flex items-start gap-3 p-2 sm:p-3 rounded-lg border ${
@@ -1158,7 +1239,7 @@ export default function AdminDashboard() {
                                   }`}
                                   data-testid={`event-${event.id}`}
                                 >
-                                  <div className={`p-2 rounded-full ${event.type === 'order' ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-200' : 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-200'}`}>
+                                  <div className={`p-2 rounded-full shrink-0 ${event.type === 'order' ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-200' : 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-200'}`}>
                                     {event.type === 'order' ? <ClipboardList className="w-4 h-4" /> : <Truck className="w-4 h-4" />}
                                   </div>
                                   <div className="flex-1 min-w-0">
@@ -1192,13 +1273,13 @@ export default function AdminDashboard() {
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
                   )}
-                </CardContent>
-              </Card>
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>
