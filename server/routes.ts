@@ -625,6 +625,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
         
+        case "orders": {
+          sheet = workbook.addWorksheet("Commandes");
+          sheet.columns = [
+            { header: "N° Commande", key: "orderNumber", width: 18 },
+            { header: "Date", key: "orderDate", width: 12 },
+            { header: "Commercial", key: "salesRepName", width: 25 },
+            { header: "Client", key: "clientName", width: 35 },
+            { header: "Responsable", key: "responsableName", width: 25 },
+            { header: "Tél Responsable", key: "responsableTel", width: 15 },
+            { header: "Email Responsable", key: "responsableEmail", width: 30 },
+            { header: "Thèmes", key: "themes", width: 50 },
+            { header: "Livraison Enseigne", key: "livraisonEnseigne", width: 30 },
+            { header: "Livraison Adresse", key: "livraisonAdresse", width: 35 },
+            { header: "Livraison CP/Ville", key: "livraisonCpVille", width: 25 },
+            { header: "Facturation Raison Sociale", key: "facturationRaisonSociale", width: 35 },
+            { header: "Facturation Adresse", key: "facturationAdresse", width: 35 },
+            { header: "Facturation CP/Ville", key: "facturationCpVille", width: 25 },
+            { header: "Mode Paiement", key: "facturationMode", width: 15 },
+            { header: "Statut", key: "status", width: 15 },
+            { header: "Créée le", key: "createdAt", width: 18 },
+          ];
+          
+          const allOrders = await db.select().from(orders).orderBy(orders.createdAt);
+          
+          allOrders.forEach(order => {
+            const themesList = order.themeSelections
+              ? (order.themeSelections as any[])
+                  .map(t => `${t.theme} (${t.category}) x${t.quantity}`)
+                  .join(", ")
+              : "";
+            
+            sheet!.addRow({
+              orderNumber: order.orderNumber,
+              orderDate: order.orderDate,
+              salesRepName: order.salesRepName,
+              clientName: order.clientName,
+              responsableName: order.responsableName,
+              responsableTel: order.responsableTel,
+              responsableEmail: order.responsableEmail,
+              themes: themesList,
+              livraisonEnseigne: order.livraisonEnseigne,
+              livraisonAdresse: order.livraisonAdresse,
+              livraisonCpVille: order.livraisonCpVille,
+              facturationRaisonSociale: order.facturationRaisonSociale,
+              facturationAdresse: order.facturationAdresse,
+              facturationCpVille: order.facturationCpVille,
+              facturationMode: order.facturationMode,
+              status: order.status,
+              createdAt: order.createdAt ? new Date(order.createdAt).toLocaleDateString("fr-FR") : "",
+            });
+          });
+          
+          filename = "commandes_export.xlsx";
+          break;
+        }
+        
         default:
           return res.status(400).json({ message: "Entité invalide" });
       }
