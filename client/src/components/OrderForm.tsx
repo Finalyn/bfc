@@ -416,21 +416,13 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label className="text-sm font-medium">
                       COMMERCIAL <span className="text-destructive">*</span>
                     </Label>
-                    <Controller
-                      name="salesRepName"
-                      control={control}
-                      render={({ field }) => (
-                        <Combobox
-                          options={commerciauxOptions}
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          placeholder="Sélectionner"
-                          searchPlaceholder="Rechercher..."
-                          emptyText="Aucun commercial trouvé"
-                          testId="select-sales-rep"
-                        />
-                      )}
+                    <Input
+                      value={connectedUserName}
+                      disabled
+                      className="h-12 text-base bg-muted"
+                      data-testid="input-sales-rep"
                     />
+                    <input type="hidden" {...register("salesRepName")} />
                     {errors.salesRepName && (
                       <p className="text-xs text-destructive">{errors.salesRepName.message}</p>
                     )}
