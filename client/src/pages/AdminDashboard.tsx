@@ -463,7 +463,7 @@ export default function AdminDashboard() {
       case "themes":
         return { theme: "", fournisseur: "" };
       case "commerciaux":
-        return { prenom: "", nom: "", role: "commercial", actif: true };
+        return { prenom: "", nom: "", role: "commercial", actif: true, motDePasse: "bfc26" };
       case "fournisseurs":
         return { nom: "", nomCourt: "" };
       default:
@@ -636,6 +636,17 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+              <Label htmlFor="motDePasse">Mot de passe</Label>
+              <Input 
+                id="motDePasse" 
+                type="text"
+                value={editFormData.motDePasse || "bfc26"} 
+                onChange={e => setEditFormData({...editFormData, motDePasse: e.target.value})} 
+                data-testid="input-mot-de-passe"
+                placeholder="bfc26"
+              />
             </div>
             <div className="p-3 bg-muted rounded-lg">
               <Label className="text-xs text-muted-foreground">Identifiant</Label>

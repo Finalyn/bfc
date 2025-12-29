@@ -39,11 +39,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Identifiant et mot de passe requis" });
       }
       
-      // Vérifier le mot de passe
-      if (password !== "slf25") {
-        return res.status(401).json({ error: "Mot de passe incorrect" });
-      }
-      
       // Chercher le commercial par identifiant (prenom+nom en minuscule)
       const allCommerciaux = await db.select().from(commerciaux);
       const commercial = allCommerciaux.find(c => {
@@ -53,6 +48,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!commercial) {
         return res.status(401).json({ error: "Identifiant non trouvé" });
+      }
+      
+      // Vérifier le mot de passe (stocké en base, ou défaut "bfc26")
+      const userPassword = commercial.motDePasse || "bfc26";
+      if (password !== userPassword) {
+        return res.status(401).json({ error: "Mot de passe incorrect" });
       }
       
       if (!commercial.actif) {
@@ -954,7 +955,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           prenom: "",
           nom: c.displayName || c.nom,
           role: "commercial",
-          actif: true
+          actif: true,
+          motDePasse: "bfc26"
         })) as typeof allCommerciaux;
       }
       
