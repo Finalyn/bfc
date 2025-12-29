@@ -836,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/import-excel", async (req, res) => {
     try {
       const excelData = loadExcelData();
-      let imported = { commerciaux: 0, fournisseurs: 0, themes: 0 };
+      let imported = { commerciaux: 0, fournisseurs: 0, themes: 0, clients: 0 };
       
       // Import commerciaux
       const existingCommerciaux = await db.select().from(commerciaux);
@@ -864,6 +864,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         imported.themes = excelData.themes.length;
       }
+      
+      // Import clients from Excel (batch insert)
+      const existingClients = await db.select().from(clients);
+      const existingCodes = new Set(existingClients.map(c => c.code));
+      const now = new Date();
+      
+      const clientsToInsert = excelData.clients
+        .filter(c => !existingCodes.has(c.code))
+        .map(c => ({
+          code: c.code,
+          nom: c.nom,
+          adresse1: c.adresse1 || "",
+          adresse2: c.adresse2 || "",
+          codePostal: c.codePostal || "",
+          ville: c.ville || "",
+          pays: c.pays || "",
+          interloc: c.interloc || "",
+          tel: c.tel || "",
+          portable: c.portable || "",
+          fax: c.fax || "",
+          mail: c.mail || "",
+          isFromExcel: true,
+          createdAt: now,
+          updatedAt: now,
+        }));
+      
+      // Insert in batches of 500
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < clientsToInsert.length; i += BATCH_SIZE) {
+        const batch = clientsToInsert.slice(i, i + BATCH_SIZE);
+        if (batch.length > 0) {
+          await db.insert(clients).values(batch);
+        }
+      }
+      imported.clients = clientsToInsert.length;
       
       res.json({ success: true, imported });
     } catch (error: any) {
