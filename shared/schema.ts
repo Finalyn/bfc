@@ -20,12 +20,18 @@ export const clients = pgTable("clients", {
   isFromExcel: boolean("is_from_excel").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  previousValues: text("previous_values"),
+  modificationApproved: boolean("modification_approved").default(true),
+  approvedAt: timestamp("approved_at"),
 });
 
 export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  previousValues: true,
+  modificationApproved: true,
+  approvedAt: true,
 });
 
 export const updateClientSchema = insertClientSchema.partial();
