@@ -28,9 +28,10 @@ export function generateOrderPDF(order: Order): Buffer {
   // === IMAGE EN-TÊTE BDIS ===
   if (headerImageBase64) {
     const imgWidth = pageWidth - 2 * margin;
-    const imgHeight = 20;
+    // Ratio original de l'image d'en-tête (environ 5:1)
+    const imgHeight = 38;
     doc.addImage(`data:image/jpeg;base64,${headerImageBase64}`, "JPEG", margin, yPos, imgWidth, imgHeight);
-    yPos += imgHeight + 8;
+    yPos += imgHeight + 6;
   }
 
   // === EN-TÊTE ===
