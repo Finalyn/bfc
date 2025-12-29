@@ -759,11 +759,11 @@ export default function AdminDashboard() {
             <TabsList className="inline-flex w-max sm:w-auto">
               <TabsTrigger value="clients" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-clients">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">Clients</span> ({clientsTotals?.pagination.total || clientsData?.pagination.total || 0})
+                <span className="hidden sm:inline">Clients</span><span className="sm:hidden">Cli.</span> ({clientsTotals?.pagination.total || clientsData?.pagination.total || 0})
               </TabsTrigger>
               <TabsTrigger value="themes" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-themes">
                 <Package className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">Thèmes</span> ({themesTotals?.pagination.total || themesData?.pagination.total || 0})
+                <span className="hidden sm:inline">Thèmes</span><span className="sm:hidden">Thè.</span> ({themesTotals?.pagination.total || themesData?.pagination.total || 0})
               </TabsTrigger>
               <TabsTrigger value="commerciaux" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-commerciaux">
                 <UserCircle className="w-3 h-3 sm:w-4 sm:h-4" />
