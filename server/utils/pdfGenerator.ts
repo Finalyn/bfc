@@ -30,7 +30,7 @@ export function generateOrderPDF(order: Order): Buffer {
     const imgWidth = pageWidth - 2 * margin;
     const imgHeight = 20;
     doc.addImage(`data:image/jpeg;base64,${headerImageBase64}`, "JPEG", margin, yPos, imgWidth, imgHeight);
-    yPos += imgHeight + 3;
+    yPos += imgHeight + 8;
   }
 
   // === EN-TÊTE ===
@@ -46,12 +46,12 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFont("helvetica", "normal");
   doc.text(order.salesRepName, margin + 28, yPos + 5);
 
-  // Titre principal
-  doc.setFontSize(16);
+  // Titre principal - aligné à gauche après les infos
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("BON DE COMMANDE 2026", pageWidth / 2, yPos + 2, { align: "center" });
+  doc.text("BON DE COMMANDE 2026", margin + 75, yPos + 2);
 
-  yPos += 12;
+  yPos += 14;
 
   // Ligne de séparation
   doc.setLineWidth(0.3);
@@ -238,19 +238,19 @@ export function generateOrderPDF(order: Order): Buffer {
   yPos += 4;
   
   doc.setDrawColor(150, 150, 150);
-  doc.rect(margin, yPos, pageWidth - 2 * margin, 15);
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 12);
   
   if (order.remarks) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     const remarksLines = doc.splitTextToSize(order.remarks, pageWidth - 2 * margin - 4);
     doc.text(remarksLines, margin + 2, yPos + 4);
   }
-  yPos += 19;
+  yPos += 15;
 
   // === SIGNATURES ===
   const sigBoxWidth = (pageWidth - 2 * margin - 20) / 2;
-  const sigBoxHeight = 28;
+  const sigBoxHeight = 25;
 
   // Signature magasin (gauche)
   doc.setFont("helvetica", "bold");
@@ -276,12 +276,12 @@ export function generateOrderPDF(order: Order): Buffer {
   
   // Infos signature
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.5);
-  doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 11);
-  doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 15);
+  doc.setFontSize(5);
+  doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 10);
+  doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 13);
   if (order.cgvAccepted) {
     doc.setFont("helvetica", "bold");
-    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 19);
+    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 16);
   }
 
   // Signature société (droite)
