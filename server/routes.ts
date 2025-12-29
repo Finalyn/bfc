@@ -1084,12 +1084,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).returning();
         return res.json(created);
       }
+      
+      // Get current client to save previous values
+      const [currentClient] = await db.select().from(clients).where(eq(clients.id, id));
+      if (!currentClient) {
+        return res.status(404).json({ message: "Non trouvé" });
+      }
+      
       const validated = updateClientSchema.parse(req.body);
-      const [updated] = await db.update(clients).set({
+      
+      // Check if contact fields are being modified
+      const contactFields = ['interloc', 'portable', 'tel', 'mail'];
+      const hasContactChanges = contactFields.some(field => {
+        const newVal = (validated as any)[field];
+        const oldVal = (currentClient as any)[field] || "";
+        return newVal !== undefined && newVal !== oldVal;
+      });
+      
+      // Prepare update data
+      const updateData: any = {
         ...validated,
         updatedAt: new Date(),
-      }).where(eq(clients.id, id)).returning();
-      if (!updated) return res.status(404).json({ message: "Non trouvé" });
+      };
+      
+      // If contact fields changed, store previous values and mark as pending approval
+      if (hasContactChanges) {
+        // Only store if not already pending (to keep original values)
+        if (currentClient.modificationApproved !== false) {
+          updateData.previousValues = JSON.stringify({
+            interloc: currentClient.interloc || "",
+            portable: currentClient.portable || "",
+            tel: currentClient.tel || "",
+            mail: currentClient.mail || "",
+          });
+          updateData.modificationApproved = false;
+        }
+      }
+      
+      const [updated] = await db.update(clients).set(updateData).where(eq(clients.id, id)).returning();
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
