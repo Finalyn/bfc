@@ -29,7 +29,7 @@ export function generateOrderPDF(order: Order): Buffer {
   if (headerImageBase64) {
     const imgWidth = pageWidth - 2 * margin;
     // Hauteur ajustée pour le ratio de l'image
-    const imgHeight = 24;
+    const imgHeight = 21;
     doc.addImage(`data:image/jpeg;base64,${headerImageBase64}`, "JPEG", margin, yPos, imgWidth, imgHeight);
     yPos += imgHeight + 6;
   }
