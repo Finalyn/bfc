@@ -69,6 +69,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [clientModalMode, setClientModalMode] = useState<"create" | "edit">("create");
   const [selectedClientData, setSelectedClientData] = useState<Client | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -121,6 +122,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     })), [clients]);
 
   const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
     const selectedClient = clients.find(c => c.id === clientId);
     if (selectedClient) {
       const adresseComplete = selectedClient.adresse2 
@@ -181,6 +183,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   };
 
   const handleClientModalSuccess = (client: any) => {
+    // Mettre à jour le client sélectionné
+    setSelectedClientId(client.id);
+    
     // Pré-remplir le formulaire avec le nouveau client
     const adresseComplete = client.adresse2 
       ? `${client.adresse1}, ${client.adresse2}`
@@ -326,7 +331,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               <CardContent className="space-y-3">
                 <Combobox
                   options={clientsOptions}
-                  value=""
+                  value={selectedClientId}
                   onValueChange={handleClientSelect}
                   placeholder="Rechercher un client..."
                   searchPlaceholder="Tapez le nom ou la ville..."
