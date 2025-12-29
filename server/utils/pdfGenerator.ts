@@ -49,15 +49,14 @@ export function generateOrderPDF(order: Order): Buffer {
   // Titre principal
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 51, 102);
-  doc.text("BON DE COMMANDE 2026", pageWidth / 2, yPos + 3, { align: "center" });
   doc.setTextColor(0, 0, 0);
+  doc.text("BON DE COMMANDE 2026", pageWidth / 2, yPos + 3, { align: "center" });
 
   yPos += 18;
 
   // Ligne de séparation
   doc.setLineWidth(0.5);
-  doc.setDrawColor(0, 51, 102);
+  doc.setDrawColor(0, 0, 0);
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 8;
 
@@ -102,9 +101,9 @@ export function generateOrderPDF(order: Order): Buffer {
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
 
   // En-têtes des tableaux
-  doc.setFillColor(0, 51, 102);
+  doc.setFillColor(50, 50, 50);
   doc.rect(margin, yPos, tableWidth, 7, "F");
-  doc.setFillColor(230, 126, 34);
+  doc.setFillColor(50, 50, 50);
   doc.rect(margin + tableWidth + 10, yPos, tableWidth, 7, "F");
 
   doc.setFontSize(8);
@@ -121,9 +120,9 @@ export function generateOrderPDF(order: Order): Buffer {
 
   // Sous-en-têtes
   yPos += 7;
-  doc.setFillColor(200, 220, 240);
+  doc.setFillColor(220, 220, 220);
   doc.rect(margin, yPos, tableWidth, 6, "F");
-  doc.setFillColor(250, 220, 200);
+  doc.setFillColor(220, 220, 220);
   doc.rect(margin + tableWidth + 10, yPos, tableWidth, 6, "F");
 
   doc.setFontSize(7);
@@ -141,9 +140,10 @@ export function generateOrderPDF(order: Order): Buffer {
   THEMES_TOUTE_ANNEE.forEach((theme, idx) => {
     const rowY = yPos + idx * rowHeight;
     if (idx % 2 === 0) {
-      doc.setFillColor(245, 245, 245);
+      doc.setFillColor(240, 240, 240);
       doc.rect(margin, rowY, tableWidth, rowHeight, "F");
     }
+    doc.setDrawColor(0, 0, 0);
     doc.rect(margin, rowY, tableWidth, rowHeight);
     
     const selection = themeSelections.find(t => t.theme === theme && t.category === "TOUTE_ANNEE");
@@ -160,9 +160,10 @@ export function generateOrderPDF(order: Order): Buffer {
   THEMES_SAISONNIER.forEach((theme, idx) => {
     const rowY = yPos + idx * rowHeight;
     if (idx % 2 === 0) {
-      doc.setFillColor(255, 245, 240);
+      doc.setFillColor(240, 240, 240);
       doc.rect(margin + tableWidth + 10, rowY, tableWidth, rowHeight, "F");
     }
+    doc.setDrawColor(0, 0, 0);
     doc.rect(margin + tableWidth + 10, rowY, tableWidth, rowHeight);
     
     const selection = themeSelections.find(t => t.theme === theme && t.category === "SAISONNIER");
@@ -283,9 +284,8 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 18);
   if (order.cgvAccepted) {
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 128, 0);
-    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 22);
     doc.setTextColor(0, 0, 0);
+    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 22);
   }
 
   // Signature société (droite)
@@ -299,7 +299,7 @@ export function generateOrderPDF(order: Order): Buffer {
   // === PIED DE PAGE ===
   doc.setFontSize(6);
   doc.setFont("helvetica", "italic");
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(0, 0, 0);
   doc.text(
     `Document généré le ${formatInTimeZone(new Date(), "Europe/Paris", "dd/MM/yyyy à HH:mm", { locale: fr })} - Réf: ${order.orderCode}`,
     pageWidth / 2,
