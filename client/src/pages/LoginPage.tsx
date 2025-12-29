@@ -29,12 +29,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await apiRequest("POST", "/api/auth/login", {
+      const data = await apiRequest("POST", "/api/auth/login", {
         username,
         password
       });
-      
-      const data = await response.json();
       
       if (data.success) {
         sessionStorage.setItem("authenticated", "true");
