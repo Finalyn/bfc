@@ -32,7 +32,7 @@
 
   --sidebar-border: 0 0% 85%;
 
-  --sidebar-primary: 0 0% 15%;
+  --sidebar-primary: 0 0% 30%;
 
   --sidebar-primary-foreground: 0 0% 100%;
 
@@ -48,7 +48,7 @@
 
   --popover-border: 0 0% 85%;
 
-  --primary: 0 0% 12%;
+  --primary: 0 0% 25%;
 
   --primary-foreground: 0 0% 100%;
 
@@ -64,7 +64,7 @@
 
   --accent-foreground: 0 0% 15%;
 
-  --destructive: 0 0% 35%;
+  --destructive: 0 0% 45%;
 
   --destructive-foreground: 0 0% 100%;
 

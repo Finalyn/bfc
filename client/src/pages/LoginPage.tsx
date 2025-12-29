@@ -49,8 +49,8 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Lock className="w-8 h-8 text-gray-700" />
+            <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-200">
+              <Lock className="w-8 h-8 text-gray-500" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">
               Gestion de Commandes

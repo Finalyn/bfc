@@ -88,8 +88,8 @@ export default function HubPage() {
           >
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                  <Database className="w-8 h-8 text-gray-700 dark:text-gray-300" />
+                <div className="w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-200">
+                  <Database className="w-8 h-8 text-gray-500 dark:text-gray-300" />
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

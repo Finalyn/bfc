@@ -44,8 +44,8 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-              <Database className="w-8 h-8 text-gray-700 dark:text-gray-300" />
+            <div className="mx-auto w-16 h-16 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4 border border-gray-200">
+              <Database className="w-8 h-8 text-gray-500 dark:text-gray-300" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Base de données
