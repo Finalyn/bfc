@@ -11,12 +11,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit, Loader2 } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
 import { ClientModal } from "./ClientModal";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
 const MONTHS = [
@@ -137,16 +148,17 @@ interface Client {
   code: string;
   nom: string;
   adresse1: string;
-  adresse2: string;
+  adresse2?: string;
   codePostal: string;
   ville: string;
-  pays: string;
+  pays?: string;
   interloc: string;
   tel: string;
   portable: string;
-  fax: string;
+  fax?: string;
   mail: string;
   displayName: string;
+  isFromDb?: boolean;
 }
 
 const formSchema = z.object({
@@ -185,8 +197,27 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [clientModalMode, setClientModalMode] = useState<"create" | "edit">("create");
   const [selectedClientData, setSelectedClientData] = useState<Client | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [originalClientData, setOriginalClientData] = useState<Client | null>(null);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
+  const [clientChanges, setClientChanges] = useState<{field: string, old: string, new: string}[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Mutation pour mettre à jour le client
+  const updateClientMutation = useMutation({
+    mutationFn: async (data: { id: number, updates: any }) => {
+      return apiRequest("PATCH", `/api/admin/clients/${data.id}`, data.updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      toast({ title: "Client mis à jour", description: "Les informations du client ont été sauvegardées dans la base de données." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    },
+  });
 
   const today = formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd");
   
@@ -243,6 +274,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     setSelectedClientId(clientId);
     const selectedClient = clients.find(c => c.id === clientId);
     if (selectedClient) {
+      // Sauvegarder les données originales pour détecter les modifications
+      setOriginalClientData(selectedClient);
+      setSelectedClientData(selectedClient);
+      
       const adresseComplete = selectedClient.adresse2 
         ? `${selectedClient.adresse1}, ${selectedClient.adresse2}`
         : selectedClient.adresse1;
@@ -273,7 +308,6 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       if (!selectedClient.interloc) missingInfo.push("interlocuteur");
       
       if (missingInfo.length > 0) {
-        setSelectedClientData(selectedClient);
         toast({
           title: "Informations manquantes",
           description: `Ce client n'a pas de ${missingInfo.join(", ")}. Vous pouvez compléter ses informations.`,
@@ -349,7 +383,44 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     return selection?.[field] || "";
   };
 
-  const onSubmit = (data: FormData) => {
+  // Fonction pour détecter les changements dans les informations client
+  const detectClientChanges = (data: FormData): {field: string, old: string, new: string}[] => {
+    if (!originalClientData) return [];
+    
+    const changes: {field: string, old: string, new: string}[] = [];
+    
+    // Comparer le nom du responsable avec l'interlocuteur
+    if (data.responsableName !== (originalClientData.interloc || "") && data.responsableName) {
+      changes.push({ 
+        field: "Interlocuteur", 
+        old: originalClientData.interloc || "(vide)", 
+        new: data.responsableName 
+      });
+    }
+    
+    // Comparer le téléphone
+    const originalTel = originalClientData.portable || originalClientData.tel || "";
+    if (data.responsableTel !== originalTel && data.responsableTel) {
+      changes.push({ 
+        field: "Téléphone", 
+        old: originalTel || "(vide)", 
+        new: data.responsableTel 
+      });
+    }
+    
+    // Comparer l'email
+    if (data.responsableEmail !== (originalClientData.mail || "") && data.responsableEmail) {
+      changes.push({ 
+        field: "Email", 
+        old: originalClientData.mail || "(vide)", 
+        new: data.responsableEmail 
+      });
+    }
+    
+    return changes;
+  };
+
+  const proceedWithSubmit = (data: FormData) => {
     const filteredSelections = themeSelections.filter(t => t.quantity || t.deliveryDate);
     
     onNext({
@@ -362,6 +433,74 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       quantity: filteredSelections.map(t => t.quantity).filter(Boolean).join(", ") || "1",
       deliveryDate: filteredSelections[0]?.deliveryDate || data.orderDate,
     });
+  };
+
+  // Extraire l'ID numérique de la base de données à partir du format "db-123"
+  const getDbIdFromClientId = (clientId: string): number | null => {
+    if (clientId && clientId.startsWith("db-")) {
+      const numId = parseInt(clientId.replace("db-", ""), 10);
+      return isNaN(numId) ? null : numId;
+    }
+    return null;
+  };
+
+  const onSubmit = (data: FormData) => {
+    // Vérifier si un client existant de la BDD a été sélectionné
+    const dbId = originalClientData ? getDbIdFromClientId(originalClientData.id) : null;
+    
+    if (originalClientData && dbId && originalClientData.isFromDb) {
+      const changes = detectClientChanges(data);
+      
+      if (changes.length > 0) {
+        // Des modifications ont été détectées, proposer de sauvegarder
+        setClientChanges(changes);
+        setPendingFormData(data);
+        setUpdateDialogOpen(true);
+        return;
+      }
+    }
+    
+    // Pas de modifications ou pas de client sélectionné, continuer directement
+    proceedWithSubmit(data);
+  };
+
+  const handleUpdateClient = async () => {
+    const dbId = originalClientData ? getDbIdFromClientId(originalClientData.id) : null;
+    
+    if (!originalClientData || !pendingFormData || !dbId) {
+      // Continuer sans mise à jour
+      proceedWithSubmit(pendingFormData);
+      setUpdateDialogOpen(false);
+      return;
+    }
+    
+    // Préparer les données de mise à jour
+    const updates: any = {};
+    if (pendingFormData.responsableName !== (originalClientData.interloc || "")) {
+      updates.interloc = pendingFormData.responsableName;
+    }
+    if (pendingFormData.responsableTel !== (originalClientData.portable || originalClientData.tel || "")) {
+      updates.portable = pendingFormData.responsableTel;
+    }
+    if (pendingFormData.responsableEmail !== (originalClientData.mail || "")) {
+      updates.mail = pendingFormData.responsableEmail;
+    }
+    
+    try {
+      await updateClientMutation.mutateAsync({ id: dbId, updates });
+    } catch (e) {
+      // Erreur déjà gérée par le mutation
+    }
+    
+    setUpdateDialogOpen(false);
+    proceedWithSubmit(pendingFormData);
+  };
+
+  const handleSkipUpdate = () => {
+    setUpdateDialogOpen(false);
+    if (pendingFormData) {
+      proceedWithSubmit(pendingFormData);
+    }
   };
 
   const facturationMode = watch("facturationMode");
@@ -875,6 +1014,51 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
         clientData={selectedClientData}
         onSuccess={handleClientModalSuccess}
       />
+
+      {/* Dialogue de proposition de mise à jour du client */}
+      <AlertDialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mettre à jour le client ?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p className="mb-3">
+                  Vous avez modifié les informations de contact de ce client. 
+                  Voulez-vous sauvegarder ces modifications dans la base de données ?
+                </p>
+                <div className="bg-muted rounded-md p-3 space-y-2">
+                  {clientChanges.map((change, idx) => (
+                    <div key={idx} className="text-sm">
+                      <span className="font-medium">{change.field} :</span>{" "}
+                      <span className="text-muted-foreground line-through">{change.old}</span>
+                      {" → "}
+                      <span className="text-primary font-medium">{change.new}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleSkipUpdate}>
+              Non, continuer sans sauvegarder
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleUpdateClient}
+              disabled={updateClientMutation.isPending}
+            >
+              {updateClientMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sauvegarde...
+                </>
+              ) : (
+                "Oui, mettre à jour le client"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

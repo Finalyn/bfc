@@ -931,6 +931,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tel: dbClient.tel || "",
             portable: dbClient.portable || "",
             mail: dbClient.mail || "",
+            createdAt: dbClient.createdAt,
+            updatedAt: dbClient.updatedAt,
           };
         }
         return {
@@ -944,6 +946,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tel: excelClient.tel,
           portable: excelClient.portable,
           mail: excelClient.mail,
+          createdAt: null,
+          updatedAt: null,
         };
       });
       
@@ -962,6 +966,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tel: c.tel || "",
           portable: c.portable || "",
           mail: c.mail || "",
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
         }));
       
       allClients = [...allClients, ...newDbClients];
