@@ -92,7 +92,7 @@ export default function AdminLoginPage() {
           <div className="text-center">
             <Button 
               variant="ghost" 
-              onClick={() => setLocation("/")}
+              onClick={() => setLocation("/hub")}
               className="text-gray-600 dark:text-gray-400"
               data-testid="button-back-hub"
             >
