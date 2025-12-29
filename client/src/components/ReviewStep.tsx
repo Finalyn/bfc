@@ -177,7 +177,7 @@ export function ReviewStep({
                 {/* Saisonnier */}
                 {themesSaisonnier.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-xs bg-orange-500 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
+                    <h3 className="font-bold text-xs bg-gray-600 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
                     <div className="border border-t-0 rounded-b-md p-2 space-y-1">
                       {themesSaisonnier.map((t, idx) => (
                         <div key={idx} className="flex justify-between text-xs">

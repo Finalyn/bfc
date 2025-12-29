@@ -47,7 +47,7 @@ export default function HubPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -82,14 +82,14 @@ export default function HubPage() {
           </Card>
 
           <Card 
-            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-orange-500"
+            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-gray-500"
             onClick={() => setLocation("/admin/login")}
             data-testid="card-database"
           >
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                  <Database className="w-8 h-8 text-orange-600" />
+                <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                  <Database className="w-8 h-8 text-gray-700 dark:text-gray-300" />
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

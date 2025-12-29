@@ -40,12 +40,12 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mb-4">
-              <Database className="w-8 h-8 text-orange-600" />
+            <div className="mx-auto w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+              <Database className="w-8 h-8 text-gray-700 dark:text-gray-300" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Base de données
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
             <Button
               type="submit"
               data-testid="button-admin-login"
-              className="w-full h-14 text-base font-medium bg-orange-600 hover:bg-orange-700"
+              className="w-full h-14 text-base font-medium"
               disabled={isLoading}
             >
               {isLoading ? "Vérification..." : "Accéder à la base de données"}

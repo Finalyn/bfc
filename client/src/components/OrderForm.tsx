@@ -474,7 +474,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
                   {/* Colonne SAISONNIER */}
                   <div>
-                    <h3 className="font-bold text-sm bg-orange-500 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
+                    <h3 className="font-bold text-sm bg-gray-600 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
                     <div className="border border-t-0 rounded-b-md">
                       <table className="w-full text-xs">
                         <thead>
