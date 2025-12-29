@@ -189,6 +189,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const queryClient = useQueryClient();
 
   const today = formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd");
+  
+  // Récupérer le nom du commercial connecté
+  const connectedUserName = sessionStorage.getItem("userName") || "";
 
   const {
     register,
@@ -201,7 +204,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       orderDate: initialData?.orderDate || today,
-      salesRepName: initialData?.salesRepName || "",
+      salesRepName: initialData?.salesRepName || connectedUserName,
       responsableName: initialData?.responsableName || "",
       responsableTel: initialData?.responsableTel || "",
       responsableEmail: initialData?.responsableEmail || "",
