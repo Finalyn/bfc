@@ -53,7 +53,11 @@ import {
   FileText,
   Calendar,
   Truck,
-  ClipboardList
+  ClipboardList,
+  BarChart3,
+  TrendingUp,
+  Euro,
+  CheckCircle2
 } from "lucide-react";
 import {
   Select,
@@ -141,7 +145,7 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "calendar";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "calendar" | "stats";
 
 interface CalendarEvent {
   id: string;
@@ -781,6 +785,10 @@ export default function AdminDashboard() {
                 <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Calendrier</span><span className="sm:hidden">Cal.</span>
               </TabsTrigger>
+              <TabsTrigger value="stats" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-stats">
+                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Statistiques</span><span className="sm:hidden">Stats</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1391,6 +1399,125 @@ export default function AdminDashboard() {
                   )}
                 </>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 sm:p-3 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                        <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Total Commandes</p>
+                        <p className="text-xl sm:text-2xl font-bold" data-testid="stat-total-orders">
+                          {ordersTotals?.pagination.total || ordersData?.pagination.total || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 sm:p-3 rounded-full bg-green-100 dark:bg-green-900/50">
+                        <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Total Clients</p>
+                        <p className="text-xl sm:text-2xl font-bold" data-testid="stat-total-clients">
+                          {clientsTotals?.pagination.total || clientsData?.pagination.total || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 sm:p-3 rounded-full bg-purple-100 dark:bg-purple-900/50">
+                        <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Total Thèmes</p>
+                        <p className="text-xl sm:text-2xl font-bold" data-testid="stat-total-themes">
+                          {themesTotals?.pagination.total || themesData?.pagination.total || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 sm:p-3 rounded-full bg-orange-100 dark:bg-orange-900/50">
+                        <UserCircle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Commerciaux</p>
+                        <p className="text-xl sm:text-2xl font-bold" data-testid="stat-total-commerciaux">
+                          {commerciauxTotals?.pagination.total || commerciauxData?.pagination.total || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Répartition des commandes par statut
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {(() => {
+                      const orders = ordersData?.data || [];
+                      const statusCounts: { [key: string]: number } = {};
+                      orders.forEach(order => {
+                        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+                      });
+                      
+                      const statusLabels: { [key: string]: { label: string; color: string } } = {
+                        'EN_ATTENTE': { label: 'En attente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' },
+                        'CONFIRMEE': { label: 'Confirmée', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' },
+                        'EN_PREPARATION': { label: 'En préparation', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300' },
+                        'EXPEDIEE': { label: 'Expédiée', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' },
+                        'LIVREE': { label: 'Livrée', color: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' },
+                        'PAYEE': { label: 'Payée', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' },
+                        'TERMINEE': { label: 'Terminée', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+                        'ANNULEE': { label: 'Annulée', color: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' },
+                      };
+                      
+                      return Object.entries(statusLabels).map(([status, { label, color }]) => (
+                        <div key={status} className={`p-3 rounded-lg ${color}`}>
+                          <p className="text-xs font-medium opacity-80">{label}</p>
+                          <p className="text-xl font-bold">{statusCounts[status] || 0}</p>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    Fournisseurs
+                  </h3>
+                  <p className="text-3xl font-bold text-center py-4" data-testid="stat-total-fournisseurs">
+                    {fournisseursTotals?.pagination.total || fournisseursData?.pagination.total || 0}
+                  </p>
+                  <p className="text-center text-muted-foreground">fournisseurs enregistrés</p>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
