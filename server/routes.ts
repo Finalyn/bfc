@@ -965,7 +965,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/clients", async (req, res) => {
     try {
       const validated = insertClientSchema.parse(req.body);
-      const [created] = await db.insert(clients).values(validated).returning();
+      const [created] = await db.insert(clients).values({
+        ...validated,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
       res.json(created);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -979,11 +983,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (id === 0) {
         // For Excel-sourced clients, create a new DB entry with their data
         const validated = insertClientSchema.parse(req.body);
-        const [created] = await db.insert(clients).values(validated).returning();
+        const [created] = await db.insert(clients).values({
+          ...validated,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).returning();
         return res.json(created);
       }
       const validated = updateClientSchema.parse(req.body);
-      const [updated] = await db.update(clients).set(validated).where(eq(clients.id, id)).returning();
+      const [updated] = await db.update(clients).set({
+        ...validated,
+        updatedAt: new Date(),
+      }).where(eq(clients.id, id)).returning();
       if (!updated) return res.status(404).json({ message: "Non trouvé" });
       res.json(updated);
     } catch (error: any) {
