@@ -88,6 +88,7 @@ interface Client {
   mail?: string;
   createdAt?: string | null;
   updatedAt?: string | null;
+  isFromExcel?: boolean;
 }
 
 interface Theme {
@@ -894,7 +895,7 @@ export default function AdminDashboard() {
                             const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
                             const createdAt = client.createdAt ? new Date(client.createdAt) : null;
                             const updatedAt = client.updatedAt ? new Date(client.updatedAt) : null;
-                            const isNew = createdAt && createdAt > oneMonthAgo;
+                            const isNew = createdAt && createdAt > oneMonthAgo && !client.isFromExcel;
                             const isRecentlyModified = updatedAt && createdAt && updatedAt > twoWeeksAgo && updatedAt.getTime() !== createdAt.getTime();
                             
                             return (

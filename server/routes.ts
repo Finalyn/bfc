@@ -937,6 +937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             mail: dbClient.mail || "",
             createdAt: dbClient.createdAt,
             updatedAt: dbClient.updatedAt,
+            isFromExcel: dbClient.isFromExcel || false,
           };
         }
         return {
@@ -952,6 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mail: excelClient.mail,
           createdAt: null,
           updatedAt: null,
+          isFromExcel: true,
         };
       });
       
@@ -972,6 +974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mail: c.mail || "",
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
+          isFromExcel: c.isFromExcel || false,
         }));
       
       allClients = [...allClients, ...newDbClients];
