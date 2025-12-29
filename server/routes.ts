@@ -146,26 +146,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Routes pour les données de référence
-  app.get("/api/data/commerciaux", (req, res) => {
-    res.json(data.commerciaux);
+  // Routes pour les données de référence (fusionnant Excel + BDD)
+  app.get("/api/data/commerciaux", async (req, res) => {
+    try {
+      // Récupérer les commerciaux de la BDD
+      const dbCommerciaux = await db.select().from(commerciaux);
+      
+      if (dbCommerciaux.length > 0) {
+        // Si on a des données en BDD, les utiliser
+        const result = dbCommerciaux.map(c => ({
+          id: c.id,
+          nom: c.nom,
+          displayName: c.nom
+        }));
+        res.json(result);
+      } else {
+        // Sinon, fallback sur les données Excel
+        res.json(data.commerciaux);
+      }
+    } catch (error) {
+      console.error("Erreur récupération commerciaux:", error);
+      res.json(data.commerciaux);
+    }
   });
 
-  app.get("/api/data/clients", (req, res) => {
-    res.json(data.clients);
+  app.get("/api/data/clients", async (req, res) => {
+    try {
+      // Récupérer les clients de la BDD
+      const dbClients = await db.select().from(clients);
+      const dbClientsByCode = new Map(dbClients.map(c => [c.code, c]));
+      
+      // Fusionner : BDD a priorité sur Excel
+      const mergedClients = data.clients.map(excelClient => {
+        const dbClient = dbClientsByCode.get(excelClient.code);
+        if (dbClient) {
+          return {
+            id: `db-${dbClient.id}`,
+            code: dbClient.code,
+            nom: dbClient.nom,
+            adresse1: dbClient.adresse1 || "",
+            codePostal: dbClient.codePostal || "",
+            ville: dbClient.ville || "",
+            interloc: dbClient.interloc || "",
+            tel: dbClient.tel || "",
+            portable: dbClient.portable || "",
+            mail: dbClient.mail || "",
+            displayName: `${dbClient.nom} - ${dbClient.ville || ""}`.trim(),
+            isFromDb: true,
+          };
+        }
+        return excelClient;
+      });
+      
+      // Ajouter les clients BDD qui ne sont pas dans Excel
+      const excelCodes = new Set(data.clients.map(c => c.code));
+      dbClients.forEach(dbClient => {
+        if (!excelCodes.has(dbClient.code)) {
+          mergedClients.push({
+            id: `db-${dbClient.id}`,
+            code: dbClient.code,
+            nom: dbClient.nom,
+            adresse1: dbClient.adresse1 || "",
+            codePostal: dbClient.codePostal || "",
+            ville: dbClient.ville || "",
+            interloc: dbClient.interloc || "",
+            tel: dbClient.tel || "",
+            portable: dbClient.portable || "",
+            mail: dbClient.mail || "",
+            displayName: `${dbClient.nom} - ${dbClient.ville || ""}`.trim(),
+            isFromDb: true,
+          });
+        }
+      });
+      
+      res.json(mergedClients);
+    } catch (error) {
+      console.error("Erreur récupération clients:", error);
+      res.json(data.clients);
+    }
   });
 
-  app.get("/api/data/fournisseurs", (req, res) => {
-    res.json(data.fournisseurs);
+  app.get("/api/data/fournisseurs", async (req, res) => {
+    try {
+      // Récupérer les fournisseurs de la BDD
+      const dbFournisseurs = await db.select().from(fournisseurs);
+      
+      if (dbFournisseurs.length > 0) {
+        // Si on a des données en BDD, les utiliser
+        const result = dbFournisseurs.map(f => ({
+          id: f.id,
+          nom: f.nom,
+          nomCourt: f.nomCourt || f.nom
+        }));
+        res.json(result);
+      } else {
+        // Sinon, fallback sur les données Excel
+        res.json(data.fournisseurs);
+      }
+    } catch (error) {
+      console.error("Erreur récupération fournisseurs:", error);
+      res.json(data.fournisseurs);
+    }
   });
 
-  app.get("/api/data/themes", (req, res) => {
-    const { fournisseur } = req.query;
-    if (fournisseur) {
-      const filtered = data.themes.filter(t => t.fournisseur === fournisseur);
-      res.json(filtered);
-    } else {
-      res.json(data.themes);
+  app.get("/api/data/themes", async (req, res) => {
+    try {
+      const { fournisseur } = req.query;
+      
+      // Récupérer les thèmes de la BDD
+      const dbThemes = await db.select().from(themes);
+      
+      if (dbThemes.length > 0) {
+        // Si on a des données en BDD, les utiliser
+        let result = dbThemes.map(t => ({
+          id: t.id,
+          theme: t.theme,
+          fournisseur: t.fournisseur
+        }));
+        
+        if (fournisseur) {
+          result = result.filter(t => t.fournisseur === fournisseur);
+        }
+        
+        res.json(result);
+      } else {
+        // Sinon, fallback sur les données Excel
+        if (fournisseur) {
+          const filtered = data.themes.filter(t => t.fournisseur === fournisseur);
+          res.json(filtered);
+        } else {
+          res.json(data.themes);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur récupération thèmes:", error);
+      if (req.query.fournisseur) {
+        const filtered = data.themes.filter(t => t.fournisseur === req.query.fournisseur);
+        res.json(filtered);
+      } else {
+        res.json(data.themes);
+      }
     }
   });
 
