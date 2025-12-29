@@ -34,24 +34,24 @@ export function generateOrderPDF(order: Order): Buffer {
   }
 
   // === EN-TÊTE ===
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
   doc.text("DATE :", margin, yPos);
   doc.setFont("helvetica", "normal");
-  doc.text(formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr }), margin + 14, yPos);
+  doc.text(formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr }), margin + 16, yPos);
   
   doc.setFont("helvetica", "bold");
-  doc.text("COMMERCIAL :", margin, yPos + 5);
+  doc.text("COMMERCIAL :", margin, yPos + 6);
   doc.setFont("helvetica", "normal");
-  doc.text(order.salesRepName, margin + 28, yPos + 5);
+  doc.text(order.salesRepName, margin + 32, yPos + 6);
 
-  // Titre principal - aligné à gauche après les infos
-  doc.setFontSize(14);
+  // Titre principal - aligné tout à droite
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("BON DE COMMANDE 2026", margin + 75, yPos + 2);
+  doc.text("BON DE COMMANDE 2026", pageWidth - margin, yPos + 3, { align: "right" });
 
-  yPos += 14;
+  yPos += 16;
 
   // Ligne de séparation
   doc.setLineWidth(0.3);
@@ -62,37 +62,37 @@ export function generateOrderPDF(order: Order): Buffer {
   // === CONTACTS (2 colonnes) ===
   const colWidth = (pageWidth - 2 * margin) / 2;
   
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.text("Responsable :", margin, yPos);
   doc.setFont("helvetica", "normal");
-  doc.text(order.responsableName || "", margin + 24, yPos);
+  doc.text(order.responsableName || "", margin + 28, yPos);
   
   doc.setFont("helvetica", "bold");
-  doc.text("Tél :", margin, yPos + 4);
+  doc.text("Tél :", margin, yPos + 5);
   doc.setFont("helvetica", "normal");
-  doc.text(order.responsableTel || "", margin + 10, yPos + 4);
+  doc.text(order.responsableTel || "", margin + 12, yPos + 5);
   
   doc.setFont("helvetica", "bold");
-  doc.text("E-mail :", margin, yPos + 8);
+  doc.text("E-mail :", margin, yPos + 10);
   doc.setFont("helvetica", "normal");
-  doc.text(order.responsableEmail || "", margin + 15, yPos + 8);
+  doc.text(order.responsableEmail || "", margin + 18, yPos + 10);
 
   // Colonne droite - Service comptabilité
   const col2X = margin + colWidth + 5;
   doc.setFont("helvetica", "bold");
   doc.text("Service comptabilité :", col2X, yPos);
   
-  doc.text("Tél :", col2X, yPos + 4);
+  doc.text("Tél :", col2X, yPos + 5);
   doc.setFont("helvetica", "normal");
-  doc.text(order.comptaTel || "", col2X + 10, yPos + 4);
+  doc.text(order.comptaTel || "", col2X + 12, yPos + 5);
   
   doc.setFont("helvetica", "bold");
-  doc.text("E-mail :", col2X, yPos + 8);
+  doc.text("E-mail :", col2X, yPos + 10);
   doc.setFont("helvetica", "normal");
-  doc.text(order.comptaEmail || "", col2X + 15, yPos + 8);
+  doc.text(order.comptaEmail || "", col2X + 18, yPos + 10);
 
-  yPos += 14;
+  yPos += 16;
 
   // === TABLEAU DES THÈMES ===
   const gap = 6;
@@ -100,39 +100,39 @@ export function generateOrderPDF(order: Order): Buffer {
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
 
   // En-têtes des tableaux
-  const headerHeight = 6;
+  const headerHeight = 7;
   doc.setFillColor(60, 60, 60);
   doc.rect(margin, yPos, tableWidth, headerHeight, "F");
   doc.rect(margin + tableWidth + gap, yPos, tableWidth, headerHeight, "F");
 
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text("THEME", margin + 2, yPos + 4);
-  doc.text("QTE", margin + tableWidth - 18, yPos + 4);
-  doc.text("Date", margin + tableWidth - 8, yPos + 4);
+  doc.text("THEME", margin + 2, yPos + 5);
+  doc.text("QTE", margin + tableWidth - 20, yPos + 5);
+  doc.text("Date", margin + tableWidth - 10, yPos + 5);
 
-  doc.text("THEME", margin + tableWidth + gap + 2, yPos + 4);
-  doc.text("QTE", margin + 2 * tableWidth + gap - 18, yPos + 4);
-  doc.text("Date", margin + 2 * tableWidth + gap - 8, yPos + 4);
+  doc.text("THEME", margin + tableWidth + gap + 2, yPos + 5);
+  doc.text("QTE", margin + 2 * tableWidth + gap - 20, yPos + 5);
+  doc.text("Date", margin + 2 * tableWidth + gap - 10, yPos + 5);
   doc.setTextColor(0, 0, 0);
 
   // Sous-en-têtes
   yPos += headerHeight;
-  const subHeaderHeight = 5;
+  const subHeaderHeight = 6;
   doc.setFillColor(200, 200, 200);
   doc.rect(margin, yPos, tableWidth, subHeaderHeight, "F");
   doc.rect(margin + tableWidth + gap, yPos, tableWidth, subHeaderHeight, "F");
 
-  doc.setFontSize(6);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.text("TOUTE L'ANNEE", margin + 2, yPos + 3.5);
-  doc.text("SAISONNIER", margin + tableWidth + gap + 2, yPos + 3.5);
+  doc.text("TOUTE L'ANNEE", margin + 2, yPos + 4);
+  doc.text("SAISONNIER", margin + tableWidth + gap + 2, yPos + 4);
   yPos += subHeaderHeight;
 
   // Lignes des thèmes
-  const rowHeight = 4.5;
-  doc.setFontSize(5.5);
+  const rowHeight = 5.5;
+  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
 
   // Colonne TOUTE L'ANNEE
@@ -146,12 +146,12 @@ export function generateOrderPDF(order: Order): Buffer {
     doc.rect(margin, rowY, tableWidth, rowHeight);
     
     const selection = themeSelections.find(t => t.theme === theme && t.category === "TOUTE_ANNEE");
-    doc.text(theme, margin + 1.5, rowY + 3);
+    doc.text(theme, margin + 2, rowY + 4);
     if (selection?.quantity) {
-      doc.text(selection.quantity, margin + tableWidth - 17, rowY + 3);
+      doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
     }
     if (selection?.deliveryDate) {
-      doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 8, rowY + 3);
+      doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
     }
   });
 
@@ -166,109 +166,109 @@ export function generateOrderPDF(order: Order): Buffer {
     doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
     
     const selection = themeSelections.find(t => t.theme === theme && t.category === "SAISONNIER");
-    doc.text(theme, margin + tableWidth + gap + 1.5, rowY + 3);
+    doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
     if (selection?.quantity) {
-      doc.text(selection.quantity, margin + 2 * tableWidth + gap - 17, rowY + 3);
+      doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
     }
     if (selection?.deliveryDate) {
-      doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 8, rowY + 3);
+      doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
     }
   });
 
-  yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * rowHeight + 6;
+  yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * rowHeight + 8;
 
   // === LIVRAISON ET FACTURATION (2 colonnes) ===
   const boxWidth = (pageWidth - 2 * margin - gap) / 2;
-  const boxHeight = 38;
+  const boxHeight = 42;
 
   // Livraison
   doc.setDrawColor(100, 100, 100);
   doc.rect(margin, yPos, boxWidth, boxHeight);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("LIVRAISON", margin + 2, yPos + 4);
+  doc.setFontSize(9);
+  doc.text("LIVRAISON", margin + 2, yPos + 5);
   
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  let livY = yPos + 9;
+  let livY = yPos + 11;
   doc.text(`ENSEIGNE : ${order.livraisonEnseigne || ""}`, margin + 2, livY);
-  livY += 4.5;
+  livY += 5;
   doc.text(`ADRESSE : ${order.livraisonAdresse || ""}`, margin + 2, livY);
-  livY += 4.5;
+  livY += 5;
   doc.text(`CP / VILLE : ${order.livraisonCpVille || ""}`, margin + 2, livY);
-  livY += 4.5;
+  livY += 5;
   doc.text(`Horaires : ${order.livraisonHoraires || ""}`, margin + 2, livY);
-  livY += 4.5;
+  livY += 5;
   doc.text(`Camion avec hayon : ${order.livraisonHayon ? "Oui" : "Non"}`, margin + 2, livY);
 
   // Facturation
   doc.rect(margin + boxWidth + gap, yPos, boxWidth, boxHeight);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("FACTURATION", margin + boxWidth + gap + 2, yPos + 4);
+  doc.setFontSize(9);
+  doc.text("FACTURATION", margin + boxWidth + gap + 2, yPos + 5);
   
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  let facY = yPos + 9;
+  let facY = yPos + 11;
   doc.text(`RAISON SOCIALE : ${order.facturationRaisonSociale || ""}`, margin + boxWidth + gap + 2, facY);
-  facY += 4.5;
+  facY += 5;
   doc.text(`ADRESSE : ${order.facturationAdresse || ""}`, margin + boxWidth + gap + 2, facY);
-  facY += 4.5;
+  facY += 5;
   doc.text(`CP / VILLE : ${order.facturationCpVille || ""}`, margin + boxWidth + gap + 2, facY);
-  facY += 4.5;
+  facY += 5;
   doc.text(`MODE DE RÈGLEMENT : ${order.facturationMode || ""}`, margin + boxWidth + gap + 2, facY);
   if (order.facturationRib) {
-    facY += 4.5;
+    facY += 5;
     doc.text(`RIB : ${order.facturationRib}`, margin + boxWidth + gap + 2, facY);
   }
 
   // CGV extrait
-  doc.setFontSize(5);
+  doc.setFontSize(6);
   doc.setFont("helvetica", "bold");
-  doc.text("EXTRAIT DES CGV", margin + boxWidth + gap + 2, yPos + 30);
+  doc.text("EXTRAIT DES CGV", margin + boxWidth + gap + 2, yPos + 33);
   doc.setFont("helvetica", "normal");
-  doc.text("Règlement à 30 jours date de facture - Escompte 2% si paiement comptant", margin + boxWidth + gap + 2, yPos + 34);
+  doc.text("Règlement à 30 jours date de facture - Escompte 2% si paiement comptant", margin + boxWidth + gap + 2, yPos + 38);
 
-  yPos += boxHeight + 5;
+  yPos += boxHeight + 6;
 
   // === REMARQUES ===
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.text("REMARQUES", margin, yPos);
-  yPos += 4;
+  yPos += 5;
   
   doc.setDrawColor(150, 150, 150);
-  doc.rect(margin, yPos, pageWidth - 2 * margin, 12);
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 18);
   
   if (order.remarks) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6);
+    doc.setFontSize(8);
     const remarksLines = doc.splitTextToSize(order.remarks, pageWidth - 2 * margin - 4);
-    doc.text(remarksLines, margin + 2, yPos + 4);
+    doc.text(remarksLines, margin + 2, yPos + 5);
   }
-  yPos += 15;
+  yPos += 22;
 
   // === SIGNATURES ===
   const sigBoxWidth = (pageWidth - 2 * margin - 20) / 2;
-  const sigBoxHeight = 25;
+  const sigBoxHeight = 32;
 
   // Signature magasin (gauche)
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.text("Le Magasin", margin + sigBoxWidth / 2, yPos, { align: "center" });
-  doc.setFontSize(5);
+  doc.setFontSize(6);
   doc.setFont("helvetica", "normal");
-  doc.text("Cachet et signature obligatoires", margin + sigBoxWidth / 2, yPos + 3, { align: "center" });
+  doc.text("Cachet et signature obligatoires", margin + sigBoxWidth / 2, yPos + 4, { align: "center" });
   doc.setFont("helvetica", "italic");
-  doc.text("Le client reconnait avoir pris connaissance des CGV", margin + sigBoxWidth / 2, yPos + 6, { align: "center" });
+  doc.text("Le client reconnait avoir pris connaissance des CGV", margin + sigBoxWidth / 2, yPos + 8, { align: "center" });
   
   doc.setDrawColor(100, 100, 100);
-  doc.rect(margin, yPos + 8, sigBoxWidth, sigBoxHeight);
+  doc.rect(margin, yPos + 10, sigBoxWidth, sigBoxHeight);
   
   // Ajouter la signature du client
   if (order.signature) {
     try {
-      doc.addImage(order.signature, "PNG", margin + 3, yPos + 10, sigBoxWidth - 6, sigBoxHeight - 6);
+      doc.addImage(order.signature, "PNG", margin + 3, yPos + 12, sigBoxWidth - 6, sigBoxHeight - 6);
     } catch (error) {
       console.error("Erreur signature:", error);
     }
@@ -276,21 +276,21 @@ export function generateOrderPDF(order: Order): Buffer {
   
   // Infos signature
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(5);
-  doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 10);
-  doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 13);
+  doc.setFontSize(6);
+  doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 14);
+  doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 18);
   if (order.cgvAccepted) {
     doc.setFont("helvetica", "bold");
-    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 16);
+    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 22);
   }
 
   // Signature société (droite)
   const sigRightX = margin + sigBoxWidth + 20;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.text("Pour la société", sigRightX + sigBoxWidth / 2, yPos, { align: "center" });
   
-  doc.rect(sigRightX, yPos + 8, sigBoxWidth, sigBoxHeight);
+  doc.rect(sigRightX, yPos + 10, sigBoxWidth, sigBoxHeight);
 
   // === PIED DE PAGE ===
   doc.setFontSize(5);
