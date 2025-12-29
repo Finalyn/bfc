@@ -890,11 +890,11 @@ export default function AdminDashboard() {
                         <TableBody>
                           {clientsData?.data.map((client) => {
                             const now = new Date();
-                            const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+                            const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                             const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
                             const createdAt = client.createdAt ? new Date(client.createdAt) : null;
                             const updatedAt = client.updatedAt ? new Date(client.updatedAt) : null;
-                            const isNew = createdAt && createdAt > twoMonthsAgo;
+                            const isNew = createdAt && createdAt > oneMonthAgo;
                             const isRecentlyModified = updatedAt && createdAt && updatedAt > twoWeeksAgo && updatedAt.getTime() !== createdAt.getTime();
                             
                             return (

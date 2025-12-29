@@ -458,7 +458,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Un client avec ce code existe déjà" });
       }
       
-      const [newClient] = await db.insert(clients).values(validatedData).returning();
+      const [newClient] = await db.insert(clients).values({
+        ...validatedData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
       
       res.json({
         id: `db-${newClient.id}`,
