@@ -3,6 +3,19 @@ import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
+import * as fs from "fs";
+import * as path from "path";
+
+// Load header image once at startup
+const headerImagePath = path.join(process.cwd(), "attached_assets", "Haut_de_page_BFC_1767019338721.jpg");
+let headerImageBase64: string | null = null;
+try {
+  if (fs.existsSync(headerImagePath)) {
+    headerImageBase64 = fs.readFileSync(headerImagePath).toString("base64");
+  }
+} catch (e) {
+  console.error("Failed to load header image:", e);
+}
 
 export function generateOrderPDF(order: Order): Buffer {
   const doc = new jsPDF();
@@ -10,7 +23,15 @@ export function generateOrderPDF(order: Order): Buffer {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
-  let yPos = 15;
+  let yPos = 10;
+
+  // === IMAGE EN-TÊTE BDIS ===
+  if (headerImageBase64) {
+    const imgWidth = pageWidth - 2 * margin;
+    const imgHeight = 22;
+    doc.addImage(`data:image/jpeg;base64,${headerImageBase64}`, "JPEG", margin, yPos, imgWidth, imgHeight);
+    yPos += imgHeight + 5;
+  }
 
   // === EN-TÊTE ===
   // Date et Commercial
