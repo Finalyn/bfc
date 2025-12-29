@@ -1127,15 +1127,15 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   <Card>
-                    <CardContent className="p-2 sm:p-4">
-                      <div className="grid grid-cols-7 gap-1 mb-2">
-                        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
-                          <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
+                    <CardContent className="p-1 sm:p-3">
+                      <div className="grid grid-cols-7 gap-0.5 mb-1">
+                        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
+                          <div key={i} className="text-center text-[10px] font-medium text-muted-foreground py-1">
                             {day}
                           </div>
                         ))}
                       </div>
-                      <div className="grid grid-cols-7 gap-1">
+                      <div className="grid grid-cols-7 gap-0.5">
                         {(() => {
                           const [year, month] = calendarMonth.split('-').map(Number);
                           const firstDay = new Date(year, month - 1, 1);
@@ -1150,9 +1150,22 @@ export default function AdminDashboard() {
                             eventsByDate[event.date].push(event);
                           });
                           
+                          const getStatusColor = (status: string) => {
+                            switch (status) {
+                              case 'PAYEE': return 'bg-emerald-500';
+                              case 'TERMINEE': return 'bg-gray-500';
+                              case 'LIVREE': return 'bg-green-500';
+                              case 'EXPEDIEE': return 'bg-purple-500';
+                              case 'EN_PREPARATION': return 'bg-indigo-500';
+                              case 'CONFIRMEE': return 'bg-blue-500';
+                              case 'ANNULEE': return 'bg-red-500';
+                              default: return 'bg-yellow-500';
+                            }
+                          };
+                          
                           const cells = [];
                           for (let i = 0; i < startDayOfWeek; i++) {
-                            cells.push(<div key={`empty-${i}`} className="aspect-square" />);
+                            cells.push(<div key={`empty-${i}`} className="h-10 sm:h-12" />);
                           }
                           
                           const today = new Date().toISOString().split('T')[0];
@@ -1160,16 +1173,17 @@ export default function AdminDashboard() {
                           for (let day = 1; day <= daysInMonth; day++) {
                             const dateStr = `${calendarMonth}-${String(day).padStart(2, '0')}`;
                             const dayEvents = eventsByDate[dateStr] || [];
-                            const orderCount = dayEvents.filter(e => e.type === 'order').length;
-                            const deliveryCount = dayEvents.filter(e => e.type === 'delivery').length;
                             const isToday = dateStr === today;
                             const isSelected = dateStr === selectedCalendarDate;
+                            
+                            const orders = dayEvents.filter(e => e.type === 'order');
+                            const deliveries = dayEvents.filter(e => e.type === 'delivery');
                             
                             cells.push(
                               <button
                                 key={day}
                                 onClick={() => setSelectedCalendarDate(dateStr === selectedCalendarDate ? null : dateStr)}
-                                className={`aspect-square p-1 rounded-lg border text-center flex flex-col items-center justify-start transition-colors ${
+                                className={`h-10 sm:h-12 p-0.5 rounded border text-center flex flex-col items-center justify-start transition-colors overflow-hidden ${
                                   isSelected 
                                     ? 'bg-primary text-primary-foreground border-primary' 
                                     : isToday 
@@ -1180,16 +1194,19 @@ export default function AdminDashboard() {
                                 }`}
                                 data-testid={`calendar-day-${dateStr}`}
                               >
-                                <span className={`text-sm font-medium ${isSelected ? '' : isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                                <span className={`text-xs font-medium leading-tight ${isSelected ? '' : isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                                   {day}
                                 </span>
                                 {dayEvents.length > 0 && (
-                                  <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                                    {orderCount > 0 && (
-                                      <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-blue-200' : 'bg-blue-500'}`} title={`${orderCount} commande(s)`} />
-                                    )}
-                                    {deliveryCount > 0 && (
-                                      <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-green-200' : 'bg-green-500'}`} title={`${deliveryCount} livraison(s)`} />
+                                  <div className="flex flex-col gap-0.5 w-full px-0.5 mt-0.5 overflow-hidden">
+                                    {orders.slice(0, 2).map((evt, i) => (
+                                      <div key={`o-${i}`} className={`h-1 w-full rounded-sm ${isSelected ? 'bg-white/60' : getStatusColor(evt.status)}`} title={`${evt.orderCode} - ${evt.clientName}`} />
+                                    ))}
+                                    {deliveries.slice(0, 2).map((evt, i) => (
+                                      <div key={`d-${i}`} className={`h-1 w-full rounded-sm ${isSelected ? 'bg-white/40' : 'bg-green-400'} border-l-2 border-green-700`} title={`Livraison: ${evt.themeName}`} />
+                                    ))}
+                                    {dayEvents.length > 4 && (
+                                      <span className="text-[8px] text-muted-foreground">+{dayEvents.length - 4}</span>
                                     )}
                                   </div>
                                 )}
@@ -1200,15 +1217,12 @@ export default function AdminDashboard() {
                           return cells;
                         })()}
                       </div>
-                      <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          Commandes
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
-                          Livraisons
-                        </div>
+                      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-3 pt-2 border-t text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-yellow-500" /> En attente</div>
+                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-blue-500" /> Confirmée</div>
+                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-purple-500" /> Expédiée</div>
+                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-green-500" /> Livrée</div>
+                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-emerald-500" /> Payée</div>
                       </div>
                     </CardContent>
                   </Card>
