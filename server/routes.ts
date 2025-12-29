@@ -20,6 +20,24 @@ import { eq, ilike, or, sql, count, asc, desc } from "drizzle-orm";
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
 
+// Cache des commerciaux pour authentification rapide
+let commerciauxCache: any[] | null = null;
+let commerciauxCacheTime = 0;
+const CACHE_DURATION = 60000; // 1 minute
+
+async function getCommerciauxCached() {
+  const now = Date.now();
+  if (!commerciauxCache || now - commerciauxCacheTime > CACHE_DURATION) {
+    commerciauxCache = await db.select().from(commerciaux);
+    commerciauxCacheTime = now;
+  }
+  return commerciauxCache;
+}
+
+function invalidateCommerciauxCache() {
+  commerciauxCache = null;
+}
+
 function generateOrderCode(): string {
   const parisTime = toZonedTime(new Date(), "Europe/Paris");
   const year = parisTime.getFullYear();
@@ -39,8 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Identifiant et mot de passe requis" });
       }
       
-      // Chercher le commercial par identifiant (prenom+nom en minuscule)
-      const allCommerciaux = await db.select().from(commerciaux);
+      // Chercher le commercial par identifiant (prenom+nom en minuscule) - utilise le cache
+      const allCommerciaux = await getCommerciauxCached();
       const commercial = allCommerciaux.find(c => {
         const identifier = (c.prenom + c.nom).toLowerCase().replace(/\s/g, '');
         return identifier === username.toLowerCase().replace(/\s/g, '');
@@ -992,6 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertCommercialSchema.parse(req.body);
       const [created] = await db.insert(commerciaux).values(validated).returning();
+      invalidateCommerciauxCache();
       res.json(created);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1004,6 +1023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validated = insertCommercialSchema.partial().parse(req.body);
       const [updated] = await db.update(commerciaux).set(validated).where(eq(commerciaux.id, id)).returning();
       if (!updated) return res.status(404).json({ message: "Non trouvé" });
+      invalidateCommerciauxCache();
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1014,6 +1034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       await db.delete(commerciaux).where(eq(commerciaux.id, id));
+      invalidateCommerciauxCache();
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
