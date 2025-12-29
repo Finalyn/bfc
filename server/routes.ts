@@ -5,7 +5,8 @@ import {
   clients, insertClientSchema, updateClientSchema,
   commerciaux, insertCommercialSchema,
   fournisseurs, insertFournisseurSchema,
-  themes, insertThemeSchema
+  themes, insertThemeSchema,
+  orders, insertOrderDbSchema, updateOrderStatusSchema, ORDER_STATUSES
 } from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
@@ -51,6 +52,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         excel: excelBuffer,
         order,
       });
+
+      // Sauvegarder la commande en base de données
+      try {
+        await db.insert(orders).values({
+          orderCode,
+          orderDate: order.orderDate,
+          salesRepName: order.salesRepName,
+          clientName: order.responsableName || order.clientName || "",
+          clientEmail: order.responsableEmail || order.clientEmail || "",
+          clientTel: order.responsableTel || "",
+          themeSelections: order.themeSelections,
+          livraisonEnseigne: order.livraisonEnseigne,
+          livraisonAdresse: order.livraisonAdresse,
+          livraisonCpVille: order.livraisonCpVille,
+          livraisonHoraires: order.livraisonHoraires || "",
+          livraisonHayon: order.livraisonHayon,
+          facturationRaisonSociale: order.facturationRaisonSociale,
+          facturationAdresse: order.facturationAdresse,
+          facturationCpVille: order.facturationCpVille,
+          facturationMode: order.facturationMode,
+          facturationRib: order.facturationRib || "",
+          remarks: order.remarks || "",
+          signature: order.signature,
+          signatureLocation: order.signatureLocation,
+          signatureDate: order.signatureDate,
+          clientSignedName: order.clientSignedName,
+          status: "EN_ATTENTE",
+        });
+      } catch (dbError) {
+        console.error("Erreur lors de la sauvegarde en BDD:", dbError);
+      }
 
       // Envoyer les emails automatiquement
       let emailsSent = false;
@@ -1032,6 +1064,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // ===== ORDERS CRUD =====
+  app.get("/api/admin/orders", async (req, res) => {
+    try {
+      const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
+      const { status } = req.query;
+      
+      let allOrders = await db.select().from(orders);
+      
+      // Filter by status
+      if (status && status !== "ALL") {
+        allOrders = allOrders.filter(o => o.status === status);
+      }
+      
+      // Filter by search
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allOrders = allOrders.filter(o => 
+          o.orderCode.toLowerCase().includes(searchLower) ||
+          o.clientName.toLowerCase().includes(searchLower) ||
+          o.livraisonEnseigne.toLowerCase().includes(searchLower) ||
+          o.salesRepName.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Sort
+      const validSortFields = ["orderCode", "orderDate", "clientName", "status", "createdAt"];
+      const sortKey = validSortFields.includes(sortField) ? sortField : "createdAt";
+      allOrders.sort((a, b) => {
+        const aVal = String((a as any)[sortKey] || "").toLowerCase();
+        const bVal = String((b as any)[sortKey] || "").toLowerCase();
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      
+      // Par défaut, trier par date décroissante
+      if (!req.query.sortField) {
+        allOrders.sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        });
+      }
+      
+      const total = allOrders.length;
+      const paginated = allOrders.slice(offset, offset + pageSize);
+      
+      res.json({
+        data: paginated,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get single order
+  app.get("/api/admin/orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [order] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!order) return res.status(404).json({ message: "Commande non trouvée" });
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update order status
+  app.patch("/api/admin/orders/:id/status", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = updateOrderStatusSchema.parse(req.body);
+      const [updated] = await db.update(orders)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(orders.id, id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Commande non trouvée" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Delete order
+  app.delete("/api/admin/orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(orders).where(eq(orders.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get order statuses
+  app.get("/api/admin/order-statuses", (req, res) => {
+    res.json(ORDER_STATUSES);
   });
 
   const httpServer = createServer(app);
