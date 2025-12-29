@@ -59,6 +59,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
@@ -891,24 +897,30 @@ export default function AdminDashboard() {
                                   <Button variant="ghost" size="icon" onClick={() => openOrderDetail(order)} data-testid={`button-view-order-${order.id}`}>
                                     <Eye className="w-4 h-4" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => window.open(`/api/admin/orders/${order.id}/pdf`, '_blank')}
-                                    data-testid={`button-pdf-order-${order.id}`}
-                                    title="Télécharger PDF"
-                                  >
-                                    <FileText className="w-4 h-4 text-red-600" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => window.open(`/api/admin/orders/${order.id}/excel`, '_blank')}
-                                    data-testid={`button-excel-order-${order.id}`}
-                                    title="Télécharger Excel"
-                                  >
-                                    <Download className="w-4 h-4 text-green-600" />
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" data-testid={`button-download-order-${order.id}`}>
+                                        <Download className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => window.open(`/api/admin/orders/${order.id}/pdf`, '_blank')}>
+                                        <FileText className="w-4 h-4 mr-2 text-red-600" />
+                                        Télécharger PDF
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => window.open(`/api/admin/orders/${order.id}/excel`, '_blank')}>
+                                        <FileText className="w-4 h-4 mr-2 text-green-600" />
+                                        Télécharger Excel
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => {
+                                        window.open(`/api/admin/orders/${order.id}/pdf`, '_blank');
+                                        window.open(`/api/admin/orders/${order.id}/excel`, '_blank');
+                                      }}>
+                                        <Download className="w-4 h-4 mr-2 text-blue-600" />
+                                        Télécharger les deux
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                   <Button variant="ghost" size="icon" onClick={() => { setEditingItem(order); setDeleteDialogOpen(true); }} data-testid={`button-delete-order-${order.id}`}>
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </Button>
