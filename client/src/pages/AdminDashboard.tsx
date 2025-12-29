@@ -1198,27 +1198,27 @@ export default function AdminDashboard() {
                                   {day}
                                 </span>
                                 {dayEvents.length > 0 && (
-                                  <div className="flex flex-col gap-0.5 w-full px-0.5 mt-0.5 overflow-hidden">
+                                  <div className="flex flex-col gap-0.5 w-full px-0.5 mt-0.5 overflow-hidden flex-1">
                                     {orders.slice(0, 2).map((evt, i) => (
                                       <div 
                                         key={`o-${i}`} 
-                                        className={`h-3 w-full rounded-sm px-0.5 flex items-center ${isSelected ? 'bg-white/60' : getStatusColor(evt.status)}`} 
+                                        className={`h-4 w-full rounded px-1 flex items-center ${isSelected ? 'bg-white/40' : getStatusColor(evt.status) + '/40'}`} 
                                         title={`${evt.orderCode} - ${evt.clientName}`}
                                       >
-                                        <span className="text-[7px] text-white truncate font-medium">{evt.clientName?.split(' ')[0]?.substring(0, 6) || evt.orderCode}</span>
+                                        <span className={`text-[9px] truncate font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{evt.clientName?.split(' ')[0]?.substring(0, 8) || evt.orderCode}</span>
                                       </div>
                                     ))}
                                     {deliveries.slice(0, 1).map((evt, i) => (
                                       <div 
                                         key={`d-${i}`} 
-                                        className={`h-3 w-full rounded-sm px-0.5 flex items-center ${isSelected ? 'bg-white/40' : 'bg-green-400'}`} 
+                                        className={`h-4 w-full rounded px-1 flex items-center ${isSelected ? 'bg-white/30' : 'bg-green-500/40'}`} 
                                         title={`Livraison: ${evt.themeName}`}
                                       >
-                                        <span className="text-[7px] text-white truncate font-medium">Liv.</span>
+                                        <span className={`text-[9px] truncate font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>Livraison</span>
                                       </div>
                                     ))}
                                     {dayEvents.length > 3 && (
-                                      <span className="text-[7px] text-muted-foreground">+{dayEvents.length - 3}</span>
+                                      <span className="text-[8px] text-muted-foreground font-medium">+{dayEvents.length - 3}</span>
                                     )}
                                   </div>
                                 )}
