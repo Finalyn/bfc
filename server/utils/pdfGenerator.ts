@@ -280,10 +280,6 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFontSize(6);
   doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 14);
   doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 18);
-  if (order.cgvAccepted) {
-    doc.setFont("helvetica", "bold");
-    doc.text("CGV ACCEPTÉES", margin + 2, yPos + sigBoxHeight + 22);
-  }
 
   // Signature société (droite)
   const sigRightX = margin + sigBoxWidth + 20;
