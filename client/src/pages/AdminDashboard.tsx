@@ -1150,16 +1150,28 @@ export default function AdminDashboard() {
                             eventsByDate[event.date].push(event);
                           });
                           
-                          const getStatusColor = (status: string) => {
+                          const getStatusBgColor = (status: string) => {
                             switch (status) {
-                              case 'PAYEE': return 'bg-emerald-500';
-                              case 'TERMINEE': return 'bg-gray-500';
-                              case 'LIVREE': return 'bg-green-500';
-                              case 'EXPEDIEE': return 'bg-purple-500';
-                              case 'EN_PREPARATION': return 'bg-indigo-500';
-                              case 'CONFIRMEE': return 'bg-blue-500';
-                              case 'ANNULEE': return 'bg-red-500';
-                              default: return 'bg-yellow-500';
+                              case 'PAYEE': return 'bg-emerald-200 dark:bg-emerald-900/50';
+                              case 'TERMINEE': return 'bg-gray-200 dark:bg-gray-700/50';
+                              case 'LIVREE': return 'bg-green-200 dark:bg-green-900/50';
+                              case 'EXPEDIEE': return 'bg-purple-200 dark:bg-purple-900/50';
+                              case 'EN_PREPARATION': return 'bg-indigo-200 dark:bg-indigo-900/50';
+                              case 'CONFIRMEE': return 'bg-blue-200 dark:bg-blue-900/50';
+                              case 'ANNULEE': return 'bg-red-200 dark:bg-red-900/50';
+                              default: return 'bg-yellow-200 dark:bg-yellow-900/50';
+                            }
+                          };
+                          const getStatusTextColor = (status: string) => {
+                            switch (status) {
+                              case 'PAYEE': return 'text-emerald-700 dark:text-emerald-300';
+                              case 'TERMINEE': return 'text-gray-700 dark:text-gray-300';
+                              case 'LIVREE': return 'text-green-700 dark:text-green-300';
+                              case 'EXPEDIEE': return 'text-purple-700 dark:text-purple-300';
+                              case 'EN_PREPARATION': return 'text-indigo-700 dark:text-indigo-300';
+                              case 'CONFIRMEE': return 'text-blue-700 dark:text-blue-300';
+                              case 'ANNULEE': return 'text-red-700 dark:text-red-300';
+                              default: return 'text-yellow-700 dark:text-yellow-300';
                             }
                           };
                           
@@ -1202,23 +1214,23 @@ export default function AdminDashboard() {
                                     {orders.slice(0, 2).map((evt, i) => (
                                       <div 
                                         key={`o-${i}`} 
-                                        className={`h-4 w-full rounded px-1 flex items-center ${isSelected ? 'bg-white/40' : getStatusColor(evt.status) + '/40'}`} 
+                                        className={`h-5 w-full rounded-md px-1 flex items-center ${isSelected ? 'bg-white/40' : getStatusBgColor(evt.status)}`} 
                                         title={`${evt.orderCode} - ${evt.clientName}`}
                                       >
-                                        <span className={`text-[9px] truncate font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{evt.clientName?.split(' ')[0]?.substring(0, 8) || evt.orderCode}</span>
+                                        <span className={`text-[10px] truncate font-bold ${isSelected ? 'text-white' : getStatusTextColor(evt.status)}`}>{evt.clientName?.split(' ')[0]?.substring(0, 8) || evt.orderCode}</span>
                                       </div>
                                     ))}
                                     {deliveries.slice(0, 1).map((evt, i) => (
                                       <div 
                                         key={`d-${i}`} 
-                                        className={`h-4 w-full rounded px-1 flex items-center ${isSelected ? 'bg-white/30' : 'bg-green-500/40'}`} 
+                                        className={`h-5 w-full rounded-md px-1 flex items-center ${isSelected ? 'bg-white/30' : 'bg-green-200 dark:bg-green-900/50'}`} 
                                         title={`Livraison: ${evt.themeName}`}
                                       >
-                                        <span className={`text-[9px] truncate font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>Livraison</span>
+                                        <span className={`text-[10px] truncate font-bold ${isSelected ? 'text-white' : 'text-green-700 dark:text-green-300'}`}>Livraison</span>
                                       </div>
                                     ))}
                                     {dayEvents.length > 3 && (
-                                      <span className="text-[8px] text-muted-foreground font-medium">+{dayEvents.length - 3}</span>
+                                      <span className="text-[9px] text-muted-foreground font-medium">+{dayEvents.length - 3}</span>
                                     )}
                                   </div>
                                 )}
