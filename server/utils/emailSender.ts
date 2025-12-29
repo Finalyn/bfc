@@ -73,6 +73,16 @@ export async function sendOrderEmails(
         
         <p>Vous trouverez le bon de commande en pièce jointe.</p>
         <p>Bien cordialement,<br/>L'équipe BDIS</p>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">
+            Découvrez tous nos produits sur 
+            <a href="https://bdis.fr" style="color: #003366; font-weight: bold; text-decoration: none;">bdis.fr</a>
+          </p>
+          <p style="margin: 10px 0 0 0; color: #9ca3af; font-size: 12px;">
+            BOISSELLERIE DISTRIBUTION - Votre partenaire depuis plus de 30 ans
+          </p>
+        </div>
       </div>
     `,
     attachments: [
