@@ -437,6 +437,8 @@ export default function AdminDashboard() {
     }
   };
 
+  const [isImporting, setIsImporting] = useState(false);
+
   const handleExport = async (entity: string) => {
     try {
       const response = await fetch(`/api/admin/export/${entity}`);
@@ -455,6 +457,31 @@ export default function AdminDashboard() {
       toast({ title: "Export réussi", description: `${entity} exporté en Excel` });
     } catch (error) {
       toast({ title: "Erreur", description: "Impossible d'exporter les données", variant: "destructive" });
+    }
+  };
+
+  const handleImportExcel = async () => {
+    if (isImporting) return;
+    setIsImporting(true);
+    try {
+      const response = await fetch('/api/admin/import-excel', { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ 
+          title: "Import réussi", 
+          description: `Importé: ${data.imported.commerciaux} commerciaux, ${data.imported.fournisseurs} fournisseurs, ${data.imported.themes} thèmes, ${data.imported.clients} clients` 
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/commerciaux'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/fournisseurs'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/themes'] });
+      } else {
+        throw new Error(data.message || "Erreur d'import");
+      }
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -746,16 +773,40 @@ export default function AdminDashboard() {
                 <Plus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Ajouter</span>
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleExport(activeTab)}
-                data-testid="button-export"
-                size="sm"
-                className="h-9 px-2 sm:px-4"
-              >
-                <Download className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Exporter</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-2 sm:px-4"
+                    data-testid="button-more-actions"
+                  >
+                    <Download className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={() => handleExport(activeTab)}
+                    data-testid="menu-export"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exporter en Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleImportExcel}
+                    disabled={isImporting}
+                    data-testid="menu-import-excel"
+                  >
+                    {isImporting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4 mr-2" />
+                    )}
+                    {isImporting ? "Import en cours..." : "Importer depuis Excel"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
