@@ -8,8 +8,58 @@ import { ReviewStep } from "@/components/ReviewStep";
 import { SuccessStep } from "@/components/SuccessStep";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Check } from "lucide-react";
 
 type Step = "form" | "preview" | "signature" | "review" | "success";
+
+const STEPS = [
+  { id: "form", label: "Formulaire", number: 1 },
+  { id: "preview", label: "Vérification", number: 2 },
+  { id: "signature", label: "Signature", number: 3 },
+  { id: "review", label: "Validation", number: 4 },
+  { id: "success", label: "Terminé", number: 5 },
+];
+
+function ProgressBar({ currentStep }: { currentStep: Step }) {
+  const currentIndex = STEPS.findIndex(s => s.id === currentStep);
+  
+  return (
+    <div className="bg-white border-b sticky top-0 z-50 px-4 py-3">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center justify-between">
+          {STEPS.map((step, index) => {
+            const isCompleted = index < currentIndex;
+            const isCurrent = index === currentIndex;
+            
+            return (
+              <div key={step.id} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div 
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+                      isCompleted 
+                        ? "bg-green-500 border-green-500 text-white" 
+                        : isCurrent 
+                          ? "bg-gray-800 border-gray-800 text-white" 
+                          : "bg-white border-gray-300 text-gray-400"
+                    }`}
+                  >
+                    {isCompleted ? <Check className="w-4 h-4" /> : step.number}
+                  </div>
+                  <span className={`text-xs mt-1 hidden sm:block ${isCurrent ? "font-semibold text-gray-800" : "text-gray-500"}`}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < STEPS.length - 1 && (
+                  <div className={`w-8 sm:w-16 h-1 mx-1 rounded ${index < currentIndex ? "bg-green-500" : "bg-gray-200"}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface GeneratedOrder {
   orderCode: string;
@@ -169,7 +219,9 @@ export default function OrderPage() {
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
+      <ProgressBar currentStep={currentStep} />
+      
       {currentStep === "form" && (
         <OrderForm onNext={handleFormNext} initialData={orderData} />
       )}
@@ -214,6 +266,6 @@ export default function OrderPage() {
           emailError={emailError}
         />
       )}
-    </>
+    </div>
   );
 }

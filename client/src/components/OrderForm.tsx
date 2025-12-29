@@ -259,7 +259,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">BON DE COMMANDE 2026</h1>
-                <p className="text-sm text-muted-foreground">Étape 1/4 - Informations</p>
+                <p className="text-sm text-muted-foreground">Remplissez tous les champs obligatoires (*)</p>
               </div>
             </div>
           </div>
