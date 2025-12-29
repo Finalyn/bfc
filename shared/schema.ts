@@ -189,3 +189,79 @@ export const insertThemeSchema = createInsertSchema(themes).omit({
 
 export type Theme = typeof themes.$inferSelect;
 export type InsertTheme = z.infer<typeof insertThemeSchema>;
+
+// Statuts possibles pour une commande
+export const ORDER_STATUSES = [
+  "EN_ATTENTE",
+  "CONFIRMEE",
+  "EN_PREPARATION",
+  "EXPEDIEE",
+  "LIVREE",
+  "PAYEE",
+  "TERMINEE",
+  "ANNULEE",
+] as const;
+
+export type OrderStatus = typeof ORDER_STATUSES[number];
+
+// Table des commandes
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  orderCode: text("order_code").notNull().unique(),
+  orderDate: text("order_date").notNull(),
+  
+  // Commercial
+  salesRepName: text("sales_rep_name").notNull(),
+  
+  // Client/Responsable
+  clientName: text("client_name").notNull(),
+  clientEmail: text("client_email").notNull(),
+  clientTel: text("client_tel").default(""),
+  
+  // Thèmes (JSON)
+  themeSelections: text("theme_selections").notNull(),
+  
+  // Livraison
+  livraisonEnseigne: text("livraison_enseigne").notNull(),
+  livraisonAdresse: text("livraison_adresse").notNull(),
+  livraisonCpVille: text("livraison_cp_ville").notNull(),
+  livraisonHoraires: text("livraison_horaires").default(""),
+  livraisonHayon: boolean("livraison_hayon").default(false),
+  
+  // Facturation
+  facturationRaisonSociale: text("facturation_raison_sociale").notNull(),
+  facturationAdresse: text("facturation_adresse").notNull(),
+  facturationCpVille: text("facturation_cp_ville").notNull(),
+  facturationMode: text("facturation_mode").notNull(),
+  facturationRib: text("facturation_rib").default(""),
+  
+  // Remarques
+  remarks: text("remarks").default(""),
+  
+  // Signature
+  signature: text("signature").notNull(),
+  signatureLocation: text("signature_location").notNull(),
+  signatureDate: text("signature_date").notNull(),
+  clientSignedName: text("client_signed_name").notNull(),
+  
+  // Statut
+  status: text("status").notNull().default("EN_ATTENTE"),
+  
+  // Métadonnées
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOrderDbSchema = createInsertSchema(orders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateOrderStatusSchema = z.object({
+  status: z.enum(ORDER_STATUSES),
+});
+
+export type OrderDb = typeof orders.$inferSelect;
+export type InsertOrderDb = z.infer<typeof insertOrderDbSchema>;
+export type UpdateOrderStatus = z.infer<typeof updateOrderStatusSchema>;
