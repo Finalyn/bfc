@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,6 +16,148 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
 import { ClientModal } from "./ClientModal";
 import { useToast } from "@/hooks/use-toast";
+
+// Composant de saisie de date simplifié (JJ / MM / AAAA)
+function DateInput({ value, onChange, className, testId }: { 
+  value: string; 
+  onChange: (value: string) => void; 
+  className?: string;
+  testId?: string;
+}) {
+  const [day, setDay] = useState(() => value ? value.split("-")[2] || "" : "");
+  const [month, setMonth] = useState(() => value ? value.split("-")[1] || "" : "");
+  const [year, setYear] = useState(() => value ? value.split("-")[0] || "" : "");
+
+  const updateDate = useCallback((d: string, m: string, y: string) => {
+    if (d && m && y && d.length <= 2 && m.length <= 2 && y.length === 4) {
+      const paddedDay = d.padStart(2, "0");
+      const paddedMonth = m.padStart(2, "0");
+      onChange(`${y}-${paddedMonth}-${paddedDay}`);
+    } else if (!d && !m && !y) {
+      onChange("");
+    }
+  }, [onChange]);
+
+  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+    setDay(v);
+    updateDate(v, month, year);
+    if (v.length === 2) {
+      const nextInput = e.target.nextElementSibling?.nextElementSibling as HTMLInputElement;
+      nextInput?.focus();
+    }
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+    setMonth(v);
+    updateDate(day, v, year);
+    if (v.length === 2) {
+      const nextInput = e.target.nextElementSibling?.nextElementSibling as HTMLInputElement;
+      nextInput?.focus();
+    }
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+    setYear(v);
+    updateDate(day, month, v);
+  };
+
+  return (
+    <div className={`flex items-center gap-1 ${className}`} data-testid={testId}>
+      <Input
+        type="text"
+        inputMode="numeric"
+        placeholder="JJ"
+        value={day}
+        onChange={handleDayChange}
+        className="h-11 w-14 text-center text-base px-1"
+        maxLength={2}
+      />
+      <span className="text-muted-foreground">/</span>
+      <Input
+        type="text"
+        inputMode="numeric"
+        placeholder="MM"
+        value={month}
+        onChange={handleMonthChange}
+        className="h-11 w-14 text-center text-base px-1"
+        maxLength={2}
+      />
+      <span className="text-muted-foreground">/</span>
+      <Input
+        type="text"
+        inputMode="numeric"
+        placeholder="AAAA"
+        value={year}
+        onChange={handleYearChange}
+        className="h-11 w-20 text-center text-base px-1"
+        maxLength={4}
+      />
+    </div>
+  );
+}
+
+// Version compacte pour les tableaux de thèmes
+function CompactDateInput({ value, onChange, testId }: { 
+  value: string; 
+  onChange: (value: string) => void;
+  testId?: string;
+}) {
+  const [day, setDay] = useState(() => value ? value.split("-")[2] || "" : "");
+  const [month, setMonth] = useState(() => value ? value.split("-")[1] || "" : "");
+
+  const updateDate = useCallback((d: string, m: string) => {
+    if (d && m && d.length <= 2 && m.length <= 2) {
+      const paddedDay = d.padStart(2, "0");
+      const paddedMonth = m.padStart(2, "0");
+      onChange(`2026-${paddedMonth}-${paddedDay}`);
+    } else if (!d && !m) {
+      onChange("");
+    }
+  }, [onChange]);
+
+  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+    setDay(v);
+    updateDate(v, month);
+    if (v.length === 2) {
+      const nextInput = e.target.nextElementSibling?.nextElementSibling as HTMLInputElement;
+      nextInput?.focus();
+    }
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+    setMonth(v);
+    updateDate(day, v);
+  };
+
+  return (
+    <div className="flex items-center gap-0.5" data-testid={testId}>
+      <Input
+        type="text"
+        inputMode="numeric"
+        placeholder="JJ"
+        value={day}
+        onChange={handleDayChange}
+        className="h-8 w-10 text-center text-xs px-0.5"
+        maxLength={2}
+      />
+      <span className="text-muted-foreground text-xs">/</span>
+      <Input
+        type="text"
+        inputMode="numeric"
+        placeholder="MM"
+        value={month}
+        onChange={handleMonthChange}
+        className="h-8 w-10 text-center text-xs px-0.5"
+        maxLength={2}
+      />
+    </div>
+  );
+}
 
 interface Client {
   id: string;
@@ -279,12 +421,16 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     <Label htmlFor="orderDate" className="text-sm font-medium">
                       DATE <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="orderDate"
-                      type="date"
-                      data-testid="input-order-date"
-                      {...register("orderDate")}
-                      className="h-12 text-base"
+                    <Controller
+                      name="orderDate"
+                      control={control}
+                      render={({ field }) => (
+                        <DateInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          testId="input-order-date"
+                        />
+                      )}
                     />
                     {errors.orderDate && (
                       <p className="text-xs text-destructive">{errors.orderDate.message}</p>
@@ -457,12 +603,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                                 />
                               </td>
                               <td className="p-1">
-                                <Input
-                                  type="date"
-                                  className="h-9 text-sm px-1"
+                                <CompactDateInput
                                   value={getThemeValue(theme, "TOUTE_ANNEE", "deliveryDate")}
-                                  onChange={(e) => updateThemeSelection(theme, "TOUTE_ANNEE", "deliveryDate", e.target.value)}
-                                  data-testid={`input-date-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                  onChange={(val) => updateThemeSelection(theme, "TOUTE_ANNEE", "deliveryDate", val)}
+                                  testId={`input-date-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
                                 />
                               </td>
                             </tr>
@@ -499,12 +643,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                                 />
                               </td>
                               <td className="p-1">
-                                <Input
-                                  type="date"
-                                  className="h-9 text-sm px-1"
+                                <CompactDateInput
                                   value={getThemeValue(theme, "SAISONNIER", "deliveryDate")}
-                                  onChange={(e) => updateThemeSelection(theme, "SAISONNIER", "deliveryDate", e.target.value)}
-                                  data-testid={`input-date-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                  onChange={(val) => updateThemeSelection(theme, "SAISONNIER", "deliveryDate", val)}
+                                  testId={`input-date-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
                                 />
                               </td>
                             </tr>
