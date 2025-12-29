@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,144 +18,116 @@ import { formatInTimeZone } from "date-fns-tz";
 import { ClientModal } from "./ClientModal";
 import { useToast } from "@/hooks/use-toast";
 
-// Composant de saisie de date simplifié (JJ / MM / AAAA)
-function DateInput({ value, onChange, className, testId }: { 
+const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
+const MONTHS = [
+  { value: "01", label: "janv." },
+  { value: "02", label: "févr." },
+  { value: "03", label: "mars" },
+  { value: "04", label: "avr." },
+  { value: "05", label: "mai" },
+  { value: "06", label: "juin" },
+  { value: "07", label: "juil." },
+  { value: "08", label: "août" },
+  { value: "09", label: "sept." },
+  { value: "10", label: "oct." },
+  { value: "11", label: "nov." },
+  { value: "12", label: "déc." },
+];
+const YEARS = ["2025", "2026", "2027"];
+
+// Composant de saisie de date avec sélecteurs déroulants
+function DateInput({ value, onChange, testId }: { 
   value: string; 
   onChange: (value: string) => void; 
-  className?: string;
   testId?: string;
 }) {
-  const [day, setDay] = useState(() => value ? value.split("-")[2] || "" : "");
-  const [month, setMonth] = useState(() => value ? value.split("-")[1] || "" : "");
-  const [year, setYear] = useState(() => value ? value.split("-")[0] || "" : "");
+  const parts = value ? value.split("-") : ["", "", ""];
+  const year = parts[0] || "";
+  const month = parts[1] || "";
+  const day = parts[2] || "";
 
-  const updateDate = useCallback((d: string, m: string, y: string) => {
-    if (d && m && y && d.length <= 2 && m.length <= 2 && y.length === 4) {
-      const paddedDay = d.padStart(2, "0");
-      const paddedMonth = m.padStart(2, "0");
-      onChange(`${y}-${paddedMonth}-${paddedDay}`);
-    } else if (!d && !m && !y) {
-      onChange("");
+  const updateDate = (d: string, m: string, y: string) => {
+    if (d && m && y) {
+      onChange(`${y}-${m}-${d}`);
     }
-  }, [onChange]);
-
-  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-    setDay(v);
-    updateDate(v, month, year);
-    if (v.length === 2) {
-      const nextInput = e.target.nextElementSibling?.nextElementSibling as HTMLInputElement;
-      nextInput?.focus();
-    }
-  };
-
-  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-    setMonth(v);
-    updateDate(day, v, year);
-    if (v.length === 2) {
-      const nextInput = e.target.nextElementSibling?.nextElementSibling as HTMLInputElement;
-      nextInput?.focus();
-    }
-  };
-
-  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-    setYear(v);
-    updateDate(day, month, v);
   };
 
   return (
-    <div className={`flex items-center gap-1 ${className}`} data-testid={testId}>
-      <Input
-        type="text"
-        inputMode="numeric"
-        placeholder="JJ"
-        value={day}
-        onChange={handleDayChange}
-        className="h-11 w-14 text-center text-base px-1"
-        maxLength={2}
-      />
-      <span className="text-muted-foreground">/</span>
-      <Input
-        type="text"
-        inputMode="numeric"
-        placeholder="MM"
-        value={month}
-        onChange={handleMonthChange}
-        className="h-11 w-14 text-center text-base px-1"
-        maxLength={2}
-      />
-      <span className="text-muted-foreground">/</span>
-      <Input
-        type="text"
-        inputMode="numeric"
-        placeholder="AAAA"
-        value={year}
-        onChange={handleYearChange}
-        className="h-11 w-20 text-center text-base px-1"
-        maxLength={4}
-      />
+    <div className="flex items-center gap-2" data-testid={testId}>
+      <Select value={day} onValueChange={(d) => updateDate(d, month, year)}>
+        <SelectTrigger className="w-20 h-12">
+          <SelectValue placeholder="Jour" />
+        </SelectTrigger>
+        <SelectContent>
+          {DAYS.map((d) => (
+            <SelectItem key={d} value={d}>{d}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={month} onValueChange={(m) => updateDate(day, m, year)}>
+        <SelectTrigger className="w-24 h-12">
+          <SelectValue placeholder="Mois" />
+        </SelectTrigger>
+        <SelectContent>
+          {MONTHS.map((m) => (
+            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={year} onValueChange={(y) => updateDate(day, month, y)}>
+        <SelectTrigger className="w-24 h-12">
+          <SelectValue placeholder="Année" />
+        </SelectTrigger>
+        <SelectContent>
+          {YEARS.map((y) => (
+            <SelectItem key={y} value={y}>{y}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
 
-// Version compacte pour les tableaux de thèmes
+// Version compacte pour les tableaux de thèmes (jour + mois seulement, année = 2026)
 function CompactDateInput({ value, onChange, testId }: { 
   value: string; 
   onChange: (value: string) => void;
   testId?: string;
 }) {
-  const [day, setDay] = useState(() => value ? value.split("-")[2] || "" : "");
-  const [month, setMonth] = useState(() => value ? value.split("-")[1] || "" : "");
+  const parts = value ? value.split("-") : ["", "", ""];
+  const month = parts[1] || "";
+  const day = parts[2] || "";
 
-  const updateDate = useCallback((d: string, m: string) => {
-    if (d && m && d.length <= 2 && m.length <= 2) {
-      const paddedDay = d.padStart(2, "0");
-      const paddedMonth = m.padStart(2, "0");
-      onChange(`2026-${paddedMonth}-${paddedDay}`);
-    } else if (!d && !m) {
+  const updateDate = (d: string, m: string) => {
+    if (d && m) {
+      onChange(`2026-${m}-${d}`);
+    } else {
       onChange("");
     }
-  }, [onChange]);
-
-  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-    setDay(v);
-    updateDate(v, month);
-    if (v.length === 2) {
-      const nextInput = e.target.nextElementSibling?.nextElementSibling as HTMLInputElement;
-      nextInput?.focus();
-    }
-  };
-
-  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-    setMonth(v);
-    updateDate(day, v);
   };
 
   return (
-    <div className="flex items-center gap-0.5" data-testid={testId}>
-      <Input
-        type="text"
-        inputMode="numeric"
-        placeholder="JJ"
-        value={day}
-        onChange={handleDayChange}
-        className="h-8 w-10 text-center text-xs px-0.5"
-        maxLength={2}
-      />
-      <span className="text-muted-foreground text-xs">/</span>
-      <Input
-        type="text"
-        inputMode="numeric"
-        placeholder="MM"
-        value={month}
-        onChange={handleMonthChange}
-        className="h-8 w-10 text-center text-xs px-0.5"
-        maxLength={2}
-      />
+    <div className="flex items-center gap-1" data-testid={testId}>
+      <Select value={day} onValueChange={(d) => updateDate(d, month)}>
+        <SelectTrigger className="w-14 h-8 text-xs px-1">
+          <SelectValue placeholder="JJ" />
+        </SelectTrigger>
+        <SelectContent>
+          {DAYS.map((d) => (
+            <SelectItem key={d} value={d}>{d}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={month} onValueChange={(m) => updateDate(day, m)}>
+        <SelectTrigger className="w-16 h-8 text-xs px-1">
+          <SelectValue placeholder="MM" />
+        </SelectTrigger>
+        <SelectContent>
+          {MONTHS.map((m) => (
+            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
