@@ -71,7 +71,10 @@ export default function HubPage() {
           {isAdmin && (
             <Card 
               className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-gray-500"
-              onClick={() => setLocation("/admin")}
+              onClick={() => {
+                sessionStorage.setItem("adminAuthenticated", "true");
+                setLocation("/admin");
+              }}
               data-testid="card-database"
             >
               <CardContent className="p-6">
