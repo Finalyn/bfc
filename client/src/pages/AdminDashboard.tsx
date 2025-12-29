@@ -50,7 +50,10 @@ import {
   Loader2,
   ShoppingCart,
   Eye,
-  FileText
+  FileText,
+  Calendar,
+  Truck,
+  ClipboardList
 } from "lucide-react";
 import {
   Select,
@@ -138,7 +141,20 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "calendar";
+
+interface CalendarEvent {
+  id: string;
+  date: string;
+  type: "order" | "delivery";
+  orderCode: string;
+  clientName: string;
+  salesRepName: string;
+  themeName?: string;
+  quantity?: number;
+  status: string;
+  orderId: number;
+}
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -160,6 +176,11 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [calendarEventType, setCalendarEventType] = useState<"all" | "order" | "delivery">("all");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -251,6 +272,70 @@ export default function AdminDashboard() {
     queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}&status=${statusFilter}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
   });
+
+  // Charger toutes les commandes pour le calendrier
+  const { data: calendarOrdersData, isLoading: calendarLoading } = useQuery<PaginatedResponse<OrderDb>>({
+    queryKey: ["/api/admin/orders", "calendar"],
+    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1000`).then(r => r.json()),
+    enabled: !isCheckingAuth && activeTab === "calendar",
+  });
+
+  // Construire les événements du calendrier
+  const calendarEvents: CalendarEvent[] = (() => {
+    if (!calendarOrdersData?.data) return [];
+    const events: CalendarEvent[] = [];
+    
+    calendarOrdersData.data.forEach(order => {
+      // Événement de commande
+      events.push({
+        id: `order-${order.id}`,
+        date: order.orderDate,
+        type: "order",
+        orderCode: order.orderCode,
+        clientName: order.clientName,
+        salesRepName: order.salesRepName,
+        status: order.status,
+        orderId: order.id,
+      });
+      
+      // Événements de livraison depuis themeSelections
+      try {
+        const selections = JSON.parse(order.themeSelections || "[]");
+        if (Array.isArray(selections)) {
+          selections.forEach((sel: any, idx: number) => {
+            if (sel.deliveryDate && sel.deliveryDate.trim()) {
+              events.push({
+                id: `delivery-${order.id}-${idx}`,
+                date: sel.deliveryDate,
+                type: "delivery",
+                orderCode: order.orderCode,
+                clientName: order.clientName,
+                salesRepName: order.salesRepName,
+                themeName: sel.theme,
+                quantity: sel.quantity,
+                status: order.status,
+                orderId: order.id,
+              });
+            }
+          });
+        }
+      } catch (e) {
+        // Ignorer les erreurs de parsing
+      }
+    });
+    
+    // Filtrer par type si nécessaire
+    let filtered = events;
+    if (calendarEventType !== "all") {
+      filtered = events.filter(e => e.type === calendarEventType);
+    }
+    
+    // Filtrer par mois
+    filtered = filtered.filter(e => e.date.startsWith(calendarMonth));
+    
+    // Trier par date
+    return filtered.sort((a, b) => a.date.localeCompare(b.date));
+  })();
 
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
@@ -579,27 +664,29 @@ export default function AdminDashboard() {
             </Button>
             <h1 className="text-lg sm:text-xl font-bold">Base de données</h1>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Button
-              onClick={openCreateModal}
-              data-testid="button-add"
-              size="sm"
-              className="h-9 px-2 sm:px-4"
-            >
-              <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Ajouter</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleExport(activeTab)}
-              data-testid="button-export"
-              size="sm"
-              className="h-9 px-2 sm:px-4"
-            >
-              <Download className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Exporter</span>
-            </Button>
-          </div>
+          {activeTab !== "calendar" && (
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Button
+                onClick={openCreateModal}
+                data-testid="button-add"
+                size="sm"
+                className="h-9 px-2 sm:px-4"
+              >
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Ajouter</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleExport(activeTab)}
+                data-testid="button-export"
+                size="sm"
+                className="h-9 px-2 sm:px-4"
+              >
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Exporter</span>
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -639,6 +726,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="orders" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-orders">
                 <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">Cmd</span> ({ordersTotals?.pagination.total || ordersData?.pagination.total || 0})
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-calendar">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Calendrier</span><span className="sm:hidden">Cal.</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -978,6 +1069,137 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const [year, month] = calendarMonth.split('-').map(Number);
+                      const newDate = new Date(year, month - 2);
+                      setCalendarMonth(`${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`);
+                    }}
+                    data-testid="button-prev-month"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <h2 className="text-lg font-semibold min-w-[140px] text-center" data-testid="calendar-month-display">
+                    {new Date(calendarMonth + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const [year, month] = calendarMonth.split('-').map(Number);
+                      const newDate = new Date(year, month);
+                      setCalendarMonth(`${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`);
+                    }}
+                    data-testid="button-next-month"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Select value={calendarEventType} onValueChange={(v) => setCalendarEventType(v as "all" | "order" | "delivery")}>
+                  <SelectTrigger className="w-full sm:w-48" data-testid="select-event-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les événements</SelectItem>
+                    <SelectItem value="order">Commandes uniquement</SelectItem>
+                    <SelectItem value="delivery">Livraisons uniquement</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  {calendarLoading ? (
+                    <div className="p-8 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                    </div>
+                  ) : calendarEvents.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Aucun événement ce mois</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {(() => {
+                        const groupedByDate: { [key: string]: CalendarEvent[] } = {};
+                        calendarEvents.forEach(event => {
+                          if (!groupedByDate[event.date]) {
+                            groupedByDate[event.date] = [];
+                          }
+                          groupedByDate[event.date].push(event);
+                        });
+                        
+                        return Object.entries(groupedByDate).map(([date, events]) => (
+                          <div key={date} className="p-3 sm:p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="bg-primary text-primary-foreground rounded-lg px-3 py-1 text-sm font-medium">
+                                {new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {events.length} événement{events.length > 1 ? 's' : ''}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2">
+                              {events.map(event => (
+                                <div 
+                                  key={event.id} 
+                                  className={`flex items-start gap-3 p-2 sm:p-3 rounded-lg border ${
+                                    event.type === 'order' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                                  }`}
+                                  data-testid={`event-${event.id}`}
+                                >
+                                  <div className={`p-2 rounded-full ${event.type === 'order' ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-200' : 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-200'}`}>
+                                    {event.type === 'order' ? <ClipboardList className="w-4 h-4" /> : <Truck className="w-4 h-4" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="font-medium text-sm">{event.orderCode}</span>
+                                      <Badge variant={event.type === 'order' ? 'default' : 'secondary'} className="text-xs">
+                                        {event.type === 'order' ? 'Commande' : 'Livraison'}
+                                      </Badge>
+                                      {getStatusBadge(event.status)}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1 truncate">{event.clientName}</p>
+                                    {event.themeName && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {event.themeName} {event.quantity ? `(x${event.quantity})` : ''}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground mt-1">Commercial: {event.salesRepName}</p>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => {
+                                      const order = calendarOrdersData?.data.find(o => o.id === event.orderId);
+                                      if (order) openOrderDetail(order);
+                                    }}
+                                    data-testid={`button-view-event-${event.id}`}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
