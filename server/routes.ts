@@ -566,6 +566,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Routes admin - Statistiques globales
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const allClients = await db.select().from(clients);
+      const excelClients = data.clients || [];
+      const dbClientCodes = new Set(allClients.map(c => c.code));
+      const uniqueExcelClients = excelClients.filter(c => !dbClientCodes.has(c.code));
+      const totalClients = allClients.length + uniqueExcelClients.length;
+
+      const allThemes = await db.select().from(themes);
+      const excelThemes = data.themes || [];
+      const dbThemeNames = new Set(allThemes.map(t => t.theme));
+      const uniqueExcelThemes = excelThemes.filter(t => !dbThemeNames.has(t.theme));
+      const totalThemes = allThemes.length + uniqueExcelThemes.length;
+
+      const allCommerciaux = await db.select().from(commerciaux);
+      const excelCommerciaux = data.commerciaux || [];
+      const totalCommerciaux = allCommerciaux.length || excelCommerciaux.length;
+
+      const allFournisseurs = await db.select().from(fournisseurs);
+      const excelFournisseurs = data.fournisseurs || [];
+      const totalFournisseurs = allFournisseurs.length || excelFournisseurs.length;
+
+      const allOrders = await db.select().from(orders);
+      const totalOrders = allOrders.length;
+
+      // Comptage par statut
+      const statusCounts: { [key: string]: number } = {};
+      allOrders.forEach(order => {
+        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+      });
+
+      res.json({
+        totalClients,
+        totalThemes,
+        totalCommerciaux,
+        totalFournisseurs,
+        totalOrders,
+        statusCounts
+      });
+    } catch (error: any) {
+      console.error("Erreur stats:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Routes admin - Export Excel
   app.get("/api/admin/export/:entity", async (req, res) => {
     try {
