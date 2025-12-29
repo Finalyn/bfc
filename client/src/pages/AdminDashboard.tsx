@@ -191,6 +191,37 @@ export default function AdminDashboard() {
     return `?page=${currentPage}&pageSize=${pageSize}&search=${encodeURIComponent(debouncedSearch)}&sortField=${sortField}&sortDir=${sortDirection}`;
   };
 
+  // Charger les totaux de toutes les entités dès le départ pour les compteurs des onglets
+  const { data: clientsTotals } = useQuery<PaginatedResponse<Client>>({
+    queryKey: ["/api/admin/clients", "totals"],
+    queryFn: () => fetch(`/api/admin/clients?page=1&pageSize=1`).then(r => r.json()),
+    enabled: !isCheckingAuth,
+  });
+
+  const { data: themesTotals } = useQuery<PaginatedResponse<Theme>>({
+    queryKey: ["/api/admin/themes", "totals"],
+    queryFn: () => fetch(`/api/admin/themes?page=1&pageSize=1`).then(r => r.json()),
+    enabled: !isCheckingAuth,
+  });
+
+  const { data: commerciauxTotals } = useQuery<PaginatedResponse<Commercial>>({
+    queryKey: ["/api/admin/commerciaux", "totals"],
+    queryFn: () => fetch(`/api/admin/commerciaux?page=1&pageSize=1`).then(r => r.json()),
+    enabled: !isCheckingAuth,
+  });
+
+  const { data: fournisseursTotals } = useQuery<PaginatedResponse<Fournisseur>>({
+    queryKey: ["/api/admin/fournisseurs", "totals"],
+    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=1`).then(r => r.json()),
+    enabled: !isCheckingAuth,
+  });
+
+  const { data: ordersTotals } = useQuery<PaginatedResponse<OrderDb>>({
+    queryKey: ["/api/admin/orders", "totals"],
+    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1`).then(r => r.json()),
+    enabled: !isCheckingAuth,
+  });
+
   const { data: clientsData, isLoading: clientsLoading } = useQuery<PaginatedResponse<Client>>({
     queryKey: ["/api/admin/clients", currentPage, debouncedSearch, sortField, sortDirection],
     queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}`).then(r => r.json()),
@@ -584,23 +615,23 @@ export default function AdminDashboard() {
           <TabsList className="mb-6 flex-wrap">
             <TabsTrigger value="clients" className="gap-2" data-testid="tab-clients">
               <Users className="w-4 h-4" />
-              Clients ({clientsData?.pagination.total || 0})
+              Clients ({clientsTotals?.pagination.total || clientsData?.pagination.total || 0})
             </TabsTrigger>
             <TabsTrigger value="themes" className="gap-2" data-testid="tab-themes">
               <Package className="w-4 h-4" />
-              Thèmes ({themesData?.pagination.total || 0})
+              Thèmes ({themesTotals?.pagination.total || themesData?.pagination.total || 0})
             </TabsTrigger>
             <TabsTrigger value="commerciaux" className="gap-2" data-testid="tab-commerciaux">
               <UserCircle className="w-4 h-4" />
-              Commerciaux ({commerciauxData?.pagination.total || 0})
+              Commerciaux ({commerciauxTotals?.pagination.total || commerciauxData?.pagination.total || 0})
             </TabsTrigger>
             <TabsTrigger value="fournisseurs" className="gap-2" data-testid="tab-fournisseurs">
               <Building2 className="w-4 h-4" />
-              Fournisseurs ({fournisseursData?.pagination.total || 0})
+              Fournisseurs ({fournisseursTotals?.pagination.total || fournisseursData?.pagination.total || 0})
             </TabsTrigger>
             <TabsTrigger value="orders" className="gap-2" data-testid="tab-orders">
               <ShoppingCart className="w-4 h-4" />
-              Commandes ({ordersData?.pagination.total || 0})
+              Commandes ({ordersTotals?.pagination.total || ordersData?.pagination.total || 0})
             </TabsTrigger>
           </TabsList>
 
