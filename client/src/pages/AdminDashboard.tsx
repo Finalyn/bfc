@@ -410,29 +410,31 @@ export default function AdminDashboard() {
     if (pagination.totalPages <= 1) return null;
     
     return (
-      <div className="flex items-center justify-between px-4 py-3 border-t">
-        <p className="text-sm text-muted-foreground">
-          Page {pagination.page} sur {pagination.totalPages} ({pagination.total} résultats)
+      <div className="flex flex-col sm:flex-row items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-t gap-2">
+        <p className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
+          <span className="hidden sm:inline">Page </span>{pagination.page}/{pagination.totalPages} ({pagination.total})
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
           <Button
             variant="outline"
             size="sm"
+            className="h-8 px-2 sm:px-3"
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={pagination.page <= 1}
             data-testid="button-prev-page"
           >
             <ChevronLeft className="w-4 h-4" />
-            Précédent
+            <span className="hidden sm:inline">Précédent</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
+            className="h-8 px-2 sm:px-3"
             onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
             disabled={pagination.page >= pagination.totalPages}
             data-testid="button-next-page"
           >
-            Suivant
+            <span className="hidden sm:inline">Suivant</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -452,47 +454,47 @@ export default function AdminDashboard() {
     switch (activeTab) {
       case "clients":
         return (
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="code">Code</Label>
+                <Label htmlFor="code" className="text-sm">Code</Label>
                 <Input id="code" value={editFormData.code || ""} onChange={e => setEditFormData({...editFormData, code: e.target.value})} />
               </div>
               <div>
-                <Label htmlFor="nom">Nom</Label>
+                <Label htmlFor="nom" className="text-sm">Nom</Label>
                 <Input id="nom" value={editFormData.nom || ""} onChange={e => setEditFormData({...editFormData, nom: e.target.value})} />
               </div>
             </div>
             <div>
-              <Label htmlFor="adresse1">Adresse</Label>
+              <Label htmlFor="adresse1" className="text-sm">Adresse</Label>
               <Input id="adresse1" value={editFormData.adresse1 || ""} onChange={e => setEditFormData({...editFormData, adresse1: e.target.value})} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="codePostal">Code Postal</Label>
+                <Label htmlFor="codePostal" className="text-sm">Code Postal</Label>
                 <Input id="codePostal" value={editFormData.codePostal || ""} onChange={e => setEditFormData({...editFormData, codePostal: e.target.value})} />
               </div>
               <div>
-                <Label htmlFor="ville">Ville</Label>
+                <Label htmlFor="ville" className="text-sm">Ville</Label>
                 <Input id="ville" value={editFormData.ville || ""} onChange={e => setEditFormData({...editFormData, ville: e.target.value})} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="tel">Téléphone</Label>
+                <Label htmlFor="tel" className="text-sm">Téléphone</Label>
                 <Input id="tel" value={editFormData.tel || ""} onChange={e => setEditFormData({...editFormData, tel: e.target.value})} />
               </div>
               <div>
-                <Label htmlFor="portable">Portable</Label>
+                <Label htmlFor="portable" className="text-sm">Portable</Label>
                 <Input id="portable" value={editFormData.portable || ""} onChange={e => setEditFormData({...editFormData, portable: e.target.value})} />
               </div>
             </div>
             <div>
-              <Label htmlFor="mail">Email</Label>
+              <Label htmlFor="mail" className="text-sm">Email</Label>
               <Input id="mail" type="email" value={editFormData.mail || ""} onChange={e => setEditFormData({...editFormData, mail: e.target.value})} />
             </div>
             <div>
-              <Label htmlFor="interloc">Interlocuteur</Label>
+              <Label htmlFor="interloc" className="text-sm">Interlocuteur</Label>
               <Input id="interloc" value={editFormData.interloc || ""} onChange={e => setEditFormData({...editFormData, interloc: e.target.value})} />
             </div>
           </div>
@@ -565,75 +567,81 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setLocation("/")}
+              onClick={() => setLocation("/hub")}
               data-testid="button-back"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-xl font-bold">Base de données</h1>
+            <h1 className="text-lg sm:text-xl font-bold">Base de données</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               onClick={openCreateModal}
               data-testid="button-add"
+              size="sm"
+              className="h-9 px-2 sm:px-4"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Ajouter</span>
             </Button>
             <Button
               variant="outline"
               onClick={() => handleExport(activeTab)}
               data-testid="button-export"
+              size="sm"
+              className="h-9 px-2 sm:px-4"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Exporter
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Exporter</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <div className="relative max-w-md">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <div className="mb-4 sm:mb-6">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full sm:max-w-md"
               data-testid="input-search"
             />
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as EntityType)}>
-          <TabsList className="mb-6 flex-wrap">
-            <TabsTrigger value="clients" className="gap-2" data-testid="tab-clients">
-              <Users className="w-4 h-4" />
-              Clients ({clientsTotals?.pagination.total || clientsData?.pagination.total || 0})
-            </TabsTrigger>
-            <TabsTrigger value="themes" className="gap-2" data-testid="tab-themes">
-              <Package className="w-4 h-4" />
-              Thèmes ({themesTotals?.pagination.total || themesData?.pagination.total || 0})
-            </TabsTrigger>
-            <TabsTrigger value="commerciaux" className="gap-2" data-testid="tab-commerciaux">
-              <UserCircle className="w-4 h-4" />
-              Commerciaux ({commerciauxTotals?.pagination.total || commerciauxData?.pagination.total || 0})
-            </TabsTrigger>
-            <TabsTrigger value="fournisseurs" className="gap-2" data-testid="tab-fournisseurs">
-              <Building2 className="w-4 h-4" />
-              Fournisseurs ({fournisseursTotals?.pagination.total || fournisseursData?.pagination.total || 0})
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-2" data-testid="tab-orders">
-              <ShoppingCart className="w-4 h-4" />
-              Commandes ({ordersTotals?.pagination.total || ordersData?.pagination.total || 0})
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 mb-4 sm:mb-6">
+            <TabsList className="inline-flex w-max sm:w-auto">
+              <TabsTrigger value="clients" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-clients">
+                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Clients</span> ({clientsTotals?.pagination.total || clientsData?.pagination.total || 0})
+              </TabsTrigger>
+              <TabsTrigger value="themes" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-themes">
+                <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Thèmes</span> ({themesTotals?.pagination.total || themesData?.pagination.total || 0})
+              </TabsTrigger>
+              <TabsTrigger value="commerciaux" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-commerciaux">
+                <UserCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Commerciaux</span><span className="sm:hidden">Com.</span> ({commerciauxTotals?.pagination.total || commerciauxData?.pagination.total || 0})
+              </TabsTrigger>
+              <TabsTrigger value="fournisseurs" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-fournisseurs">
+                <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Fournisseurs</span><span className="sm:hidden">Four.</span> ({fournisseursTotals?.pagination.total || fournisseursData?.pagination.total || 0})
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-orders">
+                <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Cmd</span> ({ordersTotals?.pagination.total || ordersData?.pagination.total || 0})
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="clients">
             <Card>
@@ -850,7 +858,7 @@ export default function AdminDashboard() {
           <TabsContent value="orders">
             <div className="mb-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48" data-testid="select-status-filter">
+                <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
                   <SelectValue placeholder="Filtrer par statut" />
                 </SelectTrigger>
                 <SelectContent>
@@ -878,38 +886,41 @@ export default function AdminDashboard() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="cursor-pointer" onClick={() => handleSort("orderCode")}>
-                              N° Commande <SortIcon field="orderCode" />
+                            <TableHead className="cursor-pointer text-xs sm:text-sm" onClick={() => handleSort("orderCode")}>
+                              <span className="hidden sm:inline">N° </span>Cmd <SortIcon field="orderCode" />
                             </TableHead>
-                            <TableHead className="cursor-pointer" onClick={() => handleSort("orderDate")}>
+                            <TableHead className="cursor-pointer text-xs sm:text-sm hidden sm:table-cell" onClick={() => handleSort("orderDate")}>
                               Date <SortIcon field="orderDate" />
                             </TableHead>
-                            <TableHead className="cursor-pointer" onClick={() => handleSort("clientName")}>
+                            <TableHead className="cursor-pointer text-xs sm:text-sm" onClick={() => handleSort("clientName")}>
                               Client <SortIcon field="clientName" />
                             </TableHead>
-                            <TableHead className="hidden md:table-cell">Commercial</TableHead>
-                            <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                            <TableHead className="hidden lg:table-cell">Commercial</TableHead>
+                            <TableHead className="cursor-pointer text-xs sm:text-sm" onClick={() => handleSort("status")}>
                               Statut <SortIcon field="status" />
                             </TableHead>
-                            <TableHead className="w-32">Actions</TableHead>
+                            <TableHead className="w-20 sm:w-32 text-xs sm:text-sm">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {ordersData?.data.map((order) => (
                             <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
-                              <TableCell className="font-mono text-sm">{order.orderCode}</TableCell>
-                              <TableCell>{order.orderDate}</TableCell>
-                              <TableCell className="font-medium">
-                                <div>{order.clientName}</div>
-                                <div className="text-xs text-muted-foreground">{order.livraisonEnseigne}</div>
+                              <TableCell className="font-mono text-xs sm:text-sm">
+                                <div>{order.orderCode}</div>
+                                <div className="text-xs text-muted-foreground sm:hidden">{order.orderDate}</div>
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">{order.salesRepName}</TableCell>
+                              <TableCell className="hidden sm:table-cell text-sm">{order.orderDate}</TableCell>
+                              <TableCell className="font-medium text-xs sm:text-sm">
+                                <div className="truncate max-w-[100px] sm:max-w-none">{order.clientName}</div>
+                                <div className="text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-none">{order.livraisonEnseigne}</div>
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell">{order.salesRepName}</TableCell>
                               <TableCell>
                                 <Select 
                                   value={order.status} 
                                   onValueChange={(newStatus) => updateOrderStatusMutation.mutate({ id: order.id, status: newStatus })}
                                 >
-                                  <SelectTrigger className="w-36 h-8" data-testid={`select-status-${order.id}`}>
+                                  <SelectTrigger className="w-24 sm:w-36 h-7 sm:h-8 text-xs" data-testid={`select-status-${order.id}`}>
                                     <SelectValue>{getStatusBadge(order.status)}</SelectValue>
                                   </SelectTrigger>
                                   <SelectContent>
@@ -924,13 +935,13 @@ export default function AdminDashboard() {
                                 </Select>
                               </TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon" onClick={() => openOrderDetail(order)} data-testid={`button-view-order-${order.id}`}>
+                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openOrderDetail(order)} data-testid={`button-view-order-${order.id}`}>
                                     <Eye className="w-4 h-4" />
                                   </Button>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" data-testid={`button-download-order-${order.id}`}>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-download-order-${order.id}`}>
                                         <Download className="w-4 h-4" />
                                       </Button>
                                     </DropdownMenuTrigger>
@@ -952,7 +963,7 @@ export default function AdminDashboard() {
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
-                                  <Button variant="ghost" size="icon" onClick={() => { setEditingItem(order); setDeleteDialogOpen(true); }} data-testid={`button-delete-order-${order.id}`}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(order); setDeleteDialogOpen(true); }} data-testid={`button-delete-order-${order.id}`}>
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </Button>
                                 </div>
