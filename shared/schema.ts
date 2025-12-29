@@ -152,7 +152,9 @@ export type EmailConfig = z.infer<typeof emailConfigSchema>;
 // Table des commerciaux
 export const commerciaux = pgTable("commerciaux", {
   id: serial("id").primaryKey(),
+  prenom: text("prenom").notNull().default(""),
   nom: text("nom").notNull(),
+  role: text("role").notNull().default("commercial"), // "admin" ou "commercial"
 });
 
 export const insertCommercialSchema = createInsertSchema(commerciaux).omit({

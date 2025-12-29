@@ -30,6 +30,47 @@ function generateOrderCode(): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Endpoint d'authentification
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Identifiant et mot de passe requis" });
+      }
+      
+      // Vérifier le mot de passe
+      if (password !== "slf25") {
+        return res.status(401).json({ error: "Mot de passe incorrect" });
+      }
+      
+      // Chercher le commercial par identifiant (prenom+nom en minuscule)
+      const allCommerciaux = await db.select().from(commerciaux);
+      const commercial = allCommerciaux.find(c => {
+        const identifier = (c.prenom + c.nom).toLowerCase().replace(/\s/g, '');
+        return identifier === username.toLowerCase().replace(/\s/g, '');
+      });
+      
+      if (!commercial) {
+        return res.status(401).json({ error: "Identifiant non trouvé" });
+      }
+      
+      res.json({
+        success: true,
+        user: {
+          id: commercial.id,
+          prenom: commercial.prenom,
+          nom: commercial.nom,
+          fullName: `${commercial.prenom} ${commercial.nom}`.trim() || commercial.nom,
+          role: commercial.role
+        }
+      });
+    } catch (error: any) {
+      console.error("Erreur auth:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
   // Générer une commande avec PDF et Excel
   app.post("/api/orders/generate", async (req, res) => {
     try {
@@ -650,20 +691,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allOrders = await db.select().from(orders).orderBy(orders.createdAt);
           
           allOrders.forEach(order => {
-            const themesList = order.themeSelections
-              ? (order.themeSelections as any[])
-                  .map(t => `${t.theme} (${t.category}) x${t.quantity}`)
-                  .join(", ")
-              : "";
+            let themesList = "";
+            try {
+              const parsed = typeof order.themeSelections === "string" ? JSON.parse(order.themeSelections) : order.themeSelections;
+              if (Array.isArray(parsed)) {
+                themesList = parsed.map(t => `${t.theme} (${t.category}) x${t.quantity}`).join(", ");
+              }
+            } catch (e) {}
             
             sheet!.addRow({
-              orderNumber: order.orderNumber,
+              orderNumber: order.orderCode,
               orderDate: order.orderDate,
               salesRepName: order.salesRepName,
               clientName: order.clientName,
-              responsableName: order.responsableName,
-              responsableTel: order.responsableTel,
-              responsableEmail: order.responsableEmail,
+              responsableName: order.clientName,
+              responsableTel: order.clientTel || "",
+              responsableEmail: order.clientEmail,
               themes: themesList,
               livraisonEnseigne: order.livraisonEnseigne,
               livraisonAdresse: order.livraisonAdresse,
@@ -904,8 +947,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (allCommerciaux.length === 0) {
         allCommerciaux = data.commerciaux.map((c, i) => ({
           id: i + 1,
-          nom: c.displayName || c.nom
-        }));
+          prenom: "",
+          nom: c.displayName || c.nom,
+          role: "commercial"
+        })) as typeof allCommerciaux;
       }
       
       // Filter

@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock } from "lucide-react";
+import { Lock, User } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -15,10 +17,10 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!password) {
+    if (!username || !password) {
       toast({
         title: "Erreur",
-        description: "Veuillez entrer le mot de passe",
+        description: "Veuillez entrer votre identifiant et mot de passe",
         variant: "destructive",
       });
       return;
@@ -26,16 +28,27 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    // Vérification simple du mot de passe
-    if (password === "slf25") {
-      // Stocker dans sessionStorage
-      sessionStorage.setItem("authenticated", "true");
-      // Redirection vers le hub
-      setLocation("/hub");
-    } else {
+    try {
+      const response = await apiRequest("POST", "/api/auth/login", {
+        username,
+        password
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        sessionStorage.setItem("authenticated", "true");
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+        sessionStorage.setItem("userRole", data.user.role);
+        sessionStorage.setItem("userName", data.user.fullName);
+        setLocation("/hub");
+      } else {
+        throw new Error(data.error || "Erreur de connexion");
+      }
+    } catch (error: any) {
       toast({
         title: "Accès refusé",
-        description: "Mot de passe incorrect",
+        description: error.message || "Identifiant ou mot de passe incorrect",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -46,7 +59,6 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-white">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
-          {/* Header */}
           <div className="text-center space-y-2">
             <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-200">
               <Lock className="w-8 h-8 text-gray-500" />
@@ -55,34 +67,56 @@ export default function LoginPage() {
               Gestion de Commandes
             </h1>
             <p className="text-sm text-gray-600">
-              Entrez le mot de passe pour accéder à l'application
+              Connectez-vous avec votre identifiant commercial
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-medium">
+                Identifiant
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="username"
+                  type="text"
+                  data-testid="input-username"
+                  placeholder="prenomnom (ex: ludovicfraioli)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                  className="h-12 text-base pl-10"
+                  disabled={isLoading}
+                  autoComplete="username"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
                 Mot de passe
               </Label>
-              <Input
-                id="password"
-                type="password"
-                data-testid="input-password"
-                placeholder="Entrez le mot de passe"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isLoading) {
-                    e.preventDefault();
-                    handleSubmit(e as any);
-                  }
-                }}
-                className="h-12 text-base"
-                disabled={isLoading}
-                autoComplete="off"
-                enterKeyHint="go"
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  data-testid="input-password"
+                  placeholder="Entrez le mot de passe"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !isLoading) {
+                      e.preventDefault();
+                      handleSubmit(e as any);
+                    }
+                  }}
+                  className="h-12 text-base pl-10"
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                  enterKeyHint="go"
+                />
+              </div>
             </div>
 
             <Button
@@ -91,12 +125,16 @@ export default function LoginPage() {
               className="w-full h-14 text-base font-medium"
               disabled={isLoading}
             >
-              {isLoading ? "Vérification..." : "Se connecter"}
+              {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
           </form>
+
+          <div className="text-center text-xs text-gray-500 space-y-1">
+            <p>Identifiant = prénom + nom en minuscule sans espace</p>
+            <p className="text-gray-400">Exemple : ludovicfraioli</p>
+          </div>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-6">
           Application réservée aux commerciaux BFC
         </p>

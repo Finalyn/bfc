@@ -463,7 +463,7 @@ export default function AdminDashboard() {
       case "themes":
         return { theme: "", fournisseur: "" };
       case "commerciaux":
-        return { nom: "" };
+        return { prenom: "", nom: "", role: "commercial" };
       case "fournisseurs":
         return { nom: "", nomCourt: "" };
       default:
@@ -601,9 +601,33 @@ export default function AdminDashboard() {
       case "commerciaux":
         return (
           <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="prenom">Prénom</Label>
+                <Input id="prenom" value={editFormData.prenom || ""} onChange={e => setEditFormData({...editFormData, prenom: e.target.value})} data-testid="input-prenom" />
+              </div>
+              <div>
+                <Label htmlFor="nom">Nom</Label>
+                <Input id="nom" value={editFormData.nom || ""} onChange={e => setEditFormData({...editFormData, nom: e.target.value})} data-testid="input-nom" />
+              </div>
+            </div>
             <div>
-              <Label htmlFor="nom">Nom</Label>
-              <Input id="nom" value={editFormData.nom || ""} onChange={e => setEditFormData({...editFormData, nom: e.target.value})} />
+              <Label htmlFor="role">Rôle</Label>
+              <Select value={editFormData.role || "commercial"} onValueChange={v => setEditFormData({...editFormData, role: v})}>
+                <SelectTrigger data-testid="select-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="commercial">Commercial</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <Label className="text-xs text-muted-foreground">Identifiant généré</Label>
+              <p className="font-mono text-sm mt-1">
+                {((editFormData.prenom || "") + (editFormData.nom || "")).toLowerCase().replace(/\s/g, '') || "prenomnom"}
+              </p>
             </div>
           </div>
         );
@@ -865,17 +889,33 @@ export default function AdminDashboard() {
                             <TableHead className="cursor-pointer" onClick={() => handleSort("id")}>
                               ID <SortIcon field="id" />
                             </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("prenom")}>
+                              Prénom <SortIcon field="prenom" />
+                            </TableHead>
                             <TableHead className="cursor-pointer" onClick={() => handleSort("nom")}>
                               Nom <SortIcon field="nom" />
+                            </TableHead>
+                            <TableHead className="hidden sm:table-cell">Identifiant</TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("role")}>
+                              Rôle <SortIcon field="role" />
                             </TableHead>
                             <TableHead className="w-24">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {commerciauxData?.data.map((commercial) => (
+                          {commerciauxData?.data.map((commercial: any) => (
                             <TableRow key={commercial.id} data-testid={`row-commercial-${commercial.id}`}>
                               <TableCell className="font-mono text-sm">{commercial.id}</TableCell>
+                              <TableCell>{commercial.prenom || "-"}</TableCell>
                               <TableCell className="font-medium">{commercial.nom}</TableCell>
+                              <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">
+                                {((commercial.prenom || "") + commercial.nom).toLowerCase().replace(/\s/g, '')}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${commercial.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
+                                  {commercial.role === 'admin' ? 'Admin' : 'Commercial'}
+                                </span>
+                              </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
                                   <Button variant="ghost" size="icon" onClick={() => openEditModal(commercial)} data-testid={`button-edit-commercial-${commercial.id}`}>
