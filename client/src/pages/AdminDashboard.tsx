@@ -118,14 +118,14 @@ interface OrderDb {
 }
 
 const ORDER_STATUSES = [
-  { value: "EN_ATTENTE", label: "En attente", color: "bg-yellow-100 text-yellow-800" },
-  { value: "CONFIRMEE", label: "Confirmée", color: "bg-blue-100 text-blue-800" },
-  { value: "EN_PREPARATION", label: "En préparation", color: "bg-indigo-100 text-indigo-800" },
-  { value: "EXPEDIEE", label: "Expédiée", color: "bg-purple-100 text-purple-800" },
-  { value: "LIVREE", label: "Livrée", color: "bg-green-100 text-green-800" },
-  { value: "PAYEE", label: "Payée", color: "bg-emerald-100 text-emerald-800" },
-  { value: "TERMINEE", label: "Terminée", color: "bg-gray-100 text-gray-800" },
-  { value: "ANNULEE", label: "Annulée", color: "bg-red-100 text-red-800" },
+  { value: "EN_ATTENTE", label: "En attente", color: "bg-gray-200 text-gray-700" },
+  { value: "CONFIRMEE", label: "Confirmée", color: "bg-gray-300 text-gray-800" },
+  { value: "EN_PREPARATION", label: "En préparation", color: "bg-gray-400 text-gray-900" },
+  { value: "EXPEDIEE", label: "Expédiée", color: "bg-gray-500 text-white" },
+  { value: "LIVREE", label: "Livrée", color: "bg-gray-600 text-white" },
+  { value: "PAYEE", label: "Payée", color: "bg-gray-700 text-white" },
+  { value: "TERMINEE", label: "Terminée", color: "bg-gray-800 text-white" },
+  { value: "ANNULEE", label: "Annulée", color: "bg-gray-900 text-white" },
 ];
 
 interface PaginatedResponse<T> {
@@ -905,18 +905,18 @@ export default function AdminDashboard() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                       <DropdownMenuItem onClick={() => window.open(`/api/admin/orders/${order.id}/pdf`, '_blank')}>
-                                        <FileText className="w-4 h-4 mr-2 text-red-600" />
+                                        <FileText className="w-4 h-4 mr-2" />
                                         Télécharger PDF
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => window.open(`/api/admin/orders/${order.id}/excel`, '_blank')}>
-                                        <FileText className="w-4 h-4 mr-2 text-green-600" />
+                                        <FileText className="w-4 h-4 mr-2" />
                                         Télécharger Excel
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => {
                                         window.open(`/api/admin/orders/${order.id}/pdf`, '_blank');
                                         window.open(`/api/admin/orders/${order.id}/excel`, '_blank');
                                       }}>
-                                        <Download className="w-4 h-4 mr-2 text-blue-600" />
+                                        <Download className="w-4 h-4 mr-2" />
                                         Télécharger les deux
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>

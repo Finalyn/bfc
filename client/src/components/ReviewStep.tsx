@@ -299,7 +299,7 @@ export function ReviewStep({
               <div className="flex gap-2 pt-1">
                 <Badge variant="secondary">Signature capturée</Badge>
                 {orderData.cgvAccepted && (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
                     CGV acceptées
                   </Badge>
                 )}
