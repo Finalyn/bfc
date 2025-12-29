@@ -197,7 +197,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [clientModalMode, setClientModalMode] = useState<"create" | "edit">("create");
   const [selectedClientData, setSelectedClientData] = useState<Client | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [originalClientData, setOriginalClientData] = useState<Client | null>(null);
+  const [originalClientData, setOriginalClientData] = useState<Client | null>(
+    initialData?.originalClientData ? JSON.parse(initialData.originalClientData) : null
+  );
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const [clientChanges, setClientChanges] = useState<{field: string, old: string, new: string}[]>([]);
@@ -432,6 +434,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       productTheme: filteredSelections.map(t => t.theme).join(", ") || "Divers",
       quantity: filteredSelections.map(t => t.quantity).filter(Boolean).join(", ") || "1",
       deliveryDate: filteredSelections[0]?.deliveryDate || data.orderDate,
+      originalClientData: originalClientData ? JSON.stringify(originalClientData) : null,
     });
   };
 
