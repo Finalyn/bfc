@@ -82,7 +82,7 @@ export default function LoginPage() {
                   id="username"
                   type="text"
                   data-testid="input-username"
-                  placeholder="prenomnom (ex: ludovicfraioli)"
+                  placeholder="Identifiant"
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
                   className="h-12 text-base pl-10"
@@ -129,10 +129,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="text-center text-xs text-gray-500 space-y-1">
-            <p>Identifiant = prénom + nom en minuscule sans espace</p>
-            <p className="text-gray-400">Exemple : ludovicfraioli</p>
-          </div>
         </div>
 
         <p className="text-center text-sm text-gray-600 mt-6">

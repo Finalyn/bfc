@@ -463,7 +463,7 @@ export default function AdminDashboard() {
       case "themes":
         return { theme: "", fournisseur: "" };
       case "commerciaux":
-        return { prenom: "", nom: "", role: "commercial" };
+        return { prenom: "", nom: "", role: "commercial", actif: true };
       case "fournisseurs":
         return { nom: "", nomCourt: "" };
       default:
@@ -611,22 +611,36 @@ export default function AdminDashboard() {
                 <Input id="nom" value={editFormData.nom || ""} onChange={e => setEditFormData({...editFormData, nom: e.target.value})} data-testid="input-nom" />
               </div>
             </div>
-            <div>
-              <Label htmlFor="role">Rôle</Label>
-              <Select value={editFormData.role || "commercial"} onValueChange={v => setEditFormData({...editFormData, role: v})}>
-                <SelectTrigger data-testid="select-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="role">Rôle</Label>
+                <Select value={editFormData.role || "commercial"} onValueChange={v => setEditFormData({...editFormData, role: v})}>
+                  <SelectTrigger data-testid="select-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="actif">Accès</Label>
+                <Select value={editFormData.actif === false ? "false" : "true"} onValueChange={v => setEditFormData({...editFormData, actif: v === "true"})}>
+                  <SelectTrigger data-testid="select-actif">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Actif</SelectItem>
+                    <SelectItem value="false">Révoqué</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="p-3 bg-muted rounded-lg">
-              <Label className="text-xs text-muted-foreground">Identifiant généré</Label>
+              <Label className="text-xs text-muted-foreground">Identifiant</Label>
               <p className="font-mono text-sm mt-1">
-                {((editFormData.prenom || "") + (editFormData.nom || "")).toLowerCase().replace(/\s/g, '') || "prenomnom"}
+                {((editFormData.prenom || "") + (editFormData.nom || "")).toLowerCase().replace(/\s/g, '') || "-"}
               </p>
             </div>
           </div>
@@ -899,6 +913,9 @@ export default function AdminDashboard() {
                             <TableHead className="cursor-pointer" onClick={() => handleSort("role")}>
                               Rôle <SortIcon field="role" />
                             </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("actif")}>
+                              Accès <SortIcon field="actif" />
+                            </TableHead>
                             <TableHead className="w-24">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -914,6 +931,11 @@ export default function AdminDashboard() {
                               <TableCell>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${commercial.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
                                   {commercial.role === 'admin' ? 'Admin' : 'Commercial'}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${commercial.actif !== false ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'}`}>
+                                  {commercial.actif !== false ? 'Actif' : 'Révoqué'}
                                 </span>
                               </TableCell>
                               <TableCell>

@@ -55,6 +55,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Identifiant non trouvé" });
       }
       
+      if (!commercial.actif) {
+        return res.status(401).json({ error: "Accès révoqué. Contactez un administrateur." });
+      }
+      
       res.json({
         success: true,
         user: {
@@ -949,14 +953,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: i + 1,
           prenom: "",
           nom: c.displayName || c.nom,
-          role: "commercial"
+          role: "commercial",
+          actif: true
         })) as typeof allCommerciaux;
       }
       
       // Filter
       if (search) {
         const searchLower = search.toLowerCase();
-        allCommerciaux = allCommerciaux.filter(c => c.nom.toLowerCase().includes(searchLower));
+        allCommerciaux = allCommerciaux.filter(c => 
+          c.nom.toLowerCase().includes(searchLower) || 
+          (c.prenom || "").toLowerCase().includes(searchLower)
+        );
       }
       
       // Sort

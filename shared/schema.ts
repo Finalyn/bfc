@@ -155,6 +155,7 @@ export const commerciaux = pgTable("commerciaux", {
   prenom: text("prenom").notNull().default(""),
   nom: text("nom").notNull(),
   role: text("role").notNull().default("commercial"), // "admin" ou "commercial"
+  actif: boolean("actif").notNull().default(true), // accès activé ou révoqué
 });
 
 export const insertCommercialSchema = createInsertSchema(commerciaux).omit({
