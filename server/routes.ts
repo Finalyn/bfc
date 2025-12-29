@@ -1160,6 +1160,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(ORDER_STATUSES);
   });
 
+  // Download PDF for order
+  app.get("/api/admin/orders/:id/pdf", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [orderDb] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!orderDb) return res.status(404).json({ message: "Commande non trouvée" });
+
+      const order: Order = {
+        orderDate: orderDb.orderDate,
+        salesRepName: orderDb.salesRepName,
+        responsableName: orderDb.clientName,
+        responsableEmail: orderDb.clientEmail,
+        responsableTel: orderDb.clientTel || "",
+        themeSelections: orderDb.themeSelections,
+        livraisonEnseigne: orderDb.livraisonEnseigne,
+        livraisonAdresse: orderDb.livraisonAdresse,
+        livraisonCpVille: orderDb.livraisonCpVille,
+        livraisonHoraires: orderDb.livraisonHoraires || "",
+        livraisonHayon: orderDb.livraisonHayon || false,
+        facturationRaisonSociale: orderDb.facturationRaisonSociale,
+        facturationAdresse: orderDb.facturationAdresse,
+        facturationCpVille: orderDb.facturationCpVille,
+        facturationMode: orderDb.facturationMode as "VIREMENT" | "CHEQUE" | "LCR",
+        facturationRib: orderDb.facturationRib || "",
+        remarks: orderDb.remarks || "",
+        signature: orderDb.signature,
+        signatureLocation: orderDb.signatureLocation,
+        signatureDate: orderDb.signatureDate,
+        clientSignedName: orderDb.clientSignedName,
+        cgvAccepted: true,
+        orderCode: orderDb.orderCode,
+        createdAt: orderDb.createdAt?.toISOString() || "",
+      };
+
+      const pdfBuffer = generateOrderPDF(order);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${orderDb.orderCode}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Download Excel for order
+  app.get("/api/admin/orders/:id/excel", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [orderDb] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!orderDb) return res.status(404).json({ message: "Commande non trouvée" });
+
+      const order: Order = {
+        orderDate: orderDb.orderDate,
+        salesRepName: orderDb.salesRepName,
+        responsableName: orderDb.clientName,
+        responsableEmail: orderDb.clientEmail,
+        responsableTel: orderDb.clientTel || "",
+        themeSelections: orderDb.themeSelections,
+        livraisonEnseigne: orderDb.livraisonEnseigne,
+        livraisonAdresse: orderDb.livraisonAdresse,
+        livraisonCpVille: orderDb.livraisonCpVille,
+        livraisonHoraires: orderDb.livraisonHoraires || "",
+        livraisonHayon: orderDb.livraisonHayon || false,
+        facturationRaisonSociale: orderDb.facturationRaisonSociale,
+        facturationAdresse: orderDb.facturationAdresse,
+        facturationCpVille: orderDb.facturationCpVille,
+        facturationMode: orderDb.facturationMode as "VIREMENT" | "CHEQUE" | "LCR",
+        facturationRib: orderDb.facturationRib || "",
+        remarks: orderDb.remarks || "",
+        signature: orderDb.signature,
+        signatureLocation: orderDb.signatureLocation,
+        signatureDate: orderDb.signatureDate,
+        clientSignedName: orderDb.clientSignedName,
+        cgvAccepted: true,
+        orderCode: orderDb.orderCode,
+        createdAt: orderDb.createdAt?.toISOString() || "",
+      };
+
+      const excelBuffer = await generateOrderExcel(order);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${orderDb.orderCode}.xlsx"`);
+      res.send(excelBuffer);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
