@@ -1165,7 +1165,7 @@ export default function AdminDashboard() {
                           
                           const cells = [];
                           for (let i = 0; i < startDayOfWeek; i++) {
-                            cells.push(<div key={`empty-${i}`} className="h-10 sm:h-12" />);
+                            cells.push(<div key={`empty-${i}`} className="aspect-square border border-gray-100 dark:border-gray-800 rounded" />);
                           }
                           
                           const today = new Date().toISOString().split('T')[0];
@@ -1183,14 +1183,14 @@ export default function AdminDashboard() {
                               <button
                                 key={day}
                                 onClick={() => setSelectedCalendarDate(dateStr === selectedCalendarDate ? null : dateStr)}
-                                className={`h-10 sm:h-12 p-0.5 rounded border text-center flex flex-col items-center justify-start transition-colors overflow-hidden ${
+                                className={`aspect-square p-0.5 rounded border text-center flex flex-col items-center justify-start transition-colors overflow-hidden ${
                                   isSelected 
                                     ? 'bg-primary text-primary-foreground border-primary' 
                                     : isToday 
                                       ? 'bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700' 
                                       : dayEvents.length > 0 
-                                        ? 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700' 
-                                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                                        ? 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700' 
+                                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                                 data-testid={`calendar-day-${dateStr}`}
                               >
