@@ -86,6 +86,8 @@ interface Client {
   tel?: string;
   portable?: string;
   mail?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface Theme {
@@ -835,10 +837,33 @@ export default function AdminDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {clientsData?.data.map((client) => (
+                          {clientsData?.data.map((client) => {
+                            const now = new Date();
+                            const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+                            const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                            const createdAt = client.createdAt ? new Date(client.createdAt) : null;
+                            const updatedAt = client.updatedAt ? new Date(client.updatedAt) : null;
+                            const isNew = createdAt && createdAt > twoMonthsAgo;
+                            const isRecentlyModified = updatedAt && createdAt && updatedAt > twoWeeksAgo && updatedAt.getTime() !== createdAt.getTime();
+                            
+                            return (
                             <TableRow key={client.id || client.code} data-testid={`row-client-${client.id}`}>
                               <TableCell className="font-mono text-sm">{client.code}</TableCell>
-                              <TableCell className="font-medium">{client.nom}</TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span>{client.nom}</span>
+                                  {isNew && (
+                                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 text-xs">
+                                      Nouveau
+                                    </Badge>
+                                  )}
+                                  {isRecentlyModified && !isNew && (
+                                    <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs">
+                                      Modifié
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {client.codePostal} {client.ville}
                               </TableCell>
@@ -861,7 +886,8 @@ export default function AdminDashboard() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))}
+                          );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
