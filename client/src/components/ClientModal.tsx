@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -80,6 +80,25 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
       mail: clientData?.mail || "",
     },
   });
+
+  // Reset form when clientData changes or modal opens
+  useEffect(() => {
+    if (open) {
+      reset({
+        code: clientData?.code || "",
+        nom: clientData?.nom || "",
+        adresse1: clientData?.adresse1 || "",
+        adresse2: clientData?.adresse2 || "",
+        codePostal: clientData?.codePostal || "",
+        ville: clientData?.ville || "",
+        pays: clientData?.pays || "",
+        interloc: clientData?.interloc || "",
+        tel: clientData?.tel || "",
+        portable: clientData?.portable || "",
+        mail: clientData?.mail || "",
+      });
+    }
+  }, [open, clientData, reset]);
 
   const createMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
