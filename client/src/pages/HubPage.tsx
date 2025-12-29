@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,45 +5,21 @@ import { ClipboardList, Database, LogOut } from "lucide-react";
 
 export default function HubPage() {
   const [, setLocation] = useLocation();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  useEffect(() => {
-    const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    const isPageReload = navigationType?.type === 'reload';
-    
-    if (isPageReload) {
-      sessionStorage.removeItem("authenticated");
-      sessionStorage.removeItem("adminAuthenticated");
-      window.location.href = "/login";
-      return;
-    }
-    
-    const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
-    
-    if (!isAuthenticated) {
-      window.location.href = "/login";
-      return;
-    }
-    
-    setIsCheckingAuth(false);
-  }, []);
+  // Vérification immédiate sans state
+  const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+  
+  if (!isAuthenticated) {
+    // Redirection immédiate sans affichage
+    setLocation("/login");
+    return null;
+  }
 
   const handleLogout = () => {
     sessionStorage.removeItem("authenticated");
     sessionStorage.removeItem("adminAuthenticated");
-    window.location.href = "/login";
+    setLocation("/login");
   };
-
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Vérification...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-white dark:from-gray-900 dark:to-gray-800">

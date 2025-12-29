@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { Lock } from "lucide-react";
 
 export default function LoginPage() {
@@ -31,8 +30,8 @@ export default function LoginPage() {
     if (password === "slf25") {
       // Stocker dans sessionStorage
       sessionStorage.setItem("authenticated", "true");
-      // Redirection simple
-      window.location.href = "/";
+      // Redirection vers le hub
+      setLocation("/hub");
     } else {
       toast({
         title: "Accès refusé",
