@@ -1,11 +1,10 @@
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
@@ -31,16 +30,13 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string>("");
   
-  const { register, handleSubmit, control, formState: { errors }, watch } = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
       signatureLocation: "",
       signatureDate: formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd"),
       clientSignedName: "",
-      cgvAccepted: false,
     },
   });
-
-  const cgvAccepted = watch("cgvAccepted");
 
   const clearSignature = () => {
     signatureRef.current?.clear();
@@ -49,11 +45,6 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
   };
 
   const onSubmit = (formData: any) => {
-    if (!formData.cgvAccepted) {
-      setError("Vous devez accepter les Conditions Générales de Vente");
-      return;
-    }
-    
     if (signatureRef.current?.isEmpty()) {
       setError("Veuillez signer avant de continuer");
       return;
@@ -66,7 +57,7 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
         signatureLocation: formData.signatureLocation,
         signatureDate: formData.signatureDate,
         clientSignedName: formData.clientSignedName,
-        cgvAccepted: formData.cgvAccepted,
+        cgvAccepted: true,
       });
     }
   };
@@ -165,23 +156,9 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
                 </p>
               </div>
               <div className="pt-3 border-t">
-                <Controller
-                  name="cgvAccepted"
-                  control={control}
-                  render={({ field }) => (
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="checkbox-cgv"
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm font-medium text-foreground">
-                        J'ai lu et j'accepte les Conditions Générales de Vente <span className="text-destructive">*</span>
-                      </span>
-                    </label>
-                  )}
-                />
+                <p className="text-sm font-medium text-foreground text-center bg-primary/10 p-3 rounded-lg">
+                  En signant ci-dessous, vous acceptez les Conditions Générales de Vente
+                </p>
               </div>
             </CardContent>
           </Card>
