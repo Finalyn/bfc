@@ -1200,13 +1200,25 @@ export default function AdminDashboard() {
                                 {dayEvents.length > 0 && (
                                   <div className="flex flex-col gap-0.5 w-full px-0.5 mt-0.5 overflow-hidden">
                                     {orders.slice(0, 2).map((evt, i) => (
-                                      <div key={`o-${i}`} className={`h-1 w-full rounded-sm ${isSelected ? 'bg-white/60' : getStatusColor(evt.status)}`} title={`${evt.orderCode} - ${evt.clientName}`} />
+                                      <div 
+                                        key={`o-${i}`} 
+                                        className={`h-3 w-full rounded-sm px-0.5 flex items-center ${isSelected ? 'bg-white/60' : getStatusColor(evt.status)}`} 
+                                        title={`${evt.orderCode} - ${evt.clientName}`}
+                                      >
+                                        <span className="text-[7px] text-white truncate font-medium">{evt.clientName?.split(' ')[0]?.substring(0, 6) || evt.orderCode}</span>
+                                      </div>
                                     ))}
-                                    {deliveries.slice(0, 2).map((evt, i) => (
-                                      <div key={`d-${i}`} className={`h-1 w-full rounded-sm ${isSelected ? 'bg-white/40' : 'bg-green-400'} border-l-2 border-green-700`} title={`Livraison: ${evt.themeName}`} />
+                                    {deliveries.slice(0, 1).map((evt, i) => (
+                                      <div 
+                                        key={`d-${i}`} 
+                                        className={`h-3 w-full rounded-sm px-0.5 flex items-center ${isSelected ? 'bg-white/40' : 'bg-green-400'}`} 
+                                        title={`Livraison: ${evt.themeName}`}
+                                      >
+                                        <span className="text-[7px] text-white truncate font-medium">Liv.</span>
+                                      </div>
                                     ))}
-                                    {dayEvents.length > 4 && (
-                                      <span className="text-[8px] text-muted-foreground">+{dayEvents.length - 4}</span>
+                                    {dayEvents.length > 3 && (
+                                      <span className="text-[7px] text-muted-foreground">+{dayEvents.length - 3}</span>
                                     )}
                                   </div>
                                 )}
