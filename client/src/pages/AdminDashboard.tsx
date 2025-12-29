@@ -47,8 +47,19 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  Loader2
+  Loader2,
+  ShoppingCart,
+  Eye,
+  FileText
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 interface Client {
@@ -81,6 +92,36 @@ interface Fournisseur {
   nomCourt: string;
 }
 
+interface OrderDb {
+  id: number;
+  orderCode: string;
+  orderDate: string;
+  salesRepName: string;
+  clientName: string;
+  clientEmail: string;
+  clientTel: string;
+  themeSelections: string;
+  livraisonEnseigne: string;
+  livraisonAdresse: string;
+  livraisonCpVille: string;
+  facturationRaisonSociale: string;
+  facturationMode: string;
+  status: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+const ORDER_STATUSES = [
+  { value: "EN_ATTENTE", label: "En attente", color: "bg-yellow-100 text-yellow-800" },
+  { value: "CONFIRMEE", label: "Confirmée", color: "bg-blue-100 text-blue-800" },
+  { value: "EN_PREPARATION", label: "En préparation", color: "bg-indigo-100 text-indigo-800" },
+  { value: "EXPEDIEE", label: "Expédiée", color: "bg-purple-100 text-purple-800" },
+  { value: "LIVREE", label: "Livrée", color: "bg-green-100 text-green-800" },
+  { value: "PAYEE", label: "Payée", color: "bg-emerald-100 text-emerald-800" },
+  { value: "TERMINEE", label: "Terminée", color: "bg-gray-100 text-gray-800" },
+  { value: "ANNULEE", label: "Annulée", color: "bg-red-100 text-red-800" },
+];
+
 interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -91,7 +132,7 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -110,6 +151,9 @@ export default function AdminDashboard() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [isCreating, setIsCreating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [orderDetailOpen, setOrderDetailOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -163,6 +207,39 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/fournisseurs", currentPage, debouncedSearch, sortField, sortDirection],
     queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "fournisseurs",
+  });
+
+  const { data: ordersData, isLoading: ordersLoading } = useQuery<PaginatedResponse<OrderDb>>({
+    queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection, statusFilter],
+    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}&status=${statusFilter}`).then(r => r.json()),
+    enabled: !isCheckingAuth && activeTab === "orders",
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      return apiRequest("PATCH", `/api/admin/orders/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      toast({ title: "Succès", description: "Statut mis à jour" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/admin/orders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      setDeleteDialogOpen(false);
+      toast({ title: "Succès", description: "Commande supprimée" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    },
   });
 
   const createMutation = useMutation({
@@ -429,8 +506,23 @@ export default function AdminDashboard() {
       case "themes": return "Thème";
       case "commerciaux": return "Commercial";
       case "fournisseurs": return "Fournisseur";
+      case "orders": return "Commande";
       default: return "Élément";
     }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusInfo = ORDER_STATUSES.find(s => s.value === status) || { label: status, color: "bg-gray-100" };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+        {statusInfo.label}
+      </span>
+    );
+  };
+
+  const openOrderDetail = (order: OrderDb) => {
+    setSelectedOrder(order);
+    setOrderDetailOpen(true);
   };
 
   return (
@@ -499,6 +591,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="fournisseurs" className="gap-2" data-testid="tab-fournisseurs">
               <Building2 className="w-4 h-4" />
               Fournisseurs ({fournisseursData?.pagination.total || 0})
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="gap-2" data-testid="tab-orders">
+              <ShoppingCart className="w-4 h-4" />
+              Commandes ({ordersData?.pagination.total || 0})
             </TabsTrigger>
           </TabsList>
 
@@ -713,6 +809,104 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="orders">
+            <div className="mb-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48" data-testid="select-status-filter">
+                  <SelectValue placeholder="Filtrer par statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Tous les statuts</SelectItem>
+                  {ORDER_STATUSES.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                {ordersLoading ? (
+                  <div className="p-8 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                  </div>
+                ) : ordersData?.data.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune commande trouvée</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("orderCode")}>
+                              N° Commande <SortIcon field="orderCode" />
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("orderDate")}>
+                              Date <SortIcon field="orderDate" />
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("clientName")}>
+                              Client <SortIcon field="clientName" />
+                            </TableHead>
+                            <TableHead className="hidden md:table-cell">Commercial</TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                              Statut <SortIcon field="status" />
+                            </TableHead>
+                            <TableHead className="w-32">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {ordersData?.data.map((order) => (
+                            <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
+                              <TableCell className="font-mono text-sm">{order.orderCode}</TableCell>
+                              <TableCell>{order.orderDate}</TableCell>
+                              <TableCell className="font-medium">
+                                <div>{order.clientName}</div>
+                                <div className="text-xs text-muted-foreground">{order.livraisonEnseigne}</div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">{order.salesRepName}</TableCell>
+                              <TableCell>
+                                <Select 
+                                  value={order.status} 
+                                  onValueChange={(newStatus) => updateOrderStatusMutation.mutate({ id: order.id, status: newStatus })}
+                                >
+                                  <SelectTrigger className="w-36 h-8" data-testid={`select-status-${order.id}`}>
+                                    <SelectValue>{getStatusBadge(order.status)}</SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ORDER_STATUSES.map(s => (
+                                      <SelectItem key={s.value} value={s.value}>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.color}`}>
+                                          {s.label}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => openOrderDetail(order)} data-testid={`button-view-order-${order.id}`}>
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => { setEditingItem(order); setDeleteDialogOpen(true); }} data-testid={`button-delete-order-${order.id}`}>
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {ordersData?.pagination && <Pagination pagination={ordersData.pagination} />}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -753,16 +947,122 @@ export default function AdminDashboard() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDelete}
+              onClick={() => {
+                if (activeTab === "orders" && editingItem?.id) {
+                  deleteOrderMutation.mutate(editingItem.id);
+                } else {
+                  handleDelete();
+                }
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
             >
-              {deleteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {(deleteMutation.isPending || deleteOrderMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={orderDetailOpen} onOpenChange={setOrderDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Détails de la commande {selectedOrder?.orderCode}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Date de commande</Label>
+                  <p className="font-medium">{selectedOrder.orderDate}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Statut</Label>
+                  <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Informations client</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Nom</Label>
+                    <p className="font-medium">{selectedOrder.clientName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Email</Label>
+                    <p className="font-medium">{selectedOrder.clientEmail || "-"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Téléphone</Label>
+                    <p className="font-medium">{selectedOrder.clientTel || "-"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Commercial</Label>
+                    <p className="font-medium">{selectedOrder.salesRepName}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Livraison</h4>
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-muted-foreground">Enseigne</Label>
+                    <p className="font-medium">{selectedOrder.livraisonEnseigne}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Adresse</Label>
+                    <p className="font-medium">{selectedOrder.livraisonAdresse}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">CP / Ville</Label>
+                    <p className="font-medium">{selectedOrder.livraisonCpVille}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Facturation</h4>
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-muted-foreground">Raison sociale</Label>
+                    <p className="font-medium">{selectedOrder.facturationRaisonSociale}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Mode de paiement</Label>
+                    <p className="font-medium">{selectedOrder.facturationMode}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Thèmes commandés</h4>
+                <div className="bg-muted p-3 rounded-md text-sm">
+                  <pre className="whitespace-pre-wrap">{selectedOrder.themeSelections}</pre>
+                </div>
+              </div>
+
+              {selectedOrder.createdAt && (
+                <div className="border-t pt-4 text-sm text-muted-foreground">
+                  <p>Créée le : {new Date(selectedOrder.createdAt).toLocaleString("fr-FR")}</p>
+                  {selectedOrder.updatedAt && (
+                    <p>Mise à jour : {new Date(selectedOrder.updatedAt).toLocaleString("fr-FR")}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOrderDetailOpen(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
