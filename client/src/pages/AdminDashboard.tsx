@@ -182,6 +182,7 @@ export default function AdminDashboard() {
   const [sortField, setSortField] = useState<string>("nom");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [clientBadgeFilter, setClientBadgeFilter] = useState<"ALL" | "NEW" | "MODIFIED" | "LAMBDA">("ALL");
   const pageSize = 50;
   const { toast } = useToast();
 
@@ -207,7 +208,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, activeTab]);
+  }, [debouncedSearch, activeTab, clientBadgeFilter]);
 
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
@@ -277,8 +278,8 @@ export default function AdminDashboard() {
   });
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<PaginatedResponse<Client>>({
-    queryKey: ["/api/admin/clients", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}`).then(r => r.json()),
+    queryKey: ["/api/admin/clients", currentPage, debouncedSearch, sortField, sortDirection, clientBadgeFilter],
+    queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}&badgeFilter=${clientBadgeFilter}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "clients",
   });
 
@@ -887,6 +888,20 @@ export default function AdminDashboard() {
           <TabsContent value="clients">
             <Card>
               <CardContent className="p-0">
+                <div className="p-3 border-b flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Filtrer par :</span>
+                  <Select value={clientBadgeFilter} onValueChange={(v) => setClientBadgeFilter(v as any)}>
+                    <SelectTrigger className="w-[140px] h-8" data-testid="select-badge-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Tous</SelectItem>
+                      <SelectItem value="NEW">Nouveaux</SelectItem>
+                      <SelectItem value="MODIFIED">Modifiés</SelectItem>
+                      <SelectItem value="LAMBDA">Lambda</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {clientsLoading ? (
                   <div className="p-8 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto" />
@@ -940,7 +955,7 @@ export default function AdminDashboard() {
                                       Nouveau
                                     </Badge>
                                   )}
-                                  {hasPendingModification && !isNew && (
+                                  {hasPendingModification && (
                                     <Popover>
                                       <PopoverTrigger asChild>
                                         <Badge className="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 text-xs cursor-pointer hover:bg-red-200">
@@ -998,7 +1013,7 @@ export default function AdminDashboard() {
                                       </PopoverContent>
                                     </Popover>
                                   )}
-                                  {hasRecentlyApproved && !isNew && !hasPendingModification && (
+                                  {hasRecentlyApproved && !hasPendingModification && (
                                     <Badge variant="outline" className="text-xs text-muted-foreground">
                                       Modifié le {approvedAt.toLocaleDateString("fr-FR")}
                                     </Badge>

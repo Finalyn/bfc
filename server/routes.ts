@@ -1013,6 +1013,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
+      // Filter by badge category
+      const badgeFilter = req.query.badgeFilter as string;
+      if (badgeFilter && badgeFilter !== "ALL") {
+        const now = new Date();
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        allClients = allClients.filter(c => {
+          const createdAt = c.createdAt ? new Date(c.createdAt) : null;
+          const isNew = createdAt && createdAt > oneMonthAgo && !c.isFromExcel;
+          const hasPendingModification = c.modificationApproved === false && c.previousValues;
+          
+          if (badgeFilter === "NEW") {
+            return isNew;
+          } else if (badgeFilter === "MODIFIED") {
+            return hasPendingModification;
+          } else if (badgeFilter === "LAMBDA") {
+            return !isNew && !hasPendingModification;
+          }
+          return true;
+        });
+      }
+      
       // Sort
       allClients.sort((a, b) => {
         const aVal = String((a as any)[sortField] || "").toLowerCase();
