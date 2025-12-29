@@ -57,7 +57,9 @@ import {
   BarChart3,
   TrendingUp,
   Euro,
-  CheckCircle2
+  CheckCircle2,
+  Check,
+  AlertCircle
 } from "lucide-react";
 import {
   Select,
@@ -73,6 +75,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 
 interface Client {
@@ -89,6 +96,9 @@ interface Client {
   createdAt?: string | null;
   updatedAt?: string | null;
   isFromExcel?: boolean;
+  previousValues?: string | null;
+  modificationApproved?: boolean;
+  approvedAt?: string | null;
 }
 
 interface Theme {
@@ -423,6 +433,19 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/${activeTab}`] });
       setDeleteDialogOpen(false);
       toast({ title: "Succès", description: "Élément supprimé avec succès" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const approveClientMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("POST", `/api/admin/clients/${id}/approve`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+      toast({ title: "Succès", description: "Modification approuvée" });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -892,11 +915,19 @@ export default function AdminDashboard() {
                           {clientsData?.data.map((client) => {
                             const now = new Date();
                             const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                            const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                            const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
                             const createdAt = client.createdAt ? new Date(client.createdAt) : null;
-                            const updatedAt = client.updatedAt ? new Date(client.updatedAt) : null;
+                            const approvedAt = client.approvedAt ? new Date(client.approvedAt) : null;
                             const isNew = createdAt && createdAt > oneMonthAgo && !client.isFromExcel;
-                            const isRecentlyModified = updatedAt && createdAt && updatedAt > twoWeeksAgo && updatedAt.getTime() !== createdAt.getTime();
+                            const hasPendingModification = client.modificationApproved === false && client.previousValues;
+                            const hasRecentlyApproved = approvedAt && approvedAt > twoMonthsAgo;
+                            
+                            let previousData: { interloc?: string; tel?: string; portable?: string; mail?: string } = {};
+                            if (client.previousValues) {
+                              try {
+                                previousData = JSON.parse(client.previousValues);
+                              } catch (e) {}
+                            }
                             
                             return (
                             <TableRow key={client.id || client.code} data-testid={`row-client-${client.id}`}>
@@ -909,9 +940,67 @@ export default function AdminDashboard() {
                                       Nouveau
                                     </Badge>
                                   )}
-                                  {isRecentlyModified && !isNew && (
-                                    <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs">
-                                      Modifié
+                                  {hasPendingModification && !isNew && (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 text-xs cursor-pointer hover:bg-red-200">
+                                          <AlertCircle className="w-3 h-3 mr-1" />
+                                          Modifié
+                                        </Badge>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-80">
+                                        <div className="space-y-3">
+                                          <h4 className="font-medium text-sm">Modifications en attente</h4>
+                                          <div className="space-y-2 text-xs">
+                                            {previousData.interloc !== client.interloc && (
+                                              <div>
+                                                <span className="font-medium">Interlocuteur:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.interloc || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.interloc || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.portable !== client.portable && (
+                                              <div>
+                                                <span className="font-medium">Portable:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.portable || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.portable || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.tel !== client.tel && (
+                                              <div>
+                                                <span className="font-medium">Téléphone:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.tel || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.tel || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.mail !== client.mail && (
+                                              <div>
+                                                <span className="font-medium">Email:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.mail || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.mail || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                          </div>
+                                          <Button 
+                                            size="sm" 
+                                            className="w-full"
+                                            onClick={() => approveClientMutation.mutate(client.id)}
+                                            disabled={approveClientMutation.isPending}
+                                          >
+                                            {approveClientMutation.isPending ? (
+                                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            ) : (
+                                              <Check className="w-4 h-4 mr-2" />
+                                            )}
+                                            Approuver
+                                          </Button>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                  {hasRecentlyApproved && !isNew && !hasPendingModification && (
+                                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                                      Modifié le {approvedAt.toLocaleDateString("fr-FR")}
                                     </Badge>
                                   )}
                                 </div>

@@ -497,10 +497,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await db.select().from(clients).where(eq(clients.code, code));
       
       if (existing.length > 0) {
-        // Mettre à jour le client existant
+        const oldClient = existing[0];
+        
+        // Sauvegarder les anciennes valeurs pour comparaison
+        const previousValues = JSON.stringify({
+          interloc: oldClient.interloc || "",
+          tel: oldClient.tel || "",
+          portable: oldClient.portable || "",
+          mail: oldClient.mail || "",
+        });
+        
+        // Mettre à jour le client existant avec approbation en attente
         const [updated] = await db
           .update(clients)
-          .set({ ...validatedData, updatedAt: new Date() })
+          .set({ 
+            ...validatedData, 
+            updatedAt: new Date(),
+            previousValues,
+            modificationApproved: false,
+          })
           .where(eq(clients.code, code))
           .returning();
         
@@ -938,6 +953,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             createdAt: dbClient.createdAt,
             updatedAt: dbClient.updatedAt,
             isFromExcel: dbClient.isFromExcel || false,
+            previousValues: dbClient.previousValues,
+            modificationApproved: dbClient.modificationApproved ?? true,
+            approvedAt: dbClient.approvedAt,
           };
         }
         return {
@@ -954,6 +972,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: null,
           updatedAt: null,
           isFromExcel: true,
+          previousValues: null,
+          modificationApproved: true,
+          approvedAt: null,
         };
       });
       
@@ -975,6 +996,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
           isFromExcel: c.isFromExcel || false,
+          previousValues: c.previousValues,
+          modificationApproved: c.modificationApproved ?? true,
+          approvedAt: c.approvedAt,
         }));
       
       allClients = [...allClients, ...newDbClients];
@@ -1060,6 +1084,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.delete(clients).where(eq(clients.id, id));
       res.json({ success: true });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Approve client modification
+  app.post("/api/admin/clients/:id/approve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id) || id === 0) {
+        return res.status(400).json({ message: "Client non trouvé" });
+      }
+      
+      const [updated] = await db.update(clients).set({
+        modificationApproved: true,
+        approvedAt: new Date(),
+        previousValues: null,
+      }).where(eq(clients.id, id)).returning();
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Client non trouvé" });
+      }
+      
+      res.json({ success: true, client: updated });
+    } catch (error: any) {
+      console.error("Erreur approbation client:", error);
       res.status(500).json({ message: error.message });
     }
   });
