@@ -54,35 +54,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Sauvegarder la commande en base de données
-      try {
-        await db.insert(orders).values({
-          orderCode,
-          orderDate: order.orderDate,
-          salesRepName: order.salesRepName,
-          clientName: order.responsableName || order.clientName || "",
-          clientEmail: order.responsableEmail || order.clientEmail || "",
-          clientTel: order.responsableTel || "",
-          themeSelections: order.themeSelections,
-          livraisonEnseigne: order.livraisonEnseigne,
-          livraisonAdresse: order.livraisonAdresse,
-          livraisonCpVille: order.livraisonCpVille,
-          livraisonHoraires: order.livraisonHoraires || "",
-          livraisonHayon: order.livraisonHayon,
-          facturationRaisonSociale: order.facturationRaisonSociale,
-          facturationAdresse: order.facturationAdresse,
-          facturationCpVille: order.facturationCpVille,
-          facturationMode: order.facturationMode,
-          facturationRib: order.facturationRib || "",
-          remarks: order.remarks || "",
-          signature: order.signature,
-          signatureLocation: order.signatureLocation,
-          signatureDate: order.signatureDate,
-          clientSignedName: order.clientSignedName,
-          status: "EN_ATTENTE",
-        });
-      } catch (dbError) {
-        console.error("Erreur lors de la sauvegarde en BDD:", dbError);
-      }
+      await db.insert(orders).values({
+        orderCode,
+        orderDate: order.orderDate,
+        salesRepName: order.salesRepName,
+        clientName: order.responsableName || order.clientName || "",
+        clientEmail: order.responsableEmail || order.clientEmail || "",
+        clientTel: order.responsableTel || "",
+        themeSelections: order.themeSelections,
+        livraisonEnseigne: order.livraisonEnseigne,
+        livraisonAdresse: order.livraisonAdresse,
+        livraisonCpVille: order.livraisonCpVille,
+        livraisonHoraires: order.livraisonHoraires || "",
+        livraisonHayon: order.livraisonHayon,
+        facturationRaisonSociale: order.facturationRaisonSociale,
+        facturationAdresse: order.facturationAdresse,
+        facturationCpVille: order.facturationCpVille,
+        facturationMode: order.facturationMode,
+        facturationRib: order.facturationRib || "",
+        remarks: order.remarks || "",
+        signature: order.signature,
+        signatureLocation: order.signatureLocation,
+        signatureDate: order.signatureDate,
+        clientSignedName: order.clientSignedName,
+        status: "EN_ATTENTE",
+      });
 
       // Envoyer les emails automatiquement
       let emailsSent = false;
