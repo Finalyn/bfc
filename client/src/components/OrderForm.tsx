@@ -100,27 +100,42 @@ function DateInput({ value, onChange, testId }: {
 }
 
 // Version compacte pour les tableaux de thèmes (jour + mois seulement, année = 2026)
-function CompactDateInput({ value, onChange, testId }: { 
+function CompactDateInput({ value, onChange, testId, hasError }: { 
   value: string; 
   onChange: (value: string) => void;
   testId?: string;
+  hasError?: boolean;
 }) {
   const parts = value ? value.split("-") : ["", "", ""];
-  const month = parts[1] || "";
-  const day = parts[2] || "";
+  const savedMonth = parts[1] || "";
+  const savedDay = parts[2] || "";
+  
+  // État local pour les sélections partielles
+  const [localDay, setLocalDay] = useState(savedDay);
+  const [localMonth, setLocalMonth] = useState(savedMonth);
 
-  const updateDate = (d: string, m: string) => {
-    if (d && m) {
-      onChange(`2026-${m}-${d}`);
-    } else {
-      onChange("");
+  const handleDayChange = (d: string) => {
+    setLocalDay(d);
+    // Mettre à jour immédiatement si le mois est déjà sélectionné
+    if (d && localMonth) {
+      onChange(`2026-${localMonth}-${d}`);
     }
   };
 
+  const handleMonthChange = (m: string) => {
+    setLocalMonth(m);
+    // Mettre à jour immédiatement si le jour est déjà sélectionné
+    if (localDay && m) {
+      onChange(`2026-${m}-${localDay}`);
+    }
+  };
+
+  const errorClass = hasError ? "border-destructive" : "";
+
   return (
     <div className="flex items-center gap-1" data-testid={testId}>
-      <Select value={day} onValueChange={(d) => updateDate(d, month)}>
-        <SelectTrigger className="w-14 h-8 text-xs px-1">
+      <Select value={localDay || savedDay} onValueChange={handleDayChange}>
+        <SelectTrigger className={`w-14 h-8 text-xs px-1 ${errorClass}`}>
           <SelectValue placeholder="JJ" />
         </SelectTrigger>
         <SelectContent>
@@ -129,8 +144,8 @@ function CompactDateInput({ value, onChange, testId }: {
           ))}
         </SelectContent>
       </Select>
-      <Select value={month} onValueChange={(m) => updateDate(day, m)}>
-        <SelectTrigger className="w-16 h-8 text-xs px-1">
+      <Select value={localMonth || savedMonth} onValueChange={handleMonthChange}>
+        <SelectTrigger className={`w-16 h-8 text-xs px-1 ${errorClass}`}>
           <SelectValue placeholder="MM" />
         </SelectTrigger>
         <SelectContent>
@@ -203,6 +218,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const [clientChanges, setClientChanges] = useState<{field: string, old: string, new: string}[]>([]);
+  const [themeDateErrors, setThemeDateErrors] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -448,6 +464,26 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   };
 
   const onSubmit = (data: FormData) => {
+    // Valider que les thèmes avec quantité ont une date de livraison
+    const themesWithoutDate = themeSelections.filter(t => {
+      const qty = parseInt(t.quantity || "0", 10);
+      return qty > 0 && !t.deliveryDate;
+    });
+    
+    if (themesWithoutDate.length > 0) {
+      const errorKeys = new Set(themesWithoutDate.map(t => `${t.theme}-${t.category}`));
+      setThemeDateErrors(errorKeys);
+      toast({
+        title: "Dates de livraison manquantes",
+        description: `Veuillez indiquer une date de livraison pour les thèmes avec quantité: ${themesWithoutDate.map(t => t.theme).join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Réinitialiser les erreurs si tout est ok
+    setThemeDateErrors(new Set());
+    
     // Vérifier si un client existant de la BDD a été sélectionné
     const dbId = originalClientData ? getDbIdFromClientId(originalClientData.id) : null;
     
@@ -717,6 +753,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                                   value={getThemeValue(theme, "TOUTE_ANNEE", "deliveryDate")}
                                   onChange={(val) => updateThemeSelection(theme, "TOUTE_ANNEE", "deliveryDate", val)}
                                   testId={`input-date-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                  hasError={themeDateErrors.has(`${theme}-TOUTE_ANNEE`)}
                                 />
                               </td>
                             </tr>
@@ -757,6 +794,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                                   value={getThemeValue(theme, "SAISONNIER", "deliveryDate")}
                                   onChange={(val) => updateThemeSelection(theme, "SAISONNIER", "deliveryDate", val)}
                                   testId={`input-date-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                  hasError={themeDateErrors.has(`${theme}-SAISONNIER`)}
                                 />
                               </td>
                             </tr>
