@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Database, LogOut, User, BarChart3, Settings, TrendingUp } from "lucide-react";
+import { ClipboardList, Database, LogOut, User, LayoutDashboard } from "lucide-react";
 
 export default function HubPage() {
   const [, setLocation] = useLocation();
@@ -76,58 +76,14 @@ export default function HubPage() {
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center border border-green-200">
-                  <BarChart3 className="w-8 h-8 text-green-600" />
+                  <LayoutDashboard className="w-8 h-8 text-green-600" />
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Mon Tableau de Bord
+                    Tableau de Bord
                   </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Mes stats, commandes et calendrier
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-purple-500"
-            onClick={() => setLocation("/profile")}
-            data-testid="card-profile"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center border border-purple-200">
-                  <Settings className="w-8 h-8 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Mon Profil
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Gérer mes notifications et paramètres
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-orange-500"
-            onClick={() => setLocation("/analytics")}
-            data-testid="card-analytics"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center border border-orange-200">
-                  <TrendingUp className="w-8 h-8 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Analyse Clients
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Habitudes, tendances et statistiques
+                    Stats, commandes, calendrier et analyse clients
                   </p>
                 </div>
               </div>
@@ -153,7 +109,7 @@ export default function HubPage() {
                       Base de données
                     </h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Gérer les clients, thèmes et commerciaux
+                      Gérer clients, thèmes, fournisseurs
                     </p>
                   </div>
                 </div>
