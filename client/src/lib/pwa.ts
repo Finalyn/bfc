@@ -215,9 +215,25 @@ export function canInstall(): boolean {
   return deferredPrompt !== null;
 }
 
+function isInstalledPwa(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true ||
+    document.referrer.includes('android-app://') ||
+    window.matchMedia('(display-mode: fullscreen)').matches
+  );
+}
+
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!('Notification' in window)) {
     console.log('Les notifications ne sont pas supportées');
+    return 'denied';
+  }
+  
+  if (!isInstalledPwa()) {
+    console.log('Notifications uniquement disponibles dans l\'app installée');
     return 'denied';
   }
   
@@ -227,6 +243,11 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 export async function showLocalNotification(title: string, body: string): Promise<void> {
   if (!('Notification' in window)) return;
+  
+  if (!isInstalledPwa()) {
+    console.log('Notifications uniquement dans l\'app installée');
+    return;
+  }
   
   if (Notification.permission !== 'granted') {
     const permission = await requestNotificationPermission();
