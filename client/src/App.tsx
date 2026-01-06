@@ -12,8 +12,6 @@ import HubPage from "@/pages/HubPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import MyDashboard from "@/pages/MyDashboard";
-import ProfilePage from "@/pages/ProfilePage";
-import AnalyticsPage from "@/pages/AnalyticsPage";
 
 function Router() {
   return (
@@ -22,8 +20,6 @@ function Router() {
       <Route path="/hub" component={HubPage} />
       <Route path="/order" component={OrderPage} />
       <Route path="/dashboard" component={MyDashboard} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/">
@@ -35,14 +31,12 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Détecter si la page a été rechargée et vider l'authentification
     const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     if (navigationType?.type === 'reload') {
       sessionStorage.removeItem("authenticated");
       sessionStorage.removeItem("adminAuthenticated");
     }
     
-    // Vider l'authentification quand on quitte la page
     const handleBeforeUnload = () => {
       sessionStorage.removeItem("authenticated");
       sessionStorage.removeItem("adminAuthenticated");

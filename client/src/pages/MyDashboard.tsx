@@ -173,7 +173,10 @@ export default function MyDashboard() {
       analysis.totalOrders++;
       
       try {
-        const orderDate = parseISO(order.orderDate || order.createdAt);
+        const rawDate = order.orderDate || order.createdAt;
+        if (!rawDate) return;
+        const dateStr = typeof rawDate === 'string' ? rawDate : rawDate.toISOString();
+        const orderDate = parseISO(dateStr);
         analysis.orderDates.push(orderDate);
         
         if (!analysis.lastOrderDate || orderDate > analysis.lastOrderDate) {
@@ -234,7 +237,10 @@ export default function MyDashboard() {
       } catch (e) {}
 
       try {
-        const orderDate = parseISO(order.orderDate || order.createdAt);
+        const rawDate = order.orderDate || order.createdAt;
+        if (!rawDate) return;
+        const dateStr = typeof rawDate === 'string' ? rawDate : rawDate.toISOString();
+        const orderDate = parseISO(dateStr);
         const month = getMonth(orderDate);
         monthCount[month] = (monthCount[month] || 0) + 1;
       } catch (e) {}

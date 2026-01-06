@@ -158,20 +158,8 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "calendar" | "stats";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs";
 
-interface CalendarEvent {
-  id: string;
-  date: string;
-  type: "order" | "delivery";
-  orderCode: string;
-  clientName: string;
-  salesRepName: string;
-  themeName?: string;
-  quantity?: number;
-  status: string;
-  orderId: number;
-}
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -191,15 +179,8 @@ export default function AdminDashboard() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [isCreating, setIsCreating] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
-  const [calendarMonth, setCalendarMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
-  const [calendarEventType, setCalendarEventType] = useState<"all" | "order" | "delivery">("all");
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -271,10 +252,10 @@ export default function AdminDashboard() {
     totalOrders: number;
     statusCounts: { [key: string]: number };
   }
-  const { data: statsData, isLoading: statsLoading } = useQuery<StatsData>({
+  const { data: statsData } = useQuery<StatsData>({
     queryKey: ["/api/admin/stats"],
     queryFn: () => fetch(`/api/admin/stats`).then(r => r.json()),
-    enabled: !isCheckingAuth && activeTab === "stats",
+    enabled: false,
   });
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<PaginatedResponse<Client>>({
@@ -299,103 +280,6 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/fournisseurs", currentPage, debouncedSearch, sortField, sortDirection],
     queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "fournisseurs",
-  });
-
-  const { data: ordersData, isLoading: ordersLoading } = useQuery<PaginatedResponse<OrderDb>>({
-    queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection, statusFilter],
-    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}&status=${statusFilter}`).then(r => r.json()),
-    enabled: !isCheckingAuth && activeTab === "orders",
-  });
-
-  // Charger toutes les commandes pour le calendrier
-  const { data: calendarOrdersData, isLoading: calendarLoading } = useQuery<PaginatedResponse<OrderDb>>({
-    queryKey: ["/api/admin/orders", "calendar"],
-    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1000`).then(r => r.json()),
-    enabled: !isCheckingAuth && activeTab === "calendar",
-  });
-
-  // Construire les événements du calendrier
-  const calendarEvents: CalendarEvent[] = (() => {
-    if (!calendarOrdersData?.data) return [];
-    const events: CalendarEvent[] = [];
-    
-    calendarOrdersData.data.forEach(order => {
-      // Événement de commande
-      events.push({
-        id: `order-${order.id}`,
-        date: order.orderDate,
-        type: "order",
-        orderCode: order.orderCode,
-        clientName: order.clientName,
-        salesRepName: order.salesRepName,
-        status: order.status,
-        orderId: order.id,
-      });
-      
-      // Événements de livraison depuis themeSelections
-      try {
-        const selections = JSON.parse(order.themeSelections || "[]");
-        if (Array.isArray(selections)) {
-          selections.forEach((sel: any, idx: number) => {
-            if (sel.deliveryDate && sel.deliveryDate.trim()) {
-              events.push({
-                id: `delivery-${order.id}-${idx}`,
-                date: sel.deliveryDate,
-                type: "delivery",
-                orderCode: order.orderCode,
-                clientName: order.clientName,
-                salesRepName: order.salesRepName,
-                themeName: sel.theme,
-                quantity: sel.quantity,
-                status: order.status,
-                orderId: order.id,
-              });
-            }
-          });
-        }
-      } catch (e) {
-        // Ignorer les erreurs de parsing
-      }
-    });
-    
-    // Filtrer par type si nécessaire
-    let filtered = events;
-    if (calendarEventType !== "all") {
-      filtered = events.filter(e => e.type === calendarEventType);
-    }
-    
-    // Filtrer par mois
-    filtered = filtered.filter(e => e.date.startsWith(calendarMonth));
-    
-    // Trier par date
-    return filtered.sort((a, b) => a.date.localeCompare(b.date));
-  })();
-
-  const updateOrderStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest("PATCH", `/api/admin/orders/${id}/status`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
-      toast({ title: "Succès", description: "Statut mis à jour" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const deleteOrderMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/admin/orders/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
-      setDeleteDialogOpen(false);
-      toast({ title: "Succès", description: "Commande supprimée" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    },
   });
 
   const createMutation = useMutation({
@@ -753,7 +637,6 @@ export default function AdminDashboard() {
       case "themes": return "Thème";
       case "commerciaux": return "Commercial";
       case "fournisseurs": return "Fournisseur";
-      case "orders": return "Commande";
       default: return "Élément";
     }
   };
@@ -787,8 +670,7 @@ export default function AdminDashboard() {
             </Button>
             <h1 className="text-lg sm:text-xl font-bold">Base de données</h1>
           </div>
-          {activeTab !== "calendar" && (
-            <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 onClick={openCreateModal}
                 data-testid="button-add"
@@ -833,7 +715,6 @@ export default function AdminDashboard() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          )}
         </div>
       </header>
 
@@ -869,18 +750,6 @@ export default function AdminDashboard() {
               <TabsTrigger value="fournisseurs" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-fournisseurs">
                 <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Fournisseurs</span><span className="sm:hidden">Four.</span> ({fournisseursTotals?.pagination.total || fournisseursData?.pagination.total || 0})
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-orders">
-                <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Commandes</span><span className="sm:hidden">Cmd</span> ({ordersTotals?.pagination.total || ordersData?.pagination.total || 0})
-              </TabsTrigger>
-              <TabsTrigger value="stats" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-stats">
-                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Statistiques</span><span className="sm:hidden">Stats</span>
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-calendar">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Calendrier</span><span className="sm:hidden">Cal.</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1224,431 +1093,6 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="orders">
-            <div className="mb-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
-                  <SelectValue placeholder="Filtrer par statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Tous les statuts</SelectItem>
-                  {ORDER_STATUSES.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Card>
-              <CardContent className="p-0">
-                {ordersLoading ? (
-                  <div className="p-8 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                  </div>
-                ) : ordersData?.data.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune commande trouvée</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="cursor-pointer text-xs sm:text-sm" onClick={() => handleSort("orderCode")}>
-                              <span className="hidden sm:inline">N° </span>Cmd <SortIcon field="orderCode" />
-                            </TableHead>
-                            <TableHead className="cursor-pointer text-xs sm:text-sm hidden sm:table-cell" onClick={() => handleSort("orderDate")}>
-                              Date <SortIcon field="orderDate" />
-                            </TableHead>
-                            <TableHead className="cursor-pointer text-xs sm:text-sm" onClick={() => handleSort("clientName")}>
-                              Client <SortIcon field="clientName" />
-                            </TableHead>
-                            <TableHead className="hidden lg:table-cell">Commercial</TableHead>
-                            <TableHead className="cursor-pointer text-xs sm:text-sm" onClick={() => handleSort("status")}>
-                              Statut <SortIcon field="status" />
-                            </TableHead>
-                            <TableHead className="w-20 sm:w-32 text-xs sm:text-sm">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {ordersData?.data.map((order) => (
-                            <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
-                              <TableCell className="font-mono text-xs sm:text-sm">
-                                <div>{order.orderCode}</div>
-                                <div className="text-xs text-muted-foreground sm:hidden">{order.orderDate}</div>
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell text-sm">{order.orderDate}</TableCell>
-                              <TableCell className="font-medium text-xs sm:text-sm">
-                                <div className="truncate max-w-[100px] sm:max-w-none">{order.clientName}</div>
-                                <div className="text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-none">{order.livraisonEnseigne}</div>
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell">{order.salesRepName}</TableCell>
-                              <TableCell>
-                                <Select 
-                                  value={order.status} 
-                                  onValueChange={(newStatus) => updateOrderStatusMutation.mutate({ id: order.id, status: newStatus })}
-                                >
-                                  <SelectTrigger className="w-24 sm:w-36 h-7 sm:h-8 text-xs" data-testid={`select-status-${order.id}`}>
-                                    <SelectValue>{getStatusBadge(order.status)}</SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {ORDER_STATUSES.map(s => (
-                                      <SelectItem key={s.value} value={s.value}>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.color}`}>
-                                          {s.label}
-                                        </span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-0.5 sm:gap-1">
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openOrderDetail(order)} data-testid={`button-view-order-${order.id}`}>
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-download-order-${order.id}`}>
-                                        <Download className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => window.open(`/api/admin/orders/${order.id}/pdf`, '_blank')}>
-                                        <FileText className="w-4 h-4 mr-2 text-red-600" />
-                                        Télécharger PDF
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => window.open(`/api/admin/orders/${order.id}/excel`, '_blank')}>
-                                        <FileText className="w-4 h-4 mr-2 text-green-600" />
-                                        Télécharger Excel
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => {
-                                        window.open(`/api/admin/orders/${order.id}/pdf`, '_blank');
-                                        window.open(`/api/admin/orders/${order.id}/excel`, '_blank');
-                                      }}>
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Télécharger les deux
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(order); setDeleteDialogOpen(true); }} data-testid={`button-delete-order-${order.id}`}>
-                                    <Trash2 className="w-4 h-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    {ordersData?.pagination && <Pagination pagination={ordersData.pagination} />}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="calendar">
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      const [year, month] = calendarMonth.split('-').map(Number);
-                      const newDate = new Date(year, month - 2);
-                      setCalendarMonth(`${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`);
-                      setSelectedCalendarDate(null);
-                    }}
-                    data-testid="button-prev-month"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <h2 className="text-lg font-semibold min-w-[140px] text-center capitalize" data-testid="calendar-month-display">
-                    {new Date(calendarMonth + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
-                  </h2>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      const [year, month] = calendarMonth.split('-').map(Number);
-                      const newDate = new Date(year, month);
-                      setCalendarMonth(`${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`);
-                      setSelectedCalendarDate(null);
-                    }}
-                    data-testid="button-next-month"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-                <Select value={calendarEventType} onValueChange={(v) => setCalendarEventType(v as "all" | "order" | "delivery")}>
-                  <SelectTrigger className="w-full sm:w-48" data-testid="select-event-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les événements</SelectItem>
-                    <SelectItem value="order">Commandes uniquement</SelectItem>
-                    <SelectItem value="delivery">Livraisons uniquement</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {calendarLoading ? (
-                <div className="p-8 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                </div>
-              ) : (
-                <>
-                  <Card>
-                    <CardContent className="p-1 sm:p-3">
-                      <div className="grid grid-cols-7 gap-0.5 mb-1">
-                        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
-                          <div key={i} className="text-center text-[10px] font-medium text-muted-foreground py-1">
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-7 gap-0.5">
-                        {(() => {
-                          const [year, month] = calendarMonth.split('-').map(Number);
-                          const firstDay = new Date(year, month - 1, 1);
-                          const lastDay = new Date(year, month, 0);
-                          const daysInMonth = lastDay.getDate();
-                          let startDayOfWeek = firstDay.getDay();
-                          startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
-                          
-                          const eventsByDate: { [key: string]: CalendarEvent[] } = {};
-                          calendarEvents.forEach(event => {
-                            if (!eventsByDate[event.date]) eventsByDate[event.date] = [];
-                            eventsByDate[event.date].push(event);
-                          });
-                          
-                          const getStatusBgColor = (status: string) => {
-                            switch (status) {
-                              case 'PAYEE': return 'bg-emerald-200 dark:bg-emerald-900/50';
-                              case 'TERMINEE': return 'bg-gray-200 dark:bg-gray-700/50';
-                              case 'LIVREE': return 'bg-green-200 dark:bg-green-900/50';
-                              case 'EXPEDIEE': return 'bg-purple-200 dark:bg-purple-900/50';
-                              case 'EN_PREPARATION': return 'bg-indigo-200 dark:bg-indigo-900/50';
-                              case 'CONFIRMEE': return 'bg-blue-200 dark:bg-blue-900/50';
-                              case 'ANNULEE': return 'bg-red-200 dark:bg-red-900/50';
-                              default: return 'bg-yellow-200 dark:bg-yellow-900/50';
-                            }
-                          };
-                          const getStatusTextColor = (status: string) => {
-                            switch (status) {
-                              case 'PAYEE': return 'text-emerald-700 dark:text-emerald-300';
-                              case 'TERMINEE': return 'text-gray-700 dark:text-gray-300';
-                              case 'LIVREE': return 'text-green-700 dark:text-green-300';
-                              case 'EXPEDIEE': return 'text-purple-700 dark:text-purple-300';
-                              case 'EN_PREPARATION': return 'text-indigo-700 dark:text-indigo-300';
-                              case 'CONFIRMEE': return 'text-blue-700 dark:text-blue-300';
-                              case 'ANNULEE': return 'text-red-700 dark:text-red-300';
-                              default: return 'text-yellow-700 dark:text-yellow-300';
-                            }
-                          };
-                          
-                          const cells = [];
-                          for (let i = 0; i < startDayOfWeek; i++) {
-                            cells.push(<div key={`empty-${i}`} className="aspect-square border border-gray-100 dark:border-gray-800 rounded" />);
-                          }
-                          
-                          const today = new Date().toISOString().split('T')[0];
-                          
-                          for (let day = 1; day <= daysInMonth; day++) {
-                            const dateStr = `${calendarMonth}-${String(day).padStart(2, '0')}`;
-                            const dayEvents = eventsByDate[dateStr] || [];
-                            const isToday = dateStr === today;
-                            const isSelected = dateStr === selectedCalendarDate;
-                            
-                            const orders = dayEvents.filter(e => e.type === 'order');
-                            const deliveries = dayEvents.filter(e => e.type === 'delivery');
-                            
-                            cells.push(
-                              <button
-                                key={day}
-                                onClick={() => setSelectedCalendarDate(dateStr === selectedCalendarDate ? null : dateStr)}
-                                className={`aspect-square p-0.5 rounded border text-center flex flex-col items-center justify-start transition-colors overflow-hidden ${
-                                  isSelected 
-                                    ? 'bg-primary text-primary-foreground border-primary' 
-                                    : isToday 
-                                      ? 'bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700' 
-                                      : dayEvents.length > 0 
-                                        ? 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700' 
-                                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                                }`}
-                                data-testid={`calendar-day-${dateStr}`}
-                              >
-                                <span className={`text-xs font-medium leading-tight ${isSelected ? '' : isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                  {day}
-                                </span>
-                                {dayEvents.length > 0 && (
-                                  <div className="flex flex-col gap-0.5 w-full px-0.5 mt-0.5 overflow-hidden flex-1">
-                                    {orders.slice(0, 2).map((evt, i) => (
-                                      <div 
-                                        key={`o-${i}`} 
-                                        className={`h-5 w-full rounded-md px-1 flex items-center ${isSelected ? 'bg-white/40' : getStatusBgColor(evt.status)}`} 
-                                        title={`${evt.orderCode} - ${evt.clientName}`}
-                                      >
-                                        <span className={`text-[10px] truncate font-bold ${isSelected ? 'text-white' : getStatusTextColor(evt.status)}`}>{evt.clientName?.split(' ')[0]?.substring(0, 8) || evt.orderCode}</span>
-                                      </div>
-                                    ))}
-                                    {deliveries.slice(0, 1).map((evt, i) => (
-                                      <div 
-                                        key={`d-${i}`} 
-                                        className={`h-5 w-full rounded-md px-1 flex items-center ${isSelected ? 'bg-white/30' : 'bg-green-200 dark:bg-green-900/50'}`} 
-                                        title={`Livraison: ${evt.themeName}`}
-                                      >
-                                        <span className={`text-[10px] truncate font-bold ${isSelected ? 'text-white' : 'text-green-700 dark:text-green-300'}`}>Livraison</span>
-                                      </div>
-                                    ))}
-                                    {dayEvents.length > 3 && (
-                                      <span className="text-[9px] text-muted-foreground font-medium">+{dayEvents.length - 3}</span>
-                                    )}
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          }
-                          
-                          return cells;
-                        })()}
-                      </div>
-                      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-3 pt-2 border-t text-[10px] text-muted-foreground">
-                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-yellow-500" /> En attente</div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-blue-500" /> Confirmée</div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-purple-500" /> Expédiée</div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-green-500" /> Livrée</div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-1 rounded-sm bg-emerald-500" /> Payée</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {selectedCalendarDate && (
-                    <Card>
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold">
-                            {new Date(selectedCalendarDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                          </h3>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedCalendarDate(null)}>
-                            <ChevronUp className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        {(() => {
-                          const dayEvents = calendarEvents.filter(e => e.date === selectedCalendarDate);
-                          if (dayEvents.length === 0) {
-                            return <p className="text-sm text-muted-foreground">Aucun événement ce jour</p>;
-                          }
-                          return (
-                            <div className="space-y-2">
-                              {dayEvents.map(event => (
-                                <div 
-                                  key={event.id} 
-                                  className={`flex items-start gap-3 p-2 sm:p-3 rounded-lg border ${
-                                    event.type === 'order' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                                  }`}
-                                  data-testid={`event-${event.id}`}
-                                >
-                                  <div className={`p-2 rounded-full shrink-0 ${event.type === 'order' ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-200' : 'bg-green-100 text-green-600 dark:bg-green-800 dark:text-green-200'}`}>
-                                    {event.type === 'order' ? <ClipboardList className="w-4 h-4" /> : <Truck className="w-4 h-4" />}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="font-medium text-sm">{event.orderCode}</span>
-                                      <Badge variant={event.type === 'order' ? 'default' : 'secondary'} className="text-xs">
-                                        {event.type === 'order' ? 'Commande' : 'Livraison'}
-                                      </Badge>
-                                      {getStatusBadge(event.status)}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground mt-1 truncate">{event.clientName}</p>
-                                    {event.themeName && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {event.themeName} {event.quantity ? `(x${event.quantity})` : ''}
-                                      </p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground mt-1">Commercial: {event.salesRepName}</p>
-                                  </div>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 shrink-0"
-                                    onClick={() => {
-                                      const order = calendarOrdersData?.data.find(o => o.id === event.orderId);
-                                      if (order) openOrderDetail(order);
-                                    }}
-                                    data-testid={`button-view-event-${event.id}`}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="stats">
-            {statsLoading ? (
-              <div className="p-8 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <Card>
-                  <CardContent className="p-4 sm:p-6">
-                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5" />
-                      Répartition des commandes par statut
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">Cliquez sur un statut pour voir les commandes</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {(() => {
-                        const statusCounts = statsData?.statusCounts || {};
-                        
-                        const statusLabels: { [key: string]: { label: string; color: string } } = {
-                          'EN_ATTENTE': { label: 'En attente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800/50' },
-                          'CONFIRMEE': { label: 'Confirmée', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50' },
-                          'EN_PREPARATION': { label: 'En préparation', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/50' },
-                          'EXPEDIEE': { label: 'Expédiée', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50' },
-                          'LIVREE': { label: 'Livrée', color: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50' },
-                          'PAYEE': { label: 'Payée', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50' },
-                          'TERMINEE': { label: 'Terminée', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' },
-                          'ANNULEE': { label: 'Annulée', color: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/50' },
-                        };
-                        
-                        return Object.entries(statusLabels).map(([status, { label, color }]) => (
-                          <button
-                            key={status}
-                            onClick={() => {
-                              setStatusFilter(status);
-                              setActiveTab("orders");
-                            }}
-                            className={`p-3 rounded-lg ${color} cursor-pointer transition-colors text-left`}
-                            data-testid={`stat-status-${status}`}
-                          >
-                            <p className="text-xs font-medium opacity-80">{label}</p>
-                            <p className="text-xl font-bold">{statusCounts[status] || 0}</p>
-                          </button>
-                        ));
-                      })()}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
       </main>
 
@@ -1689,17 +1133,11 @@ export default function AdminDashboard() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => {
-                if (activeTab === "orders" && editingItem?.id) {
-                  deleteOrderMutation.mutate(editingItem.id);
-                } else {
-                  handleDelete();
-                }
-              }}
+              onClick={() => handleDelete()}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
             >
-              {(deleteMutation.isPending || deleteOrderMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {deleteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
