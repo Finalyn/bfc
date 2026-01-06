@@ -9,7 +9,7 @@ import { SuccessStep } from "@/components/SuccessStep";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOnlineStatus } from "@/hooks/use-online-status";
-import { savePendingOrder } from "@/lib/pwa";
+import { savePendingOrder, showLocalNotification } from "@/lib/pwa";
 import { Check, WifiOff } from "lucide-react";
 
 type Step = "form" | "preview" | "signature" | "review" | "success";
@@ -128,6 +128,10 @@ export default function OrderPage() {
           title: "Commande créée et envoyée !",
           description: `Les emails ont été envoyés automatiquement`,
         });
+        showLocalNotification(
+          "Commande envoyée",
+          `La commande ${data.orderCode} a été générée et envoyée par email`
+        );
       } else {
         toast({
           title: "Commande générée",
