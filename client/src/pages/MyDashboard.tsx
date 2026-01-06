@@ -54,10 +54,16 @@ export default function MyDashboard() {
     return null;
   }
 
-  const { data: allOrders = [], isLoading } = useQuery<OrderDb[]>({
-    queryKey: ["/api/admin/orders"],
+  interface OrdersResponse {
+    data: OrderDb[];
+    pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  }
+
+  const { data: ordersResponse, isLoading } = useQuery<OrdersResponse>({
+    queryKey: ["/api/admin/orders?pageSize=1000"],
   });
 
+  const allOrders = ordersResponse?.data || [];
   const myOrders = allOrders.filter(order => order.salesRepName === userName);
 
   const stats = {
