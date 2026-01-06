@@ -135,16 +135,7 @@ export default function MyDashboard() {
 
   const updateDatesMutation = useMutation({
     mutationFn: async ({ orderId, data }: { orderId: number; data: DateUpdateData }) => {
-      const response = await fetch(`/api/admin/orders/${orderId}/dates`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors de la mise à jour");
-      }
-      return response.json();
+      return apiRequest("PATCH", `/api/admin/orders/${orderId}/dates`, data);
     },
     onSuccess: () => {
       toast({ title: "Dates mises à jour", description: "Les dates de la commande ont été modifiées avec succès." });
