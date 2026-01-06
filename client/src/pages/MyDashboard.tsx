@@ -1,11 +1,17 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -19,7 +25,8 @@ import {
   BarChart3,
   Star,
   ShoppingCart,
-  Filter
+  Filter,
+  Edit
 } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, getMonth, getYear, differenceInDays, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -80,12 +87,38 @@ interface ClientAnalysis {
   totalQuantity: number;
 }
 
+const ORDER_STATUSES = [
+  "EN_ATTENTE", 
+  "CONFIRMEE", 
+  "LIVRAISON_PROGRAMMEE", 
+  "LIVREE", 
+  "INVENTAIRE", 
+  "RETOUR_PREVU", 
+  "RETOUR_EFFECTUE", 
+  "TERMINEE", 
+  "ANNULEE"
+];
+
+interface StatusUpdateData {
+  status: string;
+  dateLivraisonPrevue?: string;
+  dateLivraisonEffective?: string;
+  dateInventaire?: string;
+  dateRetourPrevu?: string;
+  dateRetourEffectif?: string;
+  notes?: string;
+}
+
 export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
   const [selectedCommercial, setSelectedCommercial] = useState<string>("mine");
   const [selectedAnalyticsClient, setSelectedAnalyticsClient] = useState<string>("all");
+  const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusUpdate, setStatusUpdate] = useState<StatusUpdateData>({ status: "" });
+  const { toast } = useToast();
   
   const userName = sessionStorage.getItem("userName") || "";
   const userRole = sessionStorage.getItem("userRole") || "commercial";
@@ -112,6 +145,50 @@ export default function MyDashboard() {
 
   const allOrders = ordersResponse?.data || [];
   const commerciaux = commerciauxResponse?.data || [];
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, data }: { orderId: number; data: StatusUpdateData }) => {
+      return await apiRequest(`/api/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          changedBy: userName,
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Statut mis à jour", description: "Le statut de la commande a été modifié avec succès." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders?pageSize=10000"] });
+      setStatusDialogOpen(false);
+      setSelectedOrder(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur", description: error.message || "Impossible de mettre à jour le statut", variant: "destructive" });
+    },
+  });
+
+  const openStatusDialog = (order: OrderDb) => {
+    setSelectedOrder(order);
+    setStatusUpdate({
+      status: order.status,
+      dateLivraisonPrevue: order.dateLivraisonPrevue || "",
+      dateLivraisonEffective: order.dateLivraisonEffective || "",
+      dateInventaire: order.dateInventaire || "",
+      dateRetourPrevu: order.dateRetourPrevu || "",
+      dateRetourEffectif: order.dateRetourEffectif || "",
+      notes: "",
+    });
+    setStatusDialogOpen(true);
+  };
+
+  const handleStatusSubmit = () => {
+    if (!selectedOrder) return;
+    updateStatusMutation.mutate({
+      orderId: selectedOrder.id,
+      data: statusUpdate,
+    });
+  };
 
   const filteredOrders = useMemo(() => {
     if (!isAdmin || selectedCommercial === "mine") {
@@ -419,7 +496,7 @@ export default function MyDashboard() {
                     {filteredOrders.slice(0, 15).map((order) => (
                       <div 
                         key={order.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/30 gap-2"
                       >
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{order.clientName}</p>
@@ -430,9 +507,19 @@ export default function MyDashboard() {
                             )}
                           </p>
                         </div>
-                        <Badge className={STATUS_COLORS[order.status] || ""}>
-                          {STATUS_LABELS[order.status] || order.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={STATUS_COLORS[order.status] || ""}>
+                            {STATUS_LABELS[order.status] || order.status}
+                          </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openStatusDialog(order)}
+                            data-testid={`button-edit-status-${order.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -886,6 +973,134 @@ export default function MyDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier le statut</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/30 rounded-lg">
+                <p className="font-medium">{selectedOrder.clientName}</p>
+                <p className="text-sm text-muted-foreground">{selectedOrder.orderCode}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nouveau statut</Label>
+                <Select
+                  value={statusUpdate.status}
+                  onValueChange={(value) => setStatusUpdate(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger data-testid="select-status">
+                    <SelectValue placeholder="Sélectionner un statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORDER_STATUSES.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {STATUS_LABELS[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(statusUpdate.status === "LIVRAISON_PROGRAMMEE" || statusUpdate.status === "LIVREE") && (
+                <div className="space-y-2">
+                  <Label>Date de livraison prévue</Label>
+                  <Input
+                    type="date"
+                    value={statusUpdate.dateLivraisonPrevue || ""}
+                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateLivraisonPrevue: e.target.value }))}
+                    data-testid="input-date-livraison-prevue"
+                  />
+                </div>
+              )}
+
+              {statusUpdate.status === "LIVREE" && (
+                <div className="space-y-2">
+                  <Label>Date de livraison effective</Label>
+                  <Input
+                    type="date"
+                    value={statusUpdate.dateLivraisonEffective || ""}
+                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateLivraisonEffective: e.target.value }))}
+                    data-testid="input-date-livraison-effective"
+                  />
+                </div>
+              )}
+
+              {statusUpdate.status === "INVENTAIRE" && (
+                <div className="space-y-2">
+                  <Label>Date d'inventaire</Label>
+                  <Input
+                    type="date"
+                    value={statusUpdate.dateInventaire || ""}
+                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateInventaire: e.target.value }))}
+                    data-testid="input-date-inventaire"
+                  />
+                </div>
+              )}
+
+              {statusUpdate.status === "RETOUR_PREVU" && (
+                <div className="space-y-2">
+                  <Label>Date de retour prévu</Label>
+                  <Input
+                    type="date"
+                    value={statusUpdate.dateRetourPrevu || ""}
+                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateRetourPrevu: e.target.value }))}
+                    data-testid="input-date-retour-prevu"
+                  />
+                </div>
+              )}
+
+              {statusUpdate.status === "RETOUR_EFFECTUE" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Date de retour prévu</Label>
+                    <Input
+                      type="date"
+                      value={statusUpdate.dateRetourPrevu || ""}
+                      onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateRetourPrevu: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date de retour effectif</Label>
+                    <Input
+                      type="date"
+                      value={statusUpdate.dateRetourEffectif || ""}
+                      onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateRetourEffectif: e.target.value }))}
+                      data-testid="input-date-retour-effectif"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2">
+                <Label>Notes (optionnel)</Label>
+                <Textarea
+                  value={statusUpdate.notes || ""}
+                  onChange={(e) => setStatusUpdate(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Ajouter une note sur ce changement..."
+                  rows={3}
+                  data-testid="input-notes"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleStatusSubmit}
+              disabled={updateStatusMutation.isPending}
+              data-testid="button-save-status"
+            >
+              {updateStatusMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
