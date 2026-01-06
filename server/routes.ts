@@ -6,7 +6,8 @@ import {
   commerciaux, insertCommercialSchema,
   fournisseurs, insertFournisseurSchema,
   themes, insertThemeSchema,
-  orders, insertOrderDbSchema, updateOrderStatusSchema, ORDER_STATUSES
+  orders, insertOrderDbSchema, updateOrderStatusSchema, ORDER_STATUSES, ORDER_STATUS_LABELS,
+  orderStatusHistory
 } from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
@@ -1468,19 +1469,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update order status
+  // Update order status with history and dates
   app.patch("/api/admin/orders/:id/status", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { status } = updateOrderStatusSchema.parse(req.body);
+      const { 
+        status, 
+        dateLivraisonPrevue, 
+        dateLivraisonEffective, 
+        dateInventaire, 
+        dateRetourPrevu, 
+        dateRetourEffectif 
+      } = updateOrderStatusSchema.parse(req.body);
+      const changedBy = req.body.changedBy || "Système";
+      const notes = req.body.notes || null;
+      
+      // Get current order to record previous status
+      const [currentOrder] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!currentOrder) return res.status(404).json({ message: "Commande non trouvée" });
+      
+      // Build update object with only provided fields
+      const updateData: any = { status, updatedAt: new Date() };
+      if (dateLivraisonPrevue !== undefined) updateData.dateLivraisonPrevue = dateLivraisonPrevue;
+      if (dateLivraisonEffective !== undefined) updateData.dateLivraisonEffective = dateLivraisonEffective;
+      if (dateInventaire !== undefined) updateData.dateInventaire = dateInventaire;
+      if (dateRetourPrevu !== undefined) updateData.dateRetourPrevu = dateRetourPrevu;
+      if (dateRetourEffectif !== undefined) updateData.dateRetourEffectif = dateRetourEffectif;
+      
+      // Update the order
       const [updated] = await db.update(orders)
-        .set({ status, updatedAt: new Date() })
+        .set(updateData)
         .where(eq(orders.id, id))
         .returning();
-      if (!updated) return res.status(404).json({ message: "Commande non trouvée" });
+      
+      // Record status change in history
+      await db.insert(orderStatusHistory).values({
+        orderId: id,
+        previousStatus: currentOrder.status,
+        newStatus: status,
+        changedBy,
+        notes,
+      });
+      
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get order status history
+  app.get("/api/admin/orders/:id/history", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const history = await db.select()
+        .from(orderStatusHistory)
+        .where(eq(orderStatusHistory.orderId, id))
+        .orderBy(desc(orderStatusHistory.changedAt));
+      res.json(history);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
