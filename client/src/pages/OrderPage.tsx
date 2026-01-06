@@ -8,7 +8,9 @@ import { ReviewStep } from "@/components/ReviewStep";
 import { SuccessStep } from "@/components/SuccessStep";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Check } from "lucide-react";
+import { useOnlineStatus } from "@/hooks/use-online-status";
+import { savePendingOrder } from "@/lib/pwa";
+import { Check, WifiOff } from "lucide-react";
 
 type Step = "form" | "preview" | "signature" | "review" | "success";
 
@@ -77,14 +79,45 @@ export default function OrderPage() {
   const [emailsSent, setEmailsSent] = useState(false);
   const [emailError, setEmailError] = useState<string>("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [savedOffline, setSavedOffline] = useState(false);
   const { toast } = useToast();
+  const online = useOnlineStatus();
 
   const generateOrderMutation = useMutation({
     mutationFn: async (data: InsertOrder) => {
+      if (!navigator.onLine) {
+        await savePendingOrder(data);
+        return {
+          orderCode: `OFFLINE-${Date.now()}`,
+          pdfUrl: "",
+          excelUrl: "",
+          emailsSent: false,
+          emailError: null,
+          isOffline: true,
+        } as GeneratedOrder & { isOffline: boolean };
+      }
       const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
-      return response;
+      return { ...response, isOffline: false };
     },
     onSuccess: (data) => {
+      if ((data as any).isOffline) {
+        setSavedOffline(true);
+        setGeneratedOrder({
+          orderCode: data.orderCode,
+          pdfUrl: "",
+          excelUrl: "",
+          emailsSent: false,
+          emailError: "Commande sauvegardée hors-ligne",
+        });
+        setCurrentStep("success");
+        toast({
+          title: "Commande sauvegardée",
+          description: "La commande sera envoyée automatiquement dès que le réseau sera disponible",
+        });
+        return;
+      }
+      
+      setSavedOffline(false);
       setGeneratedOrder(data);
       setEmailsSent(data.emailsSent);
       setEmailError(data.emailError || "");
@@ -103,7 +136,28 @@ export default function OrderPage() {
         });
       }
     },
-    onError: (error: Error) => {
+    onError: async (error: Error, variables: InsertOrder) => {
+      if (!navigator.onLine) {
+        try {
+          await savePendingOrder(variables);
+          setSavedOffline(true);
+          setGeneratedOrder({
+            orderCode: `OFFLINE-${Date.now()}`,
+            pdfUrl: "",
+            excelUrl: "",
+            emailsSent: false,
+            emailError: "Commande sauvegardée hors-ligne",
+          });
+          setCurrentStep("success");
+          toast({
+            title: "Commande sauvegardée",
+            description: "Connexion perdue - la commande sera envoyée automatiquement dès le retour du réseau",
+          });
+          return;
+        } catch (e) {
+          console.error("Erreur sauvegarde offline:", e);
+        }
+      }
       toast({
         title: "Erreur",
         description: error.message || "Impossible de générer la commande",
@@ -264,6 +318,7 @@ export default function OrderPage() {
           isSending={sendEmailsMutation.isPending}
           emailsSent={emailsSent}
           emailError={emailError}
+          isOffline={savedOffline}
         />
       )}
     </div>

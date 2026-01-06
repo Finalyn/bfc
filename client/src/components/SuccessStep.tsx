@@ -12,7 +12,9 @@ import {
   Send,
   RotateCcw,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  WifiOff,
+  CloudOff
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -25,6 +27,7 @@ interface SuccessStepProps {
   isSending: boolean;
   emailsSent: boolean;
   emailError?: string;
+  isOffline?: boolean;
 }
 
 export function SuccessStep({ 
@@ -35,8 +38,74 @@ export function SuccessStep({
   onNewOrder,
   isSending,
   emailsSent,
-  emailError
+  emailError,
+  isOffline = false
 }: SuccessStepProps) {
+  if (isOffline) {
+    return (
+      <div className="min-h-screen bg-background p-4 pb-24">
+        <div className="max-w-lg mx-auto">
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <CloudOff className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Commande sauvegardée</h1>
+                <p className="text-sm text-muted-foreground">Mode hors-ligne</p>
+              </div>
+            </div>
+          </div>
+
+          <Card className="border-2 border-amber-500/50 mb-4">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <WifiOff className="w-5 h-5 text-amber-500" />
+                En attente de connexion
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  Votre commande a été sauvegardée localement sur votre appareil.
+                </p>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">Que va-t-il se passer ?</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Dès que la connexion reviendra, la commande sera envoyée automatiquement</li>
+                  <li>Le PDF et l'Excel seront générés</li>
+                  <li>Les emails seront envoyés au client et à l'agence</li>
+                </ul>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Ne fermez pas l'application jusqu'au retour de la connexion pour garantir l'envoi.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-2xl">
+          <div className="max-w-lg mx-auto">
+            <Button
+              onClick={onNewOrder}
+              data-testid="button-new-order-offline"
+              className="w-full h-14 text-base font-medium"
+              size="lg"
+            >
+              <RotateCcw className="w-5 h-5 mr-2" />
+              Nouvelle commande
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
       <div className="max-w-lg mx-auto">
