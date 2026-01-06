@@ -30,16 +30,16 @@ The application uses a client-server architecture.
 - **Automatic Generation**: Generates a unique order code, a PDF containing all order details and signature based on the BDIS 2026 template, and an Excel file with structured data including the signature image. All dates are in "Europe/Paris" timezone.
 - **Email Dispatch**: Two automated emails: one to the client with the PDF, and another to `jack@finalyn.com` with both PDF and Excel, including detailed order information.
 - **Data Storage**: All order data is stored in PostgreSQL database with orders table.
-- **Personal Dashboard (MyDashboard)**: Each commercial sees their own stats (total, en attente, livrées, terminées), orders list, and multi-view calendar with delivery dates.
+- **Personal Dashboard (MyDashboard)**: Each commercial sees their orders list and multi-view calendar with delivery dates. Admin can filter by commercial.
   - **Calendar Views**: 4 modes available - Jour (day), Semaine (week - default), Mois (month), Année (year). Navigation buttons allow moving between periods.
   - **Dates Modification**: Edit button on each order opens a dialog to modify key dates.
-- **Order Date System**: Simplified date-based tracking (no text statuses):
-  - **Date de commande**: Automatic at creation (orderDate)
-  - **Date de livraison**: Calculated from theme delivery dates (dateLivraison)
-  - **Date d'inventaire prévu**: Planned inventory date (dateInventairePrevu)
-  - **Date d'inventaire**: Actual inventory date (dateInventaire)
-  - **Date de retour**: Return date (dateRetour)
-  - Order phase is determined by which dates are filled (En attente → Livré → Inventaire prévu → Inventorié → Retourné)
+- **Order Date System**: Simplified date-based tracking (5 key dates, no text statuses):
+  - **Date de commande (orderDate)**: Automatic at creation
+  - **Date de livraison (dateLivraison)**: Calculated from theme delivery dates at order creation
+  - **Date d'inventaire prévu (dateInventairePrevu)**: Planned inventory date (user-modifiable)
+  - **Date d'inventaire (dateInventaire)**: Actual inventory date (user-modifiable)
+  - **Date de retour (dateRetour)**: Return date (user-modifiable)
+  - Preview dialog shows all 5 dates clearly; list shows delivery date badge
 - **Profile Page**: Users can manage notification settings (push/email) and view their account info.
 
 ### System Design Choices

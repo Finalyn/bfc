@@ -37,21 +37,12 @@ import { fr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from "recharts";
 import type { OrderDb } from "@shared/schema";
 
-const getOrderPhase = (order: OrderDb): string => {
-  if (order.dateRetour) return "Retourné";
-  if (order.dateInventaire) return "Inventorié";
-  if (order.dateInventairePrevu) return "Inventaire prévu";
-  if (order.dateLivraison) return "Livré";
-  return "En attente";
-};
-
-const getOrderPhaseColor = (phase: string): string => {
-  switch (phase) {
-    case "Retourné": return "bg-indigo-100 text-indigo-800";
-    case "Inventorié": return "bg-green-100 text-green-800";
-    case "Inventaire prévu": return "bg-orange-100 text-orange-800";
-    case "Livré": return "bg-blue-100 text-blue-800";
-    default: return "bg-yellow-100 text-yellow-800";
+const formatDateShort = (date: string | null | undefined): string => {
+  if (!date) return "-";
+  try {
+    return format(parseISO(date), "dd/MM/yy", { locale: fr });
+  } catch {
+    return date;
   }
 };
 
@@ -234,12 +225,6 @@ export default function MyDashboard() {
     return allOrders.filter(order => order.salesRepName === selectedCommercial);
   }, [allOrders, isAdmin, selectedCommercial, userName]);
 
-  const stats = useMemo(() => ({
-    total: filteredOrders.length,
-    enAttente: filteredOrders.filter(o => !o.dateLivraison).length,
-    livrees: filteredOrders.filter(o => o.dateLivraison && !o.dateRetour).length,
-    terminees: filteredOrders.filter(o => o.dateRetour).length,
-  }), [filteredOrders]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -442,63 +427,19 @@ export default function MyDashboard() {
           <span>Données de : <strong className="text-foreground">{filterLabel}</strong></span>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Commandes</p>
-                </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Package className="w-5 h-5 text-primary" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.enAttente}</p>
-                  <p className="text-xs text-muted-foreground">En attente</p>
-                </div>
+              <div>
+                <p className="text-2xl font-bold">{filteredOrders.length}</p>
+                <p className="text-xs text-muted-foreground">Commandes</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Truck className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.livrees}</p>
-                  <p className="text-xs text-muted-foreground">Livrées</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.terminees}</p>
-                  <p className="text-xs text-muted-foreground">Terminées</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="orders" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -542,8 +483,8 @@ export default function MyDashboard() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Badge className={getOrderPhaseColor(getOrderPhase(order))}>
-                            {getOrderPhase(order)}
+                          <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            Liv: {formatDateShort(order.dateLivraison)}
                           </Badge>
                           <Button
                             size="icon"
@@ -642,7 +583,7 @@ export default function MyDashboard() {
                           {getOrdersForDate(currentDate).map(order => (
                             <div key={order.id} className="p-2 bg-blue-100 dark:bg-blue-900 rounded text-sm">
                               <p className="font-medium">{order.clientName}</p>
-                              <p className="text-xs text-muted-foreground">{order.orderCode} - {getOrderPhase(order)}</p>
+                              <p className="text-xs text-muted-foreground">{order.orderCode}</p>
                             </div>
                           ))}
                         </div>
@@ -1028,14 +969,32 @@ export default function MyDashboard() {
           </DialogHeader>
           {previewOrder && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                <div>
+              <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
                   <p className="text-xl font-bold">{previewOrder.orderCode}</p>
-                  <p className="text-sm text-muted-foreground">Créée le {previewOrder.orderDate}</p>
                 </div>
-                <Badge className={getOrderPhaseColor(getOrderPhase(previewOrder))}>
-                  {getOrderPhase(previewOrder)}
-                </Badge>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                  <div className="p-2 bg-background rounded">
+                    <p className="text-muted-foreground">Commande</p>
+                    <p className="font-medium">{formatDateShort(previewOrder.orderDate)}</p>
+                  </div>
+                  <div className="p-2 bg-background rounded">
+                    <p className="text-muted-foreground">Livraison</p>
+                    <p className="font-medium">{formatDateShort(previewOrder.dateLivraison)}</p>
+                  </div>
+                  <div className="p-2 bg-background rounded">
+                    <p className="text-muted-foreground">Inv. prévu</p>
+                    <p className="font-medium">{formatDateShort(previewOrder.dateInventairePrevu)}</p>
+                  </div>
+                  <div className="p-2 bg-background rounded">
+                    <p className="text-muted-foreground">Inventaire</p>
+                    <p className="font-medium">{formatDateShort(previewOrder.dateInventaire)}</p>
+                  </div>
+                  <div className="p-2 bg-background rounded">
+                    <p className="text-muted-foreground">Retour</p>
+                    <p className="font-medium">{formatDateShort(previewOrder.dateRetour)}</p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
