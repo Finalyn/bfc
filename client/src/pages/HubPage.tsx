@@ -26,24 +26,40 @@ export default function HubPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-white dark:from-gray-900 dark:to-gray-800">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
-              {userName}
-            </span>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+      {/* Header avec profil et déconnexion */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="w-4 h-4 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            BFC APP
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Choisissez votre espace de travail
-          </p>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {userName}
+          </span>
         </div>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleLogout}
+          className="text-gray-600 dark:text-gray-400"
+          data-testid="button-logout"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Déconnexion
+        </Button>
+      </header>
+
+      {/* Contenu principal */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-lg">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              BFC APP
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Choisissez votre espace de travail
+            </p>
+          </div>
 
         <div className="grid gap-4">
           <Card 
@@ -117,17 +133,6 @@ export default function HubPage() {
             </Card>
           )}
         </div>
-
-        <div className="mt-8 text-center">
-          <Button 
-            variant="ghost" 
-            onClick={handleLogout}
-            className="text-gray-600 dark:text-gray-400"
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Déconnexion
-          </Button>
         </div>
       </div>
     </div>
