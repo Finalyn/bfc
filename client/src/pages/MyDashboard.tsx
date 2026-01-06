@@ -26,7 +26,11 @@ import {
   Star,
   ShoppingCart,
   Filter,
-  Edit
+  Edit,
+  Eye,
+  FileText,
+  FileSpreadsheet,
+  Download
 } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, getMonth, getYear, differenceInDays, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -118,6 +122,10 @@ export default function MyDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState<StatusUpdateData>({ status: "" });
+  const [previewOrder, setPreviewOrder] = useState<OrderDb | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
   const { toast } = useToast();
   
   const userName = sessionStorage.getItem("userName") || "";
@@ -188,6 +196,63 @@ export default function MyDashboard() {
       orderId: selectedOrder.id,
       data: statusUpdate,
     });
+  };
+
+  const openPreviewDialog = (order: OrderDb) => {
+    setPreviewOrder(order);
+    setPreviewDialogOpen(true);
+  };
+
+  const downloadPdf = async (order: OrderDb) => {
+    setDownloadingPdf(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}/pdf`);
+      if (!response.ok) throw new Error("Erreur lors du téléchargement");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${order.orderCode || "commande"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: "PDF téléchargé", description: "Le fichier PDF a été téléchargé avec succès." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de télécharger le PDF", variant: "destructive" });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const downloadExcel = async (order: OrderDb) => {
+    setDownloadingExcel(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}/excel`);
+      if (!response.ok) throw new Error("Erreur lors du téléchargement");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${order.orderCode || "commande"}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: "Excel téléchargé", description: "Le fichier Excel a été téléchargé avec succès." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de télécharger le fichier Excel", variant: "destructive" });
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
+
+  const parseThemeSelections = (themeSelections: string | null): ThemeSelection[] => {
+    try {
+      return JSON.parse(themeSelections || "[]");
+    } catch {
+      return [];
+    }
   };
 
   const filteredOrders = useMemo(() => {
@@ -507,15 +572,25 @@ export default function MyDashboard() {
                             )}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <Badge className={STATUS_COLORS[order.status] || ""}>
                             {STATUS_LABELS[order.status] || order.status}
                           </Badge>
                           <Button
                             size="icon"
                             variant="ghost"
+                            onClick={() => openPreviewDialog(order)}
+                            data-testid={`button-preview-order-${order.id}`}
+                            title="Voir détails"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => openStatusDialog(order)}
                             data-testid={`button-edit-status-${order.id}`}
+                            title="Modifier statut"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -973,6 +1048,123 @@ export default function MyDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Aperçu de la commande
+            </DialogTitle>
+          </DialogHeader>
+          {previewOrder && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-xl font-bold">{previewOrder.orderCode}</p>
+                  <p className="text-sm text-muted-foreground">Créée le {previewOrder.orderDate}</p>
+                </div>
+                <Badge className={STATUS_COLORS[previewOrder.status] || ""}>
+                  {STATUS_LABELS[previewOrder.status] || previewOrder.status}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-muted-foreground">Commercial</h3>
+                  <p>{previewOrder.salesRepName}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-muted-foreground">Client</h3>
+                  <p className="font-medium">{previewOrder.clientName}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground">Contact responsable</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                  <p>{previewOrder.responsableName}</p>
+                  <p>{previewOrder.responsableTel}</p>
+                  <p>{previewOrder.responsableEmail}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground">Adresse de livraison</h3>
+                <div className="text-sm">
+                  <p className="font-medium">{previewOrder.livraisonEnseigne}</p>
+                  <p>{previewOrder.livraisonAdresse}</p>
+                  <p>{previewOrder.livraisonCpVille}</p>
+                  {previewOrder.livraisonHoraires && <p>Horaires: {previewOrder.livraisonHoraires}</p>}
+                  {previewOrder.livraisonHayon && <Badge variant="outline" className="mt-1">Hayon requis</Badge>}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground">Facturation</h3>
+                <div className="text-sm">
+                  <p className="font-medium">{previewOrder.facturationRaisonSociale}</p>
+                  <p>{previewOrder.facturationAdresse}</p>
+                  <p>{previewOrder.facturationCpVille}</p>
+                  <p>Mode: {previewOrder.facturationMode}</p>
+                </div>
+              </div>
+
+              {previewOrder.themeSelections && parseThemeSelections(previewOrder.themeSelections).length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-muted-foreground">Thèmes commandés</h3>
+                  <div className="space-y-2">
+                    {parseThemeSelections(previewOrder.themeSelections).map((theme, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 bg-muted/20 rounded text-sm">
+                        <span>{theme.theme}</span>
+                        <div className="flex items-center gap-3">
+                          {theme.quantity && <span>Qté: {theme.quantity}</span>}
+                          {theme.deliveryDate && <span className="text-muted-foreground">{theme.deliveryDate}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(previewOrder.dateLivraisonPrevue || previewOrder.dateLivraisonEffective || previewOrder.dateInventaire || previewOrder.dateRetourPrevu || previewOrder.dateRetourEffectif) && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-muted-foreground">Dates clés</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {previewOrder.dateLivraisonPrevue && <p>Livraison prévue: {previewOrder.dateLivraisonPrevue}</p>}
+                    {previewOrder.dateLivraisonEffective && <p>Livraison effective: {previewOrder.dateLivraisonEffective}</p>}
+                    {previewOrder.dateInventaire && <p>Inventaire: {previewOrder.dateInventaire}</p>}
+                    {previewOrder.dateRetourPrevu && <p>Retour prévu: {previewOrder.dateRetourPrevu}</p>}
+                    {previewOrder.dateRetourEffectif && <p>Retour effectif: {previewOrder.dateRetourEffectif}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => previewOrder && downloadPdf(previewOrder)}
+              disabled={downloadingPdf}
+              className="flex-1"
+              data-testid="button-download-pdf"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {downloadingPdf ? "Téléchargement..." : "Télécharger PDF"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => previewOrder && downloadExcel(previewOrder)}
+              disabled={downloadingExcel}
+              className="flex-1"
+              data-testid="button-download-excel"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              {downloadingExcel ? "Téléchargement..." : "Télécharger Excel"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent className="max-w-md">
