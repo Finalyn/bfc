@@ -10,6 +10,8 @@ import LoginPage from "@/pages/LoginPage";
 import HubPage from "@/pages/HubPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
+import MyDashboard from "@/pages/MyDashboard";
+import ProfilePage from "@/pages/ProfilePage";
 
 function Router() {
   return (
@@ -17,6 +19,8 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/hub" component={HubPage} />
       <Route path="/order" component={OrderPage} />
+      <Route path="/dashboard" component={MyDashboard} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/">

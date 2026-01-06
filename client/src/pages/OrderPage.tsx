@@ -10,7 +10,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { savePendingOrder, showLocalNotification } from "@/lib/pwa";
-import { Check, WifiOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Check, WifiOff, ArrowLeft } from "lucide-react";
 
 type Step = "form" | "preview" | "signature" | "review" | "success";
 
@@ -22,12 +23,24 @@ const STEPS = [
   { id: "success", label: "Terminé", number: 5 },
 ];
 
-function ProgressBar({ currentStep }: { currentStep: Step }) {
+function ProgressBar({ currentStep, onBackToMenu }: { currentStep: Step; onBackToMenu: () => void }) {
   const currentIndex = STEPS.findIndex(s => s.id === currentStep);
   
   return (
     <div className="bg-white border-b sticky top-0 z-50 px-4 py-3">
       <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 mb-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onBackToMenu}
+            className="h-8 px-2"
+            data-testid="button-back-menu"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Menu
+          </Button>
+        </div>
         <div className="flex items-center justify-between">
           {STEPS.map((step, index) => {
             const isCompleted = index < currentIndex;
@@ -276,9 +289,13 @@ export default function OrderPage() {
     setEmailError("");
   };
 
+  const handleBackToMenu = () => {
+    setLocation("/hub");
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <ProgressBar currentStep={currentStep} />
+      <ProgressBar currentStep={currentStep} onBackToMenu={handleBackToMenu} />
       
       {currentStep === "form" && (
         <OrderForm onNext={handleFormNext} initialData={orderData} />

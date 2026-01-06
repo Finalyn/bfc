@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 // Table des clients
@@ -222,6 +222,7 @@ export const orders = pgTable("orders", {
   
   // Commercial
   salesRepName: text("sales_rep_name").notNull(),
+  commercialId: integer("commercial_id"),
   
   // Client/Responsable
   clientName: text("client_name").notNull(),
