@@ -200,34 +200,6 @@ export const insertThemeSchema = createInsertSchema(themes).omit({
 export type Theme = typeof themes.$inferSelect;
 export type InsertTheme = z.infer<typeof insertThemeSchema>;
 
-// Statuts possibles pour une commande (cycle commercial)
-export const ORDER_STATUSES = [
-  "EN_ATTENTE",        // Commande créée, en attente de confirmation
-  "CONFIRMEE",         // Commande confirmée par le client
-  "LIVRAISON_PROGRAMMEE", // Date de livraison fixée
-  "LIVREE",            // Commande livrée au client
-  "INVENTAIRE",        // Inventaire en cours/prévu
-  "RETOUR_PREVU",      // Retour prévu
-  "RETOUR_EFFECTUE",   // Retour effectué
-  "TERMINEE",          // Commande terminée (tout clôturé)
-  "ANNULEE",           // Commande annulée
-] as const;
-
-export type OrderStatus = typeof ORDER_STATUSES[number];
-
-// Labels français pour les statuts
-export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  "EN_ATTENTE": "En attente",
-  "CONFIRMEE": "Confirmée",
-  "LIVRAISON_PROGRAMMEE": "Livraison programmée",
-  "LIVREE": "Livrée",
-  "INVENTAIRE": "Inventaire",
-  "RETOUR_PREVU": "Retour prévu",
-  "RETOUR_EFFECTUE": "Retour effectué",
-  "TERMINEE": "Terminée",
-  "ANNULEE": "Annulée",
-};
-
 // Table des commandes
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
@@ -269,15 +241,11 @@ export const orders = pgTable("orders", {
   signatureDate: text("signature_date").notNull(),
   clientSignedName: text("client_signed_name").notNull(),
   
-  // Statut
-  status: text("status").notNull().default("EN_ATTENTE"),
-  
-  // Dates clés du cycle commercial
-  dateLivraisonPrevue: text("date_livraison_prevue"),    // Date de livraison prévue
-  dateLivraisonEffective: text("date_livraison_effective"), // Date de livraison effective
-  dateInventaire: text("date_inventaire"),               // Date d'inventaire
-  dateRetourPrevu: text("date_retour_prevu"),            // Date de retour prévue
-  dateRetourEffectif: text("date_retour_effectif"),      // Date de retour effective
+  // Dates clés du cycle commercial (le statut est implicite selon les dates remplies)
+  dateLivraison: text("date_livraison"),                 // Date de livraison (calculée des thèmes à la création)
+  dateInventairePrevu: text("date_inventaire_prevu"),    // Date d'inventaire prévu
+  dateInventaire: text("date_inventaire"),               // Date d'inventaire effective
+  dateRetour: text("date_retour"),                       // Date de retour
   
   // Métadonnées
   createdAt: timestamp("created_at").defaultNow(),
@@ -290,34 +258,13 @@ export const insertOrderDbSchema = createInsertSchema(orders).omit({
   updatedAt: true,
 });
 
-export const updateOrderStatusSchema = z.object({
-  status: z.enum(ORDER_STATUSES),
-  dateLivraisonPrevue: z.string().optional(),
-  dateLivraisonEffective: z.string().optional(),
+export const updateOrderDatesSchema = z.object({
+  dateLivraison: z.string().optional(),
+  dateInventairePrevu: z.string().optional(),
   dateInventaire: z.string().optional(),
-  dateRetourPrevu: z.string().optional(),
-  dateRetourEffectif: z.string().optional(),
+  dateRetour: z.string().optional(),
 });
 
 export type OrderDb = typeof orders.$inferSelect;
 export type InsertOrderDb = z.infer<typeof insertOrderDbSchema>;
-export type UpdateOrderStatus = z.infer<typeof updateOrderStatusSchema>;
-
-// Table historique des changements de statut
-export const orderStatusHistory = pgTable("order_status_history", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").notNull(),
-  previousStatus: text("previous_status"),
-  newStatus: text("new_status").notNull(),
-  changedBy: text("changed_by").notNull(), // Nom du commercial qui a fait le changement
-  changedAt: timestamp("changed_at").defaultNow(),
-  notes: text("notes"), // Notes optionnelles sur le changement
-});
-
-export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHistory).omit({
-  id: true,
-  changedAt: true,
-});
-
-export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
-export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;
+export type UpdateOrderDates = z.infer<typeof updateOrderDatesSchema>;

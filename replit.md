@@ -30,13 +30,16 @@ The application uses a client-server architecture.
 - **Automatic Generation**: Generates a unique order code, a PDF containing all order details and signature based on the BDIS 2026 template, and an Excel file with structured data including the signature image. All dates are in "Europe/Paris" timezone.
 - **Email Dispatch**: Two automated emails: one to the client with the PDF, and another to `jack@finalyn.com` with both PDF and Excel, including detailed order information.
 - **Data Storage**: All order data is stored in PostgreSQL database with orders table.
-- **Personal Dashboard (MyDashboard)**: Each commercial sees their own stats (total, pending, in-progress, delivered), orders list, and multi-view calendar with delivery dates.
+- **Personal Dashboard (MyDashboard)**: Each commercial sees their own stats (total, en attente, livrées, terminées), orders list, and multi-view calendar with delivery dates.
   - **Calendar Views**: 4 modes available - Jour (day), Semaine (week - default), Mois (month), Année (year). Navigation buttons allow moving between periods.
-  - **Status Modification**: Edit button on each order opens a dialog to change status with contextual date inputs.
-- **Order Status System**: Commercial-oriented statuses with key date tracking:
-  - Statuses: EN_ATTENTE, CONFIRMEE, LIVRAISON_PROGRAMMEE, LIVREE, INVENTAIRE, RETOUR_PREVU, RETOUR_EFFECTUE, TERMINEE, ANNULEE
-  - Date fields: dateLivraisonPrevue, dateLivraisonEffective, dateInventaire, dateRetourPrevu, dateRetourEffectif
-  - Status history table tracks all changes with changedBy and notes
+  - **Dates Modification**: Edit button on each order opens a dialog to modify key dates.
+- **Order Date System**: Simplified date-based tracking (no text statuses):
+  - **Date de commande**: Automatic at creation (orderDate)
+  - **Date de livraison**: Calculated from theme delivery dates (dateLivraison)
+  - **Date d'inventaire prévu**: Planned inventory date (dateInventairePrevu)
+  - **Date d'inventaire**: Actual inventory date (dateInventaire)
+  - **Date de retour**: Return date (dateRetour)
+  - Order phase is determined by which dates are filled (En attente → Livré → Inventaire prévu → Inventorié → Retourné)
 - **Profile Page**: Users can manage notification settings (push/email) and view their account info.
 
 ### System Design Choices

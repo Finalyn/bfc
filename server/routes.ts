@@ -6,8 +6,7 @@ import {
   commerciaux, insertCommercialSchema,
   fournisseurs, insertFournisseurSchema,
   themes, insertThemeSchema,
-  orders, insertOrderDbSchema, updateOrderStatusSchema, ORDER_STATUSES, ORDER_STATUS_LABELS,
-  orderStatusHistory
+  orders, insertOrderDbSchema, updateOrderDatesSchema
 } from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
@@ -118,6 +117,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         order,
       });
 
+      // Calculer la date de livraison depuis les thèmes
+      let dateLivraison: string | null = null;
+      try {
+        const themes = JSON.parse(order.themeSelections || "[]");
+        const dates = themes
+          .map((t: any) => t.deliveryDate)
+          .filter((d: any) => d && typeof d === "string");
+        if (dates.length > 0) {
+          // Prendre la première date de livraison des thèmes
+          dateLivraison = dates[0];
+        }
+      } catch (e) {}
+
       // Sauvegarder la commande en base de données
       await db.insert(orders).values({
         orderCode,
@@ -142,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signatureLocation: order.signatureLocation,
         signatureDate: order.signatureDate,
         clientSignedName: order.clientSignedName,
-        status: "EN_ATTENTE",
+        dateLivraison,
       });
 
       // Envoyer les emails automatiquement
@@ -612,11 +624,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allOrders = await db.select().from(orders);
       const totalOrders = allOrders.length;
 
-      // Comptage par statut
-      const statusCounts: { [key: string]: number } = {};
-      allOrders.forEach(order => {
-        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
-      });
+      // Comptage par état des dates
+      const dateCounts = {
+        withLivraison: allOrders.filter(o => o.dateLivraison).length,
+        withInventairePrevu: allOrders.filter(o => o.dateInventairePrevu).length,
+        withInventaire: allOrders.filter(o => o.dateInventaire).length,
+        withRetour: allOrders.filter(o => o.dateRetour).length,
+      };
 
       res.json({
         totalClients,
@@ -624,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalCommerciaux,
         totalFournisseurs,
         totalOrders,
-        statusCounts
+        dateCounts
       });
     } catch (error: any) {
       console.error("Erreur stats:", error);
@@ -804,7 +818,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               facturationAdresse: order.facturationAdresse,
               facturationCpVille: order.facturationCpVille,
               facturationMode: order.facturationMode,
-              status: order.status,
+              dateLivraison: order.dateLivraison || "",
+              dateInventaire: order.dateInventaire || "",
+              dateRetour: order.dateRetour || "",
               createdAt: order.createdAt ? new Date(order.createdAt).toLocaleDateString("fr-FR") : "",
             });
           });
@@ -1407,14 +1423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/orders", async (req, res) => {
     try {
       const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
-      const { status } = req.query;
       
       let allOrders = await db.select().from(orders);
-      
-      // Filter by status
-      if (status && status !== "ALL") {
-        allOrders = allOrders.filter(o => o.status === status);
-      }
       
       // Filter by search
       if (search) {
@@ -1469,32 +1479,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update order status with history and dates
-  app.patch("/api/admin/orders/:id/status", async (req, res) => {
+  // Update order dates
+  app.patch("/api/admin/orders/:id/dates", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { 
-        status, 
-        dateLivraisonPrevue, 
-        dateLivraisonEffective, 
+        dateLivraison, 
+        dateInventairePrevu, 
         dateInventaire, 
-        dateRetourPrevu, 
-        dateRetourEffectif 
-      } = updateOrderStatusSchema.parse(req.body);
-      const changedBy = req.body.changedBy || "Système";
-      const notes = req.body.notes || null;
+        dateRetour 
+      } = updateOrderDatesSchema.parse(req.body);
       
-      // Get current order to record previous status
+      // Get current order
       const [currentOrder] = await db.select().from(orders).where(eq(orders.id, id));
       if (!currentOrder) return res.status(404).json({ message: "Commande non trouvée" });
       
       // Build update object with only provided fields
-      const updateData: any = { status, updatedAt: new Date() };
-      if (dateLivraisonPrevue !== undefined) updateData.dateLivraisonPrevue = dateLivraisonPrevue;
-      if (dateLivraisonEffective !== undefined) updateData.dateLivraisonEffective = dateLivraisonEffective;
+      const updateData: any = { updatedAt: new Date() };
+      if (dateLivraison !== undefined) updateData.dateLivraison = dateLivraison;
+      if (dateInventairePrevu !== undefined) updateData.dateInventairePrevu = dateInventairePrevu;
       if (dateInventaire !== undefined) updateData.dateInventaire = dateInventaire;
-      if (dateRetourPrevu !== undefined) updateData.dateRetourPrevu = dateRetourPrevu;
-      if (dateRetourEffectif !== undefined) updateData.dateRetourEffectif = dateRetourEffectif;
+      if (dateRetour !== undefined) updateData.dateRetour = dateRetour;
       
       // Update the order
       const [updated] = await db.update(orders)
@@ -1502,32 +1507,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(orders.id, id))
         .returning();
       
-      // Record status change in history
-      await db.insert(orderStatusHistory).values({
-        orderId: id,
-        previousStatus: currentOrder.status,
-        newStatus: status,
-        changedBy,
-        notes,
-      });
-      
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
-    }
-  });
-
-  // Get order status history
-  app.get("/api/admin/orders/:id/history", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const history = await db.select()
-        .from(orderStatusHistory)
-        .where(eq(orderStatusHistory.orderId, id))
-        .orderBy(desc(orderStatusHistory.changedAt));
-      res.json(history);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
     }
   });
 
@@ -1540,11 +1522,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  });
-
-  // Get order statuses
-  app.get("/api/admin/order-statuses", (req, res) => {
-    res.json(ORDER_STATUSES);
   });
 
   // Download PDF for order

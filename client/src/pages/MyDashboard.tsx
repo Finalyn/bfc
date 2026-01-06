@@ -37,28 +37,22 @@ import { fr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from "recharts";
 import type { OrderDb } from "@shared/schema";
 
-const STATUS_LABELS: Record<string, string> = {
-  "EN_ATTENTE": "En attente",
-  "CONFIRMEE": "Confirmée",
-  "LIVRAISON_PROGRAMMEE": "Livraison programmée",
-  "LIVREE": "Livrée",
-  "INVENTAIRE": "Inventaire",
-  "RETOUR_PREVU": "Retour prévu",
-  "RETOUR_EFFECTUE": "Retour effectué",
-  "TERMINEE": "Terminée",
-  "ANNULEE": "Annulée",
+const getOrderPhase = (order: OrderDb): string => {
+  if (order.dateRetour) return "Retourné";
+  if (order.dateInventaire) return "Inventorié";
+  if (order.dateInventairePrevu) return "Inventaire prévu";
+  if (order.dateLivraison) return "Livré";
+  return "En attente";
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  "EN_ATTENTE": "bg-yellow-100 text-yellow-800",
-  "CONFIRMEE": "bg-blue-100 text-blue-800",
-  "LIVRAISON_PROGRAMMEE": "bg-purple-100 text-purple-800",
-  "LIVREE": "bg-green-100 text-green-800",
-  "INVENTAIRE": "bg-orange-100 text-orange-800",
-  "RETOUR_PREVU": "bg-pink-100 text-pink-800",
-  "RETOUR_EFFECTUE": "bg-indigo-100 text-indigo-800",
-  "TERMINEE": "bg-gray-100 text-gray-800",
-  "ANNULEE": "bg-red-100 text-red-800",
+const getOrderPhaseColor = (phase: string): string => {
+  switch (phase) {
+    case "Retourné": return "bg-indigo-100 text-indigo-800";
+    case "Inventorié": return "bg-green-100 text-green-800";
+    case "Inventaire prévu": return "bg-orange-100 text-orange-800";
+    case "Livré": return "bg-blue-100 text-blue-800";
+    default: return "bg-yellow-100 text-yellow-800";
+  }
 };
 
 type CalendarView = "day" | "week" | "month" | "year";
@@ -91,26 +85,11 @@ interface ClientAnalysis {
   totalQuantity: number;
 }
 
-const ORDER_STATUSES = [
-  "EN_ATTENTE", 
-  "CONFIRMEE", 
-  "LIVRAISON_PROGRAMMEE", 
-  "LIVREE", 
-  "INVENTAIRE", 
-  "RETOUR_PREVU", 
-  "RETOUR_EFFECTUE", 
-  "TERMINEE", 
-  "ANNULEE"
-];
-
-interface StatusUpdateData {
-  status: string;
-  dateLivraisonPrevue?: string;
-  dateLivraisonEffective?: string;
+interface DateUpdateData {
+  dateLivraison?: string;
+  dateInventairePrevu?: string;
   dateInventaire?: string;
-  dateRetourPrevu?: string;
-  dateRetourEffectif?: string;
-  notes?: string;
+  dateRetour?: string;
 }
 
 export default function MyDashboard() {
@@ -120,8 +99,8 @@ export default function MyDashboard() {
   const [selectedCommercial, setSelectedCommercial] = useState<string>("mine");
   const [selectedAnalyticsClient, setSelectedAnalyticsClient] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [statusUpdate, setStatusUpdate] = useState<StatusUpdateData>({ status: "" });
+  const [datesDialogOpen, setDatesDialogOpen] = useState(false);
+  const [datesUpdate, setDatesUpdate] = useState<DateUpdateData>({});
   const [previewOrder, setPreviewOrder] = useState<OrderDb | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -154,47 +133,46 @@ export default function MyDashboard() {
   const allOrders = ordersResponse?.data || [];
   const commerciaux = commerciauxResponse?.data || [];
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ orderId, data }: { orderId: number; data: StatusUpdateData }) => {
-      return await apiRequest(`/api/orders/${orderId}/status`, {
+  const updateDatesMutation = useMutation({
+    mutationFn: async ({ orderId, data }: { orderId: number; data: DateUpdateData }) => {
+      const response = await fetch(`/api/admin/orders/${orderId}/dates`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          changedBy: userName,
-        }),
+        body: JSON.stringify(data),
       });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de la mise à jour");
+      }
+      return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Statut mis à jour", description: "Le statut de la commande a été modifié avec succès." });
+      toast({ title: "Dates mises à jour", description: "Les dates de la commande ont été modifiées avec succès." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders?pageSize=10000"] });
-      setStatusDialogOpen(false);
+      setDatesDialogOpen(false);
       setSelectedOrder(null);
     },
     onError: (error: any) => {
-      toast({ title: "Erreur", description: error.message || "Impossible de mettre à jour le statut", variant: "destructive" });
+      toast({ title: "Erreur", description: error.message || "Impossible de mettre à jour les dates", variant: "destructive" });
     },
   });
 
-  const openStatusDialog = (order: OrderDb) => {
+  const openDatesDialog = (order: OrderDb) => {
     setSelectedOrder(order);
-    setStatusUpdate({
-      status: order.status,
-      dateLivraisonPrevue: order.dateLivraisonPrevue || "",
-      dateLivraisonEffective: order.dateLivraisonEffective || "",
+    setDatesUpdate({
+      dateLivraison: order.dateLivraison || "",
+      dateInventairePrevu: order.dateInventairePrevu || "",
       dateInventaire: order.dateInventaire || "",
-      dateRetourPrevu: order.dateRetourPrevu || "",
-      dateRetourEffectif: order.dateRetourEffectif || "",
-      notes: "",
+      dateRetour: order.dateRetour || "",
     });
-    setStatusDialogOpen(true);
+    setDatesDialogOpen(true);
   };
 
-  const handleStatusSubmit = () => {
+  const handleDatesSubmit = () => {
     if (!selectedOrder) return;
-    updateStatusMutation.mutate({
+    updateDatesMutation.mutate({
       orderId: selectedOrder.id,
-      data: statusUpdate,
+      data: datesUpdate,
     });
   };
 
@@ -267,9 +245,9 @@ export default function MyDashboard() {
 
   const stats = useMemo(() => ({
     total: filteredOrders.length,
-    enAttente: filteredOrders.filter(o => o.status === "EN_ATTENTE").length,
-    enCours: filteredOrders.filter(o => ["CONFIRMEE", "LIVRAISON_PROGRAMMEE"].includes(o.status)).length,
-    livrees: filteredOrders.filter(o => ["LIVREE", "INVENTAIRE", "RETOUR_PREVU", "RETOUR_EFFECTUE", "TERMINEE"].includes(o.status)).length,
+    enAttente: filteredOrders.filter(o => !o.dateLivraison).length,
+    livrees: filteredOrders.filter(o => o.dateLivraison && !o.dateRetour).length,
+    terminees: filteredOrders.filter(o => o.dateRetour).length,
   }), [filteredOrders]);
 
   const monthStart = startOfMonth(currentDate);
@@ -509,8 +487,8 @@ export default function MyDashboard() {
                   <Truck className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.enCours}</p>
-                  <p className="text-xs text-muted-foreground">En cours</p>
+                  <p className="text-2xl font-bold">{stats.livrees}</p>
+                  <p className="text-xs text-muted-foreground">Livrées</p>
                 </div>
               </div>
             </CardContent>
@@ -523,8 +501,8 @@ export default function MyDashboard() {
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.livrees}</p>
-                  <p className="text-xs text-muted-foreground">Livrées</p>
+                  <p className="text-2xl font-bold">{stats.terminees}</p>
+                  <p className="text-xs text-muted-foreground">Terminées</p>
                 </div>
               </div>
             </CardContent>
@@ -573,8 +551,8 @@ export default function MyDashboard() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Badge className={STATUS_COLORS[order.status] || ""}>
-                            {STATUS_LABELS[order.status] || order.status}
+                          <Badge className={getOrderPhaseColor(getOrderPhase(order))}>
+                            {getOrderPhase(order)}
                           </Badge>
                           <Button
                             size="icon"
@@ -588,9 +566,9 @@ export default function MyDashboard() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => openStatusDialog(order)}
-                            data-testid={`button-edit-status-${order.id}`}
-                            title="Modifier statut"
+                            onClick={() => openDatesDialog(order)}
+                            data-testid={`button-edit-dates-${order.id}`}
+                            title="Modifier dates"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -673,7 +651,7 @@ export default function MyDashboard() {
                           {getOrdersForDate(currentDate).map(order => (
                             <div key={order.id} className="p-2 bg-blue-100 dark:bg-blue-900 rounded text-sm">
                               <p className="font-medium">{order.clientName}</p>
-                              <p className="text-xs text-muted-foreground">{order.orderCode} - {STATUS_LABELS[order.status]}</p>
+                              <p className="text-xs text-muted-foreground">{order.orderCode} - {getOrderPhase(order)}</p>
                             </div>
                           ))}
                         </div>
@@ -1064,8 +1042,8 @@ export default function MyDashboard() {
                   <p className="text-xl font-bold">{previewOrder.orderCode}</p>
                   <p className="text-sm text-muted-foreground">Créée le {previewOrder.orderDate}</p>
                 </div>
-                <Badge className={STATUS_COLORS[previewOrder.status] || ""}>
-                  {STATUS_LABELS[previewOrder.status] || previewOrder.status}
+                <Badge className={getOrderPhaseColor(getOrderPhase(previewOrder))}>
+                  {getOrderPhase(previewOrder)}
                 </Badge>
               </div>
 
@@ -1081,11 +1059,11 @@ export default function MyDashboard() {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm text-muted-foreground">Contact responsable</h3>
+                <h3 className="font-semibold text-sm text-muted-foreground">Contact</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                  <p>{previewOrder.responsableName}</p>
-                  <p>{previewOrder.responsableTel}</p>
-                  <p>{previewOrder.responsableEmail}</p>
+                  <p>{previewOrder.clientName}</p>
+                  <p>{previewOrder.clientTel}</p>
+                  <p>{previewOrder.clientEmail}</p>
                 </div>
               </div>
 
@@ -1127,18 +1105,16 @@ export default function MyDashboard() {
                 </div>
               )}
 
-              {(previewOrder.dateLivraisonPrevue || previewOrder.dateLivraisonEffective || previewOrder.dateInventaire || previewOrder.dateRetourPrevu || previewOrder.dateRetourEffectif) && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-sm text-muted-foreground">Dates clés</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {previewOrder.dateLivraisonPrevue && <p>Livraison prévue: {previewOrder.dateLivraisonPrevue}</p>}
-                    {previewOrder.dateLivraisonEffective && <p>Livraison effective: {previewOrder.dateLivraisonEffective}</p>}
-                    {previewOrder.dateInventaire && <p>Inventaire: {previewOrder.dateInventaire}</p>}
-                    {previewOrder.dateRetourPrevu && <p>Retour prévu: {previewOrder.dateRetourPrevu}</p>}
-                    {previewOrder.dateRetourEffectif && <p>Retour effectif: {previewOrder.dateRetourEffectif}</p>}
-                  </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground">Dates clés</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <p>Commande: {previewOrder.orderDate}</p>
+                  {previewOrder.dateLivraison && <p>Livraison: {previewOrder.dateLivraison}</p>}
+                  {previewOrder.dateInventairePrevu && <p>Inventaire prévu: {previewOrder.dateInventairePrevu}</p>}
+                  {previewOrder.dateInventaire && <p>Inventaire: {previewOrder.dateInventaire}</p>}
+                  {previewOrder.dateRetour && <p>Retour: {previewOrder.dateRetour}</p>}
                 </div>
-              )}
+              </div>
             </div>
           )}
           <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
@@ -1166,129 +1142,70 @@ export default function MyDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+      <Dialog open={datesDialogOpen} onOpenChange={setDatesDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Modifier le statut</DialogTitle>
+            <DialogTitle>Modifier les dates</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
               <div className="p-3 bg-muted/30 rounded-lg">
                 <p className="font-medium">{selectedOrder.clientName}</p>
                 <p className="text-sm text-muted-foreground">{selectedOrder.orderCode}</p>
+                <p className="text-xs text-muted-foreground mt-1">Date de commande: {selectedOrder.orderDate}</p>
               </div>
 
               <div className="space-y-2">
-                <Label>Nouveau statut</Label>
-                <Select
-                  value={statusUpdate.status}
-                  onValueChange={(value) => setStatusUpdate(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger data-testid="select-status">
-                    <SelectValue placeholder="Sélectionner un statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORDER_STATUSES.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {STATUS_LABELS[status]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Date de livraison</Label>
+                <Input
+                  type="date"
+                  value={datesUpdate.dateLivraison || ""}
+                  onChange={(e) => setDatesUpdate(prev => ({ ...prev, dateLivraison: e.target.value }))}
+                  data-testid="input-date-livraison"
+                />
               </div>
 
-              {(statusUpdate.status === "LIVRAISON_PROGRAMMEE" || statusUpdate.status === "LIVREE") && (
-                <div className="space-y-2">
-                  <Label>Date de livraison prévue</Label>
-                  <Input
-                    type="date"
-                    value={statusUpdate.dateLivraisonPrevue || ""}
-                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateLivraisonPrevue: e.target.value }))}
-                    data-testid="input-date-livraison-prevue"
-                  />
-                </div>
-              )}
-
-              {statusUpdate.status === "LIVREE" && (
-                <div className="space-y-2">
-                  <Label>Date de livraison effective</Label>
-                  <Input
-                    type="date"
-                    value={statusUpdate.dateLivraisonEffective || ""}
-                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateLivraisonEffective: e.target.value }))}
-                    data-testid="input-date-livraison-effective"
-                  />
-                </div>
-              )}
-
-              {statusUpdate.status === "INVENTAIRE" && (
-                <div className="space-y-2">
-                  <Label>Date d'inventaire</Label>
-                  <Input
-                    type="date"
-                    value={statusUpdate.dateInventaire || ""}
-                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateInventaire: e.target.value }))}
-                    data-testid="input-date-inventaire"
-                  />
-                </div>
-              )}
-
-              {statusUpdate.status === "RETOUR_PREVU" && (
-                <div className="space-y-2">
-                  <Label>Date de retour prévu</Label>
-                  <Input
-                    type="date"
-                    value={statusUpdate.dateRetourPrevu || ""}
-                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateRetourPrevu: e.target.value }))}
-                    data-testid="input-date-retour-prevu"
-                  />
-                </div>
-              )}
-
-              {statusUpdate.status === "RETOUR_EFFECTUE" && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Date de retour prévu</Label>
-                    <Input
-                      type="date"
-                      value={statusUpdate.dateRetourPrevu || ""}
-                      onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateRetourPrevu: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date de retour effectif</Label>
-                    <Input
-                      type="date"
-                      value={statusUpdate.dateRetourEffectif || ""}
-                      onChange={(e) => setStatusUpdate(prev => ({ ...prev, dateRetourEffectif: e.target.value }))}
-                      data-testid="input-date-retour-effectif"
-                    />
-                  </div>
-                </>
-              )}
+              <div className="space-y-2">
+                <Label>Date d'inventaire prévu</Label>
+                <Input
+                  type="date"
+                  value={datesUpdate.dateInventairePrevu || ""}
+                  onChange={(e) => setDatesUpdate(prev => ({ ...prev, dateInventairePrevu: e.target.value }))}
+                  data-testid="input-date-inventaire-prevu"
+                />
+              </div>
 
               <div className="space-y-2">
-                <Label>Notes (optionnel)</Label>
-                <Textarea
-                  value={statusUpdate.notes || ""}
-                  onChange={(e) => setStatusUpdate(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Ajouter une note sur ce changement..."
-                  rows={3}
-                  data-testid="input-notes"
+                <Label>Date d'inventaire</Label>
+                <Input
+                  type="date"
+                  value={datesUpdate.dateInventaire || ""}
+                  onChange={(e) => setDatesUpdate(prev => ({ ...prev, dateInventaire: e.target.value }))}
+                  data-testid="input-date-inventaire"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Date de retour</Label>
+                <Input
+                  type="date"
+                  value={datesUpdate.dateRetour || ""}
+                  onChange={(e) => setDatesUpdate(prev => ({ ...prev, dateRetour: e.target.value }))}
+                  data-testid="input-date-retour"
                 />
               </div>
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDatesDialogOpen(false)}>
               Annuler
             </Button>
             <Button 
-              onClick={handleStatusSubmit}
-              disabled={updateStatusMutation.isPending}
-              data-testid="button-save-status"
+              onClick={handleDatesSubmit}
+              disabled={updateDatesMutation.isPending}
+              data-testid="button-save-dates"
             >
-              {updateStatusMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+              {updateDatesMutation.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
