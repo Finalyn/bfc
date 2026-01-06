@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Database, LogOut, User, BarChart3, Settings } from "lucide-react";
+import { ClipboardList, Database, LogOut, User, BarChart3, Settings, TrendingUp } from "lucide-react";
 
 export default function HubPage() {
   const [, setLocation] = useLocation();
@@ -106,6 +106,28 @@ export default function HubPage() {
                   </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Gérer mes notifications et paramètres
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-orange-500"
+            onClick={() => setLocation("/analytics")}
+            data-testid="card-analytics"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center border border-orange-200">
+                  <TrendingUp className="w-8 h-8 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Analyse Clients
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Habitudes, tendances et statistiques
                   </p>
                 </div>
               </div>
