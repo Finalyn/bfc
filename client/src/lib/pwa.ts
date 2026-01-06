@@ -1,5 +1,5 @@
-const DB_NAME = 'bdis-offline-db';
-const DB_VERSION = 1;
+const DB_NAME = 'bfc-app-db';
+const DB_VERSION = 2;
 const ORDERS_STORE = 'pendingOrders';
 const DATA_STORE = 'cachedData';
 
@@ -213,4 +213,35 @@ export async function promptInstall(): Promise<boolean> {
 
 export function canInstall(): boolean {
   return deferredPrompt !== null;
+}
+
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (!('Notification' in window)) {
+    console.log('Les notifications ne sont pas supportées');
+    return 'denied';
+  }
+  
+  const permission = await Notification.requestPermission();
+  return permission;
+}
+
+export async function showLocalNotification(title: string, body: string): Promise<void> {
+  if (!('Notification' in window)) return;
+  
+  if (Notification.permission !== 'granted') {
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') return;
+  }
+  
+  const registration = await navigator.serviceWorker.ready;
+  await registration.showNotification(title, {
+    body,
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
+  } as NotificationOptions);
+}
+
+export function getNotificationPermission(): NotificationPermission | 'unsupported' {
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission;
 }

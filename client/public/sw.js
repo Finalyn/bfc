@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bdis-commandes-v1';
-const STATIC_CACHE = 'bdis-static-v1';
-const DATA_CACHE = 'bdis-data-v1';
+const CACHE_NAME = 'bfc-app-v2';
+const STATIC_CACHE = 'bfc-static-v2';
+const DATA_CACHE = 'bfc-data-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -31,12 +31,52 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== STATIC_CACHE && name !== DATA_CACHE)
+          .filter((name) => !name.startsWith('bfc-'))
           .map((name) => caches.delete(name))
       );
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'Nouvelle notification BFC APP',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
+    vibrate: [100, 50, 100],
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
+    actions: [
+      { action: 'open', title: 'Ouvrir' },
+      { action: 'close', title: 'Fermer' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification('BFC APP', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  if (event.action === 'close') return;
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
 });
 
 self.addEventListener('fetch', (event) => {
