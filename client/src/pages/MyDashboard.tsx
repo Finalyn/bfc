@@ -232,20 +232,55 @@ export default function MyDashboard() {
 
   const getOrdersForDate = (date: Date) => {
     return filteredOrders.filter(order => {
-      try {
-        const selections = JSON.parse(order.themeSelections || "[]");
-        return selections.some((sel: any) => {
-          if (sel.deliveryDate) {
-            const deliveryDate = parseISO(sel.deliveryDate);
-            return isSameDay(deliveryDate, date);
-          }
+      if (order.dateLivraison) {
+        try {
+          const deliveryDate = parseISO(order.dateLivraison);
+          return isSameDay(deliveryDate, date);
+        } catch {
           return false;
-        });
-      } catch {
-        return false;
+        }
       }
+      return false;
     });
   };
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const thisMonthStart = startOfMonth(now);
+    const thisMonthEnd = endOfMonth(now);
+    
+    const thisMonthOrders = filteredOrders.filter(o => {
+      if (!o.orderDate) return false;
+      try {
+        const orderDate = parseISO(o.orderDate);
+        return orderDate >= thisMonthStart && orderDate <= thisMonthEnd;
+      } catch { return false; }
+    });
+    
+    const upcomingDeliveries = filteredOrders.filter(o => {
+      if (!o.dateLivraison) return false;
+      try {
+        const deliveryDate = parseISO(o.dateLivraison);
+        return deliveryDate >= now;
+      } catch { return false; }
+    });
+    
+    const pendingInventory = filteredOrders.filter(o => 
+      o.dateLivraison && !o.dateInventaire
+    );
+    
+    const pendingReturn = filteredOrders.filter(o => 
+      o.dateInventaire && !o.dateRetour
+    );
+    
+    return {
+      total: filteredOrders.length,
+      thisMonth: thisMonthOrders.length,
+      upcomingDeliveries: upcomingDeliveries.length,
+      pendingInventory: pendingInventory.length,
+      pendingReturn: pendingReturn.length,
+    };
+  }, [filteredOrders]);
 
   const clientAnalytics = useMemo(() => {
     const clientMap = new Map<string, ClientAnalysis>();
@@ -427,19 +462,77 @@ export default function MyDashboard() {
           <span>Données de : <strong className="text-foreground">{filterLabel}</strong></span>
         </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Package className="w-5 h-5 text-primary" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Package className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{filteredOrders.length}</p>
-                <p className="text-xs text-muted-foreground">Commandes</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.thisMonth}</p>
+                  <p className="text-xs text-muted-foreground">Ce mois</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                  <Truck className="w-4 h-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.upcomingDeliveries}</p>
+                  <p className="text-xs text-muted-foreground">À livrer</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <ClipboardList className="w-4 h-4 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.pendingInventory}</p>
+                  <p className="text-xs text-muted-foreground">À inventorier</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.pendingReturn}</p>
+                  <p className="text-xs text-muted-foreground">À retourner</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Tabs defaultValue="orders" className="w-full">
           <TabsList className="grid w-full grid-cols-3">

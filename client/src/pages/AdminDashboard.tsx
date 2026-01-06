@@ -158,7 +158,7 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders";
 
 
 export default function AdminDashboard() {
@@ -189,7 +189,20 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, activeTab, clientBadgeFilter]);
+  }, [debouncedSearch, clientBadgeFilter]);
+
+  const handleTabChange = (tab: EntityType) => {
+    // Set sort field BEFORE changing tab to prevent bad query
+    if (tab === "orders") {
+      setSortField("orderDate");
+    } else if (tab === "themes") {
+      setSortField("theme");
+    } else {
+      setSortField("nom");
+    }
+    setCurrentPage(1);
+    setActiveTab(tab);
+  };
 
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
@@ -280,6 +293,12 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/fournisseurs", currentPage, debouncedSearch, sortField, sortDirection],
     queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "fournisseurs",
+  });
+
+  const { data: ordersData, isLoading: ordersLoading } = useQuery<PaginatedResponse<OrderDb>>({
+    queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection],
+    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}`).then(r => r.json()),
+    enabled: !isCheckingAuth && activeTab === "orders",
   });
 
   const createMutation = useMutation({
@@ -732,7 +751,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as EntityType)}>
+        <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as EntityType)}>
           <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 mb-4 sm:mb-6">
             <TabsList className="inline-flex w-max sm:w-auto">
               <TabsTrigger value="clients" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-clients">
@@ -750,6 +769,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="fournisseurs" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-fournisseurs">
                 <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Fournisseurs</span><span className="sm:hidden">Four.</span> ({fournisseursTotals?.pagination.total || fournisseursData?.pagination.total || 0})
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-orders">
+                <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Commandes</span><span className="sm:hidden">Cmd.</span> ({ordersTotals?.pagination.total || 0})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1088,6 +1111,79 @@ export default function AdminDashboard() {
                       </Table>
                     </div>
                     {fournisseursData?.pagination && <Pagination pagination={fournisseursData.pagination} />}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <Card>
+              <CardContent className="p-0">
+                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">Toutes les commandes</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExport("orders")}
+                    data-testid="button-export-orders"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exporter Excel
+                  </Button>
+                </div>
+                {ordersLoading ? (
+                  <div className="p-8 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("orderCode")}>
+                              Code <SortIcon field="orderCode" />
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("orderDate")}>
+                              Date <SortIcon field="orderDate" />
+                            </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("salesRepName")}>
+                              Commercial <SortIcon field="salesRepName" />
+                            </TableHead>
+                            <TableHead className="cursor-pointer hidden md:table-cell" onClick={() => handleSort("clientName")}>
+                              Client <SortIcon field="clientName" />
+                            </TableHead>
+                            <TableHead className="hidden lg:table-cell">Livraison</TableHead>
+                            <TableHead className="w-24">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {ordersData?.data.map((order) => (
+                            <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
+                              <TableCell className="font-mono text-sm">{order.orderCode}</TableCell>
+                              <TableCell>{order.orderDate}</TableCell>
+                              <TableCell className="font-medium">{order.salesRepName}</TableCell>
+                              <TableCell className="hidden md:table-cell">{order.clientName}</TableCell>
+                              <TableCell className="hidden lg:table-cell">{order.livraisonEnseigne}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => { setSelectedOrder(order); setOrderDetailOpen(true); }}
+                                    data-testid={`button-view-order-${order.id}`}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {ordersData?.pagination && <Pagination pagination={ordersData.pagination} />}
                   </>
                 )}
               </CardContent>
