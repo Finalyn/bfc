@@ -1,7 +1,7 @@
 {
-  "name": "BDIS Commandes",
-  "short_name": "BDIS",
-  "description": "Application de gestion des commandes commerciales BDIS",
+  "name": "BFC APP",
+  "short_name": "BFC APP",
+  "description": "Application de gestion des commandes commerciales BFC",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
