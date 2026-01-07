@@ -91,11 +91,11 @@ interface OrderEvent {
   dateLabel: string;
 }
 
-const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string; icon: string }> = {
-  livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900", icon: "🚚" },
-  inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900", icon: "📋" },
-  inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900", icon: "✓" },
-  retour: { label: "Retour", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900", icon: "↩" },
+const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string }> = {
+  livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900" },
+  inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
+  retour: { label: "Retour", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900" },
 };
 
 export default function MyDashboard() {
