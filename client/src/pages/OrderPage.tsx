@@ -9,7 +9,9 @@ import { SuccessStep } from "@/components/SuccessStep";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOnlineStatus } from "@/hooks/use-online-status";
-import { savePendingOrder, showLocalNotification } from "@/lib/pwa";
+import { showLocalNotification } from "@/lib/pwa";
+import { saveOfflineOrder } from "@/lib/offlineStorage";
+import { generateOrderPDFClient } from "@/lib/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Check, WifiOff, ArrowLeft } from "lucide-react";
 
@@ -99,9 +101,50 @@ export default function OrderPage() {
   const generateOrderMutation = useMutation({
     mutationFn: async (data: InsertOrder) => {
       if (!navigator.onLine) {
-        await savePendingOrder(data);
+        const orderCode = `OFF-${Date.now().toString(36).toUpperCase()}`;
+        const now = new Date().toISOString();
+        
+        const fullOrder: Order = {
+          orderCode,
+          orderDate: data.orderDate || now.split('T')[0],
+          salesRepName: data.salesRepName,
+          responsableName: data.responsableName,
+          responsableTel: data.responsableTel,
+          responsableEmail: data.responsableEmail,
+          comptaTel: data.comptaTel,
+          comptaEmail: data.comptaEmail,
+          themeSelections: data.themeSelections,
+          livraisonEnseigne: data.livraisonEnseigne,
+          livraisonAdresse: data.livraisonAdresse,
+          livraisonCpVille: data.livraisonCpVille,
+          livraisonHoraires: data.livraisonHoraires,
+          livraisonHayon: data.livraisonHayon,
+          facturationRaisonSociale: data.facturationRaisonSociale,
+          facturationAdresse: data.facturationAdresse,
+          facturationCpVille: data.facturationCpVille,
+          facturationMode: data.facturationMode,
+          facturationRib: data.facturationRib,
+          cgvAccepted: data.cgvAccepted,
+          signature: data.signature,
+          signatureLocation: data.signatureLocation,
+          signatureDate: data.signatureDate,
+          clientSignedName: data.clientSignedName,
+          clientName: data.clientName,
+          clientEmail: data.clientEmail,
+          newsletterAccepted: data.newsletterAccepted ?? true,
+          createdAt: now,
+        };
+        
+        try {
+          const pdfBlob = await generateOrderPDFClient(fullOrder);
+          await saveOfflineOrder(fullOrder, pdfBlob);
+        } catch (pdfError) {
+          console.error("Erreur génération PDF offline:", pdfError);
+          await saveOfflineOrder(fullOrder);
+        }
+        
         return {
-          orderCode: `OFFLINE-${Date.now()}`,
+          orderCode,
           pdfUrl: "",
           excelUrl: "",
           emailsSent: false,
@@ -156,10 +199,51 @@ export default function OrderPage() {
     onError: async (error: Error, variables: InsertOrder) => {
       if (!navigator.onLine) {
         try {
-          await savePendingOrder(variables);
+          const orderCode = `OFF-${Date.now().toString(36).toUpperCase()}`;
+          const now = new Date().toISOString();
+          
+          const fullOrder: Order = {
+            orderCode,
+            orderDate: variables.orderDate || now.split('T')[0],
+            salesRepName: variables.salesRepName,
+            responsableName: variables.responsableName,
+            responsableTel: variables.responsableTel,
+            responsableEmail: variables.responsableEmail,
+            comptaTel: variables.comptaTel,
+            comptaEmail: variables.comptaEmail,
+            themeSelections: variables.themeSelections,
+            livraisonEnseigne: variables.livraisonEnseigne,
+            livraisonAdresse: variables.livraisonAdresse,
+            livraisonCpVille: variables.livraisonCpVille,
+            livraisonHoraires: variables.livraisonHoraires,
+            livraisonHayon: variables.livraisonHayon,
+            facturationRaisonSociale: variables.facturationRaisonSociale,
+            facturationAdresse: variables.facturationAdresse,
+            facturationCpVille: variables.facturationCpVille,
+            facturationMode: variables.facturationMode,
+            facturationRib: variables.facturationRib,
+            cgvAccepted: variables.cgvAccepted,
+            signature: variables.signature,
+            signatureLocation: variables.signatureLocation,
+            signatureDate: variables.signatureDate,
+            clientSignedName: variables.clientSignedName,
+            clientName: variables.clientName,
+            clientEmail: variables.clientEmail,
+            newsletterAccepted: variables.newsletterAccepted ?? true,
+            createdAt: now,
+          };
+          
+          try {
+            const pdfBlob = await generateOrderPDFClient(fullOrder);
+            await saveOfflineOrder(fullOrder, pdfBlob);
+          } catch (pdfError) {
+            console.error("Erreur génération PDF offline:", pdfError);
+            await saveOfflineOrder(fullOrder);
+          }
+          
           setSavedOffline(true);
           setGeneratedOrder({
-            orderCode: `OFFLINE-${Date.now()}`,
+            orderCode,
             pdfUrl: "",
             excelUrl: "",
             emailsSent: false,
