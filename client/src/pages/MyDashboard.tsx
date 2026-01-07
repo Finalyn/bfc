@@ -126,6 +126,7 @@ export default function MyDashboard() {
   const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>([]);
   const [online, setOnline] = useState(isOnline());
   const [syncing, setSyncing] = useState(false);
+  const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -204,6 +205,25 @@ export default function MyDashboard() {
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message || "Impossible de mettre à jour les dates", variant: "destructive" });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async ({ orderCode, clientEmail }: { orderCode: string; clientEmail: string }) => {
+      setSendingEmailFor(orderCode);
+      return apiRequest("POST", "/api/orders/send-emails", { orderCode, clientEmail });
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: "Emails envoyés", description: `Les emails pour ${variables.orderCode} ont été envoyés avec succès.` });
+      setSendingEmailFor(null);
+    },
+    onError: (error: any, variables) => {
+      toast({ 
+        title: "Erreur d'envoi", 
+        description: error.message || "Impossible d'envoyer les emails. Réessayez plus tard.", 
+        variant: "destructive" 
+      });
+      setSendingEmailFor(null);
     },
   });
 
@@ -708,6 +728,23 @@ export default function MyDashboard() {
                             title="Modifier dates"
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => sendEmailMutation.mutate({ 
+                              orderCode: order.orderCode, 
+                              clientEmail: order.clientEmail || "" 
+                            })}
+                            disabled={sendingEmailFor === order.orderCode || !order.clientEmail}
+                            data-testid={`button-send-email-${order.id}`}
+                            title={order.clientEmail ? "Envoyer les emails" : "Email client manquant"}
+                          >
+                            {sendingEmailFor === order.orderCode ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
