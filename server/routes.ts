@@ -154,6 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signatureLocation: order.signatureLocation,
         signatureDate: order.signatureDate,
         clientSignedName: order.clientSignedName,
+        newsletterAccepted: (order as any).newsletterAccepted ?? true,
         dateLivraison,
       });
 
@@ -248,6 +249,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: error.message || "Erreur lors de l'envoi des emails" 
       });
+    }
+  });
+
+  // Synchroniser une commande hors ligne
+  app.post("/api/orders/sync-offline", async (req, res) => {
+    try {
+      const { order } = req.body;
+      
+      if (!order || !order.orderCode) {
+        return res.status(400).json({ message: "Order data is required" });
+      }
+
+      // Vérifier si la commande existe déjà
+      const [existing] = await db.select().from(orders).where(eq(orders.orderCode, order.orderCode));
+      
+      if (!existing) {
+        // Calculer la date de livraison depuis les thèmes
+        let dateLivraison: string | null = null;
+        try {
+          const themes = JSON.parse(order.themeSelections || "[]");
+          const dates = themes
+            .map((t: any) => t.deliveryDate)
+            .filter((d: any) => d && typeof d === "string");
+          if (dates.length > 0) {
+            dateLivraison = dates[0];
+          }
+        } catch (e) {}
+
+        // Insérer la commande
+        await db.insert(orders).values({
+          orderCode: order.orderCode,
+          orderDate: order.orderDate,
+          salesRepName: order.salesRepName,
+          clientName: order.responsableName || order.clientName || "",
+          clientEmail: order.responsableEmail || order.clientEmail || "",
+          clientTel: order.responsableTel || "",
+          themeSelections: order.themeSelections,
+          livraisonEnseigne: order.livraisonEnseigne,
+          livraisonAdresse: order.livraisonAdresse,
+          livraisonCpVille: order.livraisonCpVille,
+          livraisonHoraires: order.livraisonHoraires || "",
+          livraisonHayon: order.livraisonHayon,
+          facturationRaisonSociale: order.facturationRaisonSociale,
+          facturationAdresse: order.facturationAdresse,
+          facturationCpVille: order.facturationCpVille,
+          facturationMode: order.facturationMode,
+          facturationRib: order.facturationRib || "",
+          remarks: order.remarks || "",
+          signature: order.signature,
+          signatureLocation: order.signatureLocation,
+          signatureDate: order.signatureDate,
+          clientSignedName: order.clientSignedName,
+          newsletterAccepted: order.newsletterAccepted ?? true,
+          dateLivraison,
+        });
+      }
+
+      // Générer PDF et Excel pour l'envoi d'email
+      const pdfBuffer = generateOrderPDF(order);
+      const excelBuffer = await generateOrderExcel(order);
+
+      // Stocker en mémoire pour l'envoi ultérieur
+      fileStorage.set(order.orderCode, {
+        pdf: pdfBuffer,
+        excel: excelBuffer,
+        order,
+      });
+
+      // Envoyer les emails
+      let emailsSent = false;
+      let emailError = null;
+      try {
+        await sendOrderEmails(
+          order,
+          pdfBuffer,
+          excelBuffer,
+          order.clientEmail || order.responsableEmail
+        );
+        emailsSent = true;
+      } catch (error: any) {
+        console.error("Erreur lors de l'envoi des emails (sync):", error);
+        emailError = error.message || "Erreur lors de l'envoi des emails";
+      }
+
+      res.json({
+        success: true,
+        emailsSent,
+        emailError,
+        orderCode: order.orderCode,
+      });
+    } catch (error: any) {
+      console.error("Erreur sync offline:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 
@@ -642,6 +736,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Erreur stats:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Récupérer les emails avec newsletter acceptée
+  app.get("/api/admin/newsletter-emails", async (req, res) => {
+    try {
+      const allOrders = await db.select().from(orders);
+      
+      // Filtrer les commandes avec newsletter acceptée
+      const newsletterOrders = allOrders.filter(o => o.newsletterAccepted === true);
+      
+      // Extraire les emails uniques
+      const emailSet = new Set<string>();
+      const emailData: { email: string; clientName: string; orderCode: string; orderDate: string }[] = [];
+      
+      newsletterOrders.forEach(order => {
+        if (order.clientEmail && !emailSet.has(order.clientEmail)) {
+          emailSet.add(order.clientEmail);
+          emailData.push({
+            email: order.clientEmail,
+            clientName: order.clientName,
+            orderCode: order.orderCode,
+            orderDate: order.orderDate,
+          });
+        }
+      });
+      
+      res.json({
+        total: emailData.length,
+        emails: emailData,
+      });
+    } catch (error: any) {
+      console.error("Erreur newsletter emails:", error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -1554,6 +1682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signatureDate: orderDb.signatureDate,
         clientSignedName: orderDb.clientSignedName,
         cgvAccepted: true,
+        newsletterAccepted: orderDb.newsletterAccepted ?? true,
         orderCode: orderDb.orderCode,
         createdAt: orderDb.createdAt?.toISOString() || "",
       };
@@ -1597,6 +1726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signatureDate: orderDb.signatureDate,
         clientSignedName: orderDb.clientSignedName,
         cgvAccepted: true,
+        newsletterAccepted: orderDb.newsletterAccepted ?? true,
         orderCode: orderDb.orderCode,
         createdAt: orderDb.createdAt?.toISOString() || "",
       };

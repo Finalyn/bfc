@@ -126,6 +126,9 @@ export const orderSchema = z.object({
   signatureDate: z.string().min(1, "La date de signature est requise"),
   clientSignedName: z.string().min(1, "Le nom du signataire est requis"),
   
+  // Newsletter
+  newsletterAccepted: z.boolean().optional().default(true),
+  
   // Métadonnées
   createdAt: z.string(),
   
@@ -240,6 +243,9 @@ export const orders = pgTable("orders", {
   signatureLocation: text("signature_location").notNull(),
   signatureDate: text("signature_date").notNull(),
   clientSignedName: text("client_signed_name").notNull(),
+  
+  // Newsletter
+  newsletterAccepted: boolean("newsletter_accepted").default(true),
   
   // Dates clés du cycle commercial (le statut est implicite selon les dates remplies)
   dateLivraison: text("date_livraison"),                 // Date de livraison (calculée des thèmes à la création)

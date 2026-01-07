@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle, FileText } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle, FileText, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -16,6 +17,7 @@ interface SignatureData {
   signatureDate: string;
   clientSignedName: string;
   cgvAccepted: boolean;
+  newsletterAccepted: boolean;
 }
 
 interface SignatureStepProps {
@@ -30,13 +32,16 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string>("");
   
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: {
       signatureLocation: "",
       signatureDate: formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd"),
       clientSignedName: "",
+      newsletterAccepted: true,
     },
   });
+  
+  const newsletterAccepted = watch("newsletterAccepted");
 
   const clearSignature = () => {
     signatureRef.current?.clear();
@@ -58,6 +63,7 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
         signatureDate: formData.signatureDate,
         clientSignedName: formData.clientSignedName,
         cgvAccepted: true,
+        newsletterAccepted: formData.newsletterAccepted,
       });
     }
   };
@@ -159,6 +165,37 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
                 <p className="text-sm font-medium text-foreground text-center bg-primary/10 p-3 rounded-lg">
                   En signant ci-dessous, vous acceptez les Conditions Générales de Vente
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Newsletter */}
+          <Card className="border-2">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="newsletterAccepted"
+                  data-testid="checkbox-newsletter"
+                  checked={newsletterAccepted}
+                  onCheckedChange={(checked) => {
+                    const event = { target: { name: "newsletterAccepted", value: checked } };
+                    register("newsletterAccepted").onChange(event as any);
+                  }}
+                  {...register("newsletterAccepted")}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label 
+                    htmlFor="newsletterAccepted" 
+                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4 text-primary" />
+                    Recevoir la newsletter
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Je souhaite recevoir les offres et actualités par email
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
