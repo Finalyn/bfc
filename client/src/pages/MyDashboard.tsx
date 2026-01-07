@@ -83,6 +83,21 @@ interface DateUpdateData {
   dateRetour?: string;
 }
 
+type DateEventType = "livraison" | "inventairePrevu" | "inventaire" | "retour";
+
+interface OrderEvent {
+  order: OrderDb;
+  eventType: DateEventType;
+  dateLabel: string;
+}
+
+const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string; icon: string }> = {
+  livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900", icon: "🚚" },
+  inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900", icon: "📋" },
+  inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900", icon: "✓" },
+  retour: { label: "Retour", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900", icon: "↩" },
+};
+
 export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -96,6 +111,8 @@ export default function MyDashboard() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
+  const [dayDetailDialogOpen, setDayDetailDialogOpen] = useState(false);
   const { toast } = useToast();
   
   const userName = sessionStorage.getItem("userName") || "";
@@ -243,6 +260,41 @@ export default function MyDashboard() {
       return false;
     });
   };
+
+  const getOrderEventsForDate = (date: Date): OrderEvent[] => {
+    const events: OrderEvent[] = [];
+    
+    filteredOrders.forEach(order => {
+      const checkDate = (dateStr: string | null | undefined, eventType: DateEventType) => {
+        if (!dateStr) return;
+        try {
+          const d = parseISO(dateStr);
+          if (isSameDay(d, date)) {
+            events.push({ order, eventType, dateLabel: formatDateShort(dateStr) });
+          }
+        } catch {}
+      };
+
+      checkDate(order.dateLivraison, "livraison");
+      checkDate(order.dateInventairePrevu, "inventairePrevu");
+      checkDate(order.dateInventaire, "inventaire");
+      checkDate(order.dateRetour, "retour");
+    });
+
+    return events;
+  };
+
+  const openDayDetailDialog = (date: Date) => {
+    setSelectedDayDate(date);
+    setDayDetailDialogOpen(true);
+  };
+
+  const selectedDayEvents = selectedDayDate ? getOrderEventsForDate(selectedDayDate) : [];
+  const groupedEvents = selectedDayEvents.reduce((acc, event) => {
+    if (!acc[event.eventType]) acc[event.eventType] = [];
+    acc[event.eventType].push(event);
+    return acc;
+  }, {} as Record<DateEventType, OrderEvent[]>);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -667,20 +719,37 @@ export default function MyDashboard() {
               <CardContent>
                 {calendarView === "day" && (
                   <div className="space-y-2">
-                    <div className="p-4 rounded-lg bg-muted/30">
+                    <div 
+                      className="p-4 rounded-lg bg-muted/30 cursor-pointer hover-elevate"
+                      onClick={() => openDayDetailDialog(currentDate)}
+                      data-testid="calendar-day-detail"
+                    >
                       <p className="font-medium text-center mb-2">{format(currentDate, "EEEE d MMMM", { locale: fr })}</p>
-                      {getOrdersForDate(currentDate).length === 0 ? (
-                        <p className="text-center text-muted-foreground text-sm">Aucun événement ce jour</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {getOrdersForDate(currentDate).map(order => (
-                            <div key={order.id} className="p-2 bg-blue-100 dark:bg-blue-900 rounded text-sm">
-                              <p className="font-medium">{order.clientName}</p>
-                              <p className="text-xs text-muted-foreground">{order.orderCode}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        const dayEvents = getOrderEventsForDate(currentDate);
+                        if (dayEvents.length === 0) {
+                          return <p className="text-center text-muted-foreground text-sm">Aucun événement ce jour</p>;
+                        }
+                        return (
+                          <div className="space-y-2">
+                            {dayEvents.slice(0, 5).map((event, idx) => (
+                              <div key={`${event.order.id}-${event.eventType}-${idx}`} className={`p-2 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded text-sm`}>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-medium ${DATE_EVENT_CONFIG[event.eventType].color}`}>
+                                    {DATE_EVENT_CONFIG[event.eventType].label}
+                                  </span>
+                                </div>
+                                <p className="font-medium">{event.order.clientName}</p>
+                                <p className="text-xs text-muted-foreground">{event.order.orderCode}</p>
+                              </div>
+                            ))}
+                            {dayEvents.length > 5 && (
+                              <p className="text-xs text-center text-muted-foreground">+{dayEvents.length - 5} autres événements</p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <p className="text-xs text-center text-primary mt-2">Cliquer pour voir les détails</p>
                     </div>
                   </div>
                 )}
@@ -697,24 +766,26 @@ export default function MyDashboard() {
                         start: startOfWeek(currentDate, { weekStartsOn: 1 }), 
                         end: endOfWeek(currentDate, { weekStartsOn: 1 }) 
                       }).map(day => {
-                        const dayOrders = getOrdersForDate(day);
+                        const dayEvents = getOrderEventsForDate(day);
                         const isToday = isSameDay(day, new Date());
                         return (
                           <div 
                             key={day.toISOString()}
-                            className={`min-h-[80px] rounded-lg p-2 text-sm ${
+                            className={`min-h-[80px] rounded-lg p-2 text-sm cursor-pointer hover-elevate ${
                               isToday ? "bg-primary/10 border-2 border-primary" : 
-                              dayOrders.length > 0 ? "bg-blue-50 dark:bg-blue-900/30" : "bg-muted/30"
+                              dayEvents.length > 0 ? "bg-blue-50 dark:bg-blue-900/30" : "bg-muted/30"
                             }`}
+                            onClick={() => openDayDetailDialog(day)}
+                            data-testid={`calendar-week-day-${format(day, "yyyy-MM-dd")}`}
                           >
                             <span className={`font-medium ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</span>
-                            {dayOrders.slice(0, 3).map(order => (
-                              <div key={order.id} className="text-xs mt-1 p-1 bg-blue-100 dark:bg-blue-800 rounded truncate">
-                                {order.clientName}
+                            {dayEvents.slice(0, 3).map((event, idx) => (
+                              <div key={`${event.order.id}-${event.eventType}-${idx}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate`}>
+                                <span className={`${DATE_EVENT_CONFIG[event.eventType].color} font-medium`}>{DATE_EVENT_CONFIG[event.eventType].label.substring(0, 3)}</span> {event.order.clientName}
                               </div>
                             ))}
-                            {dayOrders.length > 3 && (
-                              <p className="text-xs text-muted-foreground">+{dayOrders.length - 3} autres</p>
+                            {dayEvents.length > 3 && (
+                              <p className="text-xs text-muted-foreground">+{dayEvents.length - 3} autres</p>
                             )}
                           </div>
                         );
@@ -735,19 +806,21 @@ export default function MyDashboard() {
                         <div key={`empty-${i}`} className="h-12" />
                       ))}
                       {daysInMonth.map(day => {
-                        const dayOrders = getOrdersForDate(day);
+                        const dayEvents = getOrderEventsForDate(day);
                         const isToday = isSameDay(day, new Date());
                         return (
                           <div 
                             key={day.toISOString()}
-                            className={`h-12 rounded-lg flex flex-col items-center justify-center text-sm ${
+                            className={`h-12 rounded-lg flex flex-col items-center justify-center text-sm cursor-pointer hover-elevate ${
                               isToday ? "bg-primary text-primary-foreground" : 
-                              dayOrders.length > 0 ? "bg-blue-100 dark:bg-blue-900" : ""
+                              dayEvents.length > 0 ? "bg-blue-100 dark:bg-blue-900" : ""
                             }`}
+                            onClick={() => openDayDetailDialog(day)}
+                            data-testid={`calendar-month-day-${format(day, "yyyy-MM-dd")}`}
                           >
                             <span>{format(day, "d")}</span>
-                            {dayOrders.length > 0 && (
-                              <span className="text-xs">{dayOrders.length}</span>
+                            {dayEvents.length > 0 && (
+                              <span className="text-xs">{dayEvents.length}</span>
                             )}
                           </div>
                         );
@@ -1051,6 +1124,80 @@ export default function MyDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={dayDetailDialogOpen} onOpenChange={setDayDetailDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              {selectedDayDate && format(selectedDayDate, "EEEE d MMMM yyyy", { locale: fr })}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedDayEvents.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Aucun événement ce jour</p>
+          ) : (
+            <div className="space-y-4">
+              {(["livraison", "inventairePrevu", "inventaire", "retour"] as DateEventType[]).map(eventType => {
+                const events = groupedEvents[eventType];
+                if (!events || events.length === 0) return null;
+                const config = DATE_EVENT_CONFIG[eventType];
+                return (
+                  <div key={eventType} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${config.bgColor}`} />
+                      <h3 className={`font-semibold text-sm ${config.color}`}>{config.label} ({events.length})</h3>
+                    </div>
+                    <div className="space-y-2 pl-5">
+                      {events.map((event, idx) => (
+                        <div 
+                          key={`${event.order.id}-${eventType}-${idx}`}
+                          className={`p-3 ${config.bgColor} rounded-lg cursor-pointer hover-elevate`}
+                          onClick={() => {
+                            setDayDetailDialogOpen(false);
+                            openPreviewDialog(event.order);
+                          }}
+                          data-testid={`order-event-${event.order.id}-${eventType}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">{event.order.clientName}</p>
+                            <Badge variant="outline" className="text-xs">{event.order.orderCode}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{event.order.salesRepName}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-muted-foreground">
+                              {event.order.livraisonEnseigne && `${event.order.livraisonEnseigne}`}
+                            </p>
+                            <div className="flex gap-1">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-6 px-2 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDayDetailDialogOpen(false);
+                                  openPreviewDialog(event.order);
+                                }}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Voir
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDayDetailDialogOpen(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
