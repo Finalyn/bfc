@@ -7,6 +7,15 @@ import { formatInTimeZone } from "date-fns-tz";
 const AGENCY_EMAIL = "jack@finalyn.com";
 const FROM_EMAIL = process.env.SMTP_USER || "jack@finalyn.com";
 
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    )
+  ]);
+}
+
 export async function sendOrderEmails(
   order: Order,
   pdfBuffer: Buffer,
@@ -14,6 +23,11 @@ export async function sendOrderEmails(
   clientEmail: string
 ): Promise<void> {
   const smtpPort = parseInt(process.env.SMTP_PORT || "587");
+  
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    console.warn("Configuration SMTP manquante - emails non envoyés");
+    throw new Error("Configuration SMTP non disponible");
+  }
   
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -27,9 +41,9 @@ export async function sendOrderEmails(
     tls: {
       rejectUnauthorized: false,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
   });
 
   const orderDate = formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
@@ -169,9 +183,13 @@ export async function sendOrderEmails(
     ],
   };
 
-  // Envoyer les deux emails
-  await Promise.all([
-    transporter.sendMail(clientMailOptions),
-    transporter.sendMail(agencyMailOptions),
-  ]);
+  // Envoyer les deux emails avec timeout global de 15 secondes
+  await withTimeout(
+    Promise.all([
+      transporter.sendMail(clientMailOptions),
+      transporter.sendMail(agencyMailOptions),
+    ]),
+    15000,
+    "Timeout lors de l'envoi des emails (15s)"
+  );
 }
