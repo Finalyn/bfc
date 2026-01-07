@@ -53,7 +53,10 @@ export async function saveOfflineOrder(order: Order, pdfBlob?: Blob): Promise<Of
     const store = tx.objectStore(ORDERS_STORE);
     const request = store.put(offlineOrder);
     
-    request.onsuccess = () => resolve(offlineOrder);
+    request.onsuccess = () => {
+      notifyOfflineOrdersChange();
+      resolve(offlineOrder);
+    };
     request.onerror = () => reject(request.error);
     
     tx.oncomplete = () => db.close();
@@ -197,5 +200,19 @@ export function onOnlineStatusChange(callback: (isOnline: boolean) => void): () 
   return () => {
     window.removeEventListener("online", handleOnline);
     window.removeEventListener("offline", handleOffline);
+  };
+}
+
+type OfflineOrdersChangeListener = () => void;
+const offlineOrdersListeners: Set<OfflineOrdersChangeListener> = new Set();
+
+export function notifyOfflineOrdersChange(): void {
+  offlineOrdersListeners.forEach(listener => listener());
+}
+
+export function onOfflineOrdersChange(callback: OfflineOrdersChangeListener): () => void {
+  offlineOrdersListeners.add(callback);
+  return () => {
+    offlineOrdersListeners.delete(callback);
   };
 }

@@ -39,7 +39,7 @@ import {
   Mail,
   AlertCircle
 } from "lucide-react";
-import { getOfflineOrders, deleteOfflineOrder, type OfflineOrder, isOnline, onOnlineStatusChange } from "@/lib/offlineStorage";
+import { getOfflineOrders, deleteOfflineOrder, type OfflineOrder, isOnline, onOnlineStatusChange, onOfflineOrdersChange } from "@/lib/offlineStorage";
 import { syncPendingOrders, initAutoSync, addSyncListener } from "@/lib/offlineSync";
 import { generateOrderPDFClient, downloadPDFBlob } from "@/lib/pdfGenerator";
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, getMonth, getYear, differenceInDays, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears } from "date-fns";
@@ -160,10 +160,16 @@ export default function MyDashboard() {
 
     const unsubAutoSync = initAutoSync();
 
+    const unsubOfflineChange = onOfflineOrdersChange(async () => {
+      const updated = await getOfflineOrders();
+      setOfflineOrders(updated);
+    });
+
     return () => {
       unsubOnline();
       unsubSync();
       unsubAutoSync();
+      unsubOfflineChange();
     };
   }, [toast]);
   
