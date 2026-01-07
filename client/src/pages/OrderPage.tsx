@@ -6,7 +6,7 @@ import { OrderForm } from "@/components/OrderForm";
 import { SignatureStep } from "@/components/SignatureStep";
 import { ReviewStep } from "@/components/ReviewStep";
 import { SuccessStep } from "@/components/SuccessStep";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { showLocalNotification } from "@/lib/pwa";
@@ -178,6 +178,8 @@ export default function OrderPage() {
       setEmailsSent(data.emailsSent);
       setEmailError(data.emailError || "");
       setCurrentStep("success");
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders?pageSize=10000"] });
       
       if (data.emailsSent) {
         toast({
