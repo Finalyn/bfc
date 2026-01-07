@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,13 +21,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit, Loader2 } from "lucide-react";
+import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit, Loader2, WifiOff } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
 import { ClientModal } from "./ClientModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
 const MONTHS = [
@@ -219,8 +220,23 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const [clientChanges, setClientChanges] = useState<{field: string, old: string, new: string}[]>([]);
   const [themeDateErrors, setThemeDateErrors] = useState<Set<string>>(new Set());
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [manualClientMode, setManualClientMode] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
   
   // Mutation pour mettre à jour le client
   const updateClientMutation = useMutation({
@@ -610,36 +626,83 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
             </Card>
 
             {/* Sélection Client (pré-remplissage) */}
-            <Card className="border-2 border-primary/30 bg-primary/5">
+            <Card className={`border-2 ${isOffline || manualClientMode ? "border-amber-500/50 bg-amber-50 dark:bg-amber-950/20" : "border-primary/30 bg-primary/5"}`}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Store className="w-5 h-5" />
                   Sélection du client
+                  {isOffline && (
+                    <Badge variant="outline" className="ml-2 gap-1 text-amber-600 border-amber-500">
+                      <WifiOff className="w-3 h-3" />
+                      Hors ligne
+                    </Badge>
+                  )}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Sélectionnez un client existant ou créez-en un nouveau
+                  {isOffline || manualClientMode
+                    ? "Mode hors ligne - saisissez les informations client manuellement ci-dessous"
+                    : "Sélectionnez un client existant ou créez-en un nouveau"}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Combobox
-                  options={clientsOptions}
-                  value={selectedClientId}
-                  onValueChange={handleClientSelect}
-                  placeholder="Rechercher un client..."
-                  searchPlaceholder="Tapez le nom ou la ville..."
-                  emptyText="Aucun client trouvé"
-                  testId="select-client"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleNewClient}
-                  className="w-full h-11"
-                  data-testid="button-new-client"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Nouveau client
-                </Button>
+                {!isOffline && !manualClientMode ? (
+                  <>
+                    <Combobox
+                      options={clientsOptions}
+                      value={selectedClientId}
+                      onValueChange={handleClientSelect}
+                      placeholder="Rechercher un client..."
+                      searchPlaceholder="Tapez le nom ou la ville..."
+                      emptyText="Aucun client trouvé"
+                      testId="select-client"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleNewClient}
+                        className="flex-1 h-11"
+                        data-testid="button-new-client"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Nouveau client
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setManualClientMode(true)}
+                        className="h-11"
+                        data-testid="button-manual-entry"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Saisie manuelle
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-md bg-amber-100 dark:bg-amber-900/30 text-sm text-amber-800 dark:text-amber-200">
+                      <p className="font-medium flex items-center gap-2">
+                        <WifiOff className="w-4 h-4" />
+                        Mode saisie manuelle
+                      </p>
+                      <p className="mt-1 text-xs">
+                        Remplissez les champs de livraison et facturation ci-dessous. Le client pourra être lié ou créé lors de la synchronisation.
+                      </p>
+                    </div>
+                    {!isOffline && manualClientMode && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setManualClientMode(false)}
+                        className="w-full h-11"
+                        data-testid="button-exit-manual"
+                      >
+                        Revenir à la sélection automatique
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
