@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,18 @@ import {
   Eye,
   FileText,
   FileSpreadsheet,
-  Download
+  Download,
+  CloudOff,
+  Cloud,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Mail,
+  AlertCircle
 } from "lucide-react";
+import { getOfflineOrders, deleteOfflineOrder, type OfflineOrder, isOnline, onOnlineStatusChange } from "@/lib/offlineStorage";
+import { syncPendingOrders, initAutoSync, addSyncListener } from "@/lib/offlineSync";
+import { generateOrderPDFClient, downloadPDFBlob } from "@/lib/pdfGenerator";
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, getMonth, getYear, differenceInDays, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears } from "date-fns";
 import { fr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from "recharts";
@@ -113,7 +123,48 @@ export default function MyDashboard() {
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [dayDetailDialogOpen, setDayDetailDialogOpen] = useState(false);
+  const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>([]);
+  const [online, setOnline] = useState(isOnline());
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadOfflineOrders = async () => {
+      const orders = await getOfflineOrders();
+      setOfflineOrders(orders);
+    };
+    loadOfflineOrders();
+
+    const unsubOnline = onOnlineStatusChange((status) => {
+      setOnline(status);
+      if (status) {
+        toast({ title: "Connexion rétablie", description: "Synchronisation des commandes en cours..." });
+      }
+    });
+
+    const unsubSync = addSyncListener(async (status) => {
+      setSyncing(status.syncing);
+      if (!status.syncing && status.lastSyncResult) {
+        const { success, failed } = status.lastSyncResult;
+        if (success > 0) {
+          toast({ 
+            title: "Synchronisation terminée", 
+            description: `${success} commande(s) synchronisée(s)${failed > 0 ? `, ${failed} échec(s)` : ""}`
+          });
+        }
+        const updated = await getOfflineOrders();
+        setOfflineOrders(updated);
+      }
+    });
+
+    const unsubAutoSync = initAutoSync();
+
+    return () => {
+      unsubOnline();
+      unsubSync();
+      unsubAutoSync();
+    };
+  }, [toast]);
   
   const userName = sessionStorage.getItem("userName") || "";
   const userRole = sessionStorage.getItem("userRole") || "commercial";
@@ -587,10 +638,19 @@ export default function MyDashboard() {
         </div>
 
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="orders" data-testid="tab-orders">
               <ClipboardList className="w-4 h-4 mr-2" />
               Commandes
+            </TabsTrigger>
+            <TabsTrigger value="offline" data-testid="tab-offline" className="relative">
+              <CloudOff className="w-4 h-4 mr-2" />
+              Hors ligne
+              {offlineOrders.length > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {offlineOrders.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="calendar" data-testid="tab-calendar">
               <Calendar className="w-4 h-4 mr-2" />
@@ -649,6 +709,116 @@ export default function MyDashboard() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="offline" className="mt-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base">Commandes hors ligne</CardTitle>
+                  <Badge variant={online ? "default" : "secondary"} className="flex items-center gap-1">
+                    {online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                    {online ? "En ligne" : "Hors ligne"}
+                  </Badge>
+                </div>
+                {offlineOrders.length > 0 && online && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      setSyncing(true);
+                      await syncPendingOrders();
+                      const updated = await getOfflineOrders();
+                      setOfflineOrders(updated);
+                      setSyncing(false);
+                    }}
+                    disabled={syncing}
+                    data-testid="button-sync-offline"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                    {syncing ? "Synchronisation..." : "Synchroniser"}
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {offlineOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Cloud className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune commande hors ligne</p>
+                    <p className="text-xs mt-2">Les commandes créées hors ligne apparaîtront ici</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {offlineOrders.map((offlineOrder) => (
+                      <div 
+                        key={offlineOrder.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/30 gap-2"
+                        data-testid={`offline-order-${offlineOrder.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{offlineOrder.order.clientName || offlineOrder.order.livraisonEnseigne}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {offlineOrder.order.orderCode} • {format(new Date(offlineOrder.createdAt), "dd/MM/yyyy HH:mm", { locale: fr })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {offlineOrder.emailSent ? (
+                            <Badge variant="default" className="flex items-center gap-1 bg-green-600">
+                              <Mail className="w-3 h-3" />
+                              Envoyé
+                            </Badge>
+                          ) : offlineOrder.emailError ? (
+                            <Badge variant="destructive" className="flex items-center gap-1" title={offlineOrder.emailError}>
+                              <AlertCircle className="w-3 h-3" />
+                              Erreur
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              En attente
+                            </Badge>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={async () => {
+                              try {
+                                const pdfBlob = await generateOrderPDFClient(offlineOrder.order as any);
+                                downloadPDFBlob(pdfBlob, `${offlineOrder.order.orderCode}.pdf`);
+                              } catch (error) {
+                                toast({ title: "Erreur", description: "Impossible de télécharger le PDF", variant: "destructive" });
+                              }
+                            }}
+                            data-testid={`button-download-offline-pdf-${offlineOrder.id}`}
+                            title="Télécharger PDF"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          {offlineOrder.syncedToServer && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={async () => {
+                                if (confirm("Supprimer cette commande locale ? (La commande a été synchronisée avec le serveur)")) {
+                                  await deleteOfflineOrder(offlineOrder.id);
+                                  const updated = await getOfflineOrders();
+                                  setOfflineOrders(updated);
+                                  toast({ title: "Commande supprimée", description: "La commande locale a été supprimée" });
+                                }
+                              }}
+                              data-testid={`button-delete-offline-${offlineOrder.id}`}
+                              title="Supprimer"
+                            >
+                              <Edit className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
