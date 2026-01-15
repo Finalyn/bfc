@@ -120,6 +120,9 @@ export const orderSchema = z.object({
   // Remarques
   remarks: z.string().optional(),
   
+  // Champs personnalisés du fournisseur (JSON)
+  champsPersonnalises: z.string().optional().default("{}"),
+  
   // CGV
   cgvAccepted: z.boolean().refine(val => val === true, { message: "Vous devez accepter les CGV" }),
   

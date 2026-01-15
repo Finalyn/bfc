@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
-import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
+import { FOURNISSEURS_CONFIG, getFournisseurConfig } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -187,6 +187,38 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
     worksheet.getCell(`A${currentRow}`).value = order.remarks;
     worksheet.getCell(`A${currentRow}`).alignment = { wrapText: true };
     currentRow += 2;
+  }
+
+  // Champs personnalisés du fournisseur
+  const champsPersonnalises: Record<string, string> = order.champsPersonnalises ? JSON.parse(order.champsPersonnalises) : {};
+  const fournisseurChamps = getFournisseurConfig(order.fournisseur)?.champsPersonnalises || [];
+  
+  if (fournisseurChamps.length > 0 && Object.keys(champsPersonnalises).length > 0) {
+    worksheet.getCell(`A${currentRow}`).value = `INFORMATIONS SPÉCIFIQUES ${fournisseurConfig.nom.toUpperCase()}`;
+    worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 11, color: { argb: "FF003366" } };
+    currentRow++;
+    
+    fournisseurChamps.forEach((champ) => {
+      const value = champsPersonnalises[champ.id];
+      if (value) {
+        let displayValue = value;
+        if (champ.type === "date" && value) {
+          try {
+            displayValue = formatInTimeZone(new Date(value), "Europe/Paris", "dd/MM/yyyy");
+          } catch (e) {
+            displayValue = value;
+          }
+        } else if (champ.type === "checkbox") {
+          displayValue = value === "true" ? "Oui" : "Non";
+        }
+        worksheet.getCell(`A${currentRow}`).value = champ.label;
+        worksheet.getCell(`A${currentRow}`).font = { bold: true };
+        worksheet.getCell(`B${currentRow}`).value = displayValue;
+        currentRow++;
+      }
+    });
+    
+    currentRow++;
   }
 
   // Signature

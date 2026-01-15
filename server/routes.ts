@@ -134,6 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.insert(orders).values({
         orderCode,
         orderDate: order.orderDate,
+        fournisseur: order.fournisseur || "BDIS",
         salesRepName: order.salesRepName,
         clientName: order.responsableName || order.clientName || "",
         clientEmail: order.responsableEmail || order.clientEmail || "",
@@ -150,6 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facturationMode: order.facturationMode,
         facturationRib: order.facturationRib || "",
         remarks: order.remarks || "",
+        champsPersonnalises: order.champsPersonnalises || "{}",
         signature: order.signature,
         signatureLocation: order.signatureLocation,
         signatureDate: order.signatureDate,
@@ -281,6 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(orders).values({
           orderCode: order.orderCode,
           orderDate: order.orderDate,
+          fournisseur: order.fournisseur || "BDIS",
           salesRepName: order.salesRepName,
           clientName: order.responsableName || order.clientName || "",
           clientEmail: order.responsableEmail || order.clientEmail || "",
@@ -297,6 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           facturationMode: order.facturationMode,
           facturationRib: order.facturationRib || "",
           remarks: order.remarks || "",
+          champsPersonnalises: order.champsPersonnalises || "{}",
           signature: order.signature,
           signatureLocation: order.signatureLocation,
           signatureDate: order.signatureDate,
@@ -1667,6 +1671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const order: Order = {
         orderDate: orderDb.orderDate,
+        fournisseur: orderDb.fournisseur || "BDIS",
         salesRepName: orderDb.salesRepName,
         responsableName: orderDb.clientName,
         responsableEmail: orderDb.clientEmail,
@@ -1683,6 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facturationMode: orderDb.facturationMode as "VIREMENT" | "CHEQUE" | "LCR",
         facturationRib: orderDb.facturationRib || "",
         remarks: orderDb.remarks || "",
+        champsPersonnalises: orderDb.champsPersonnalises || "{}",
         signature: orderDb.signature,
         signatureLocation: orderDb.signatureLocation,
         signatureDate: orderDb.signatureDate,
@@ -1711,6 +1717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const order: Order = {
         orderDate: orderDb.orderDate,
+        fournisseur: orderDb.fournisseur || "BDIS",
         salesRepName: orderDb.salesRepName,
         responsableName: orderDb.clientName,
         responsableEmail: orderDb.clientEmail,
@@ -1727,6 +1734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facturationMode: orderDb.facturationMode as "VIREMENT" | "CHEQUE" | "LCR",
         facturationRib: orderDb.facturationRib || "",
         remarks: orderDb.remarks || "",
+        champsPersonnalises: orderDb.champsPersonnalises || "{}",
         signature: orderDb.signature,
         signatureLocation: orderDb.signatureLocation,
         signatureDate: orderDb.signatureDate,
