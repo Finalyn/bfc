@@ -85,6 +85,9 @@ export const orderSchema = z.object({
   orderCode: z.string(),
   orderDate: z.string().min(1, "La date est requise"),
   
+  // Fournisseur
+  fournisseur: z.string().min(1, "Le fournisseur est requis"),
+  
   // Commercial
   salesRepName: z.string().min(1, "Le nom du commercial est requis"),
   
@@ -208,6 +211,9 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   orderCode: text("order_code").notNull().unique(),
   orderDate: text("order_date").notNull(),
+  
+  // Fournisseur
+  fournisseur: text("fournisseur").notNull().default("BDIS"),
   
   // Commercial
   salesRepName: text("sales_rep_name").notNull(),
