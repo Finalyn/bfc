@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -21,13 +22,22 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   
   let currentRow = 1;
   
+  // Récupérer le fournisseur
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  
   // Titre
   worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
   const titleCell = worksheet.getCell(`A${currentRow}`);
-  titleCell.value = "BON DE COMMANDE 2026";
+  titleCell.value = `BON DE COMMANDE ${fournisseurConfig.nom} 2026`;
   titleCell.font = { size: 18, bold: true, color: { argb: "FF003366" } };
   titleCell.alignment = { horizontal: "center" };
   currentRow += 2;
+  
+  // Info fournisseur
+  worksheet.getCell(`A${currentRow}`).value = "FOURNISSEUR";
+  worksheet.getCell(`A${currentRow}`).font = { bold: true };
+  worksheet.getCell(`B${currentRow}`).value = fournisseurConfig.nom;
+  currentRow++;
 
   // En-tête
   worksheet.getCell(`A${currentRow}`).value = "DATE";
@@ -216,6 +226,30 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   worksheet.getCell(`A${currentRow}`).font = { italic: true, size: 9 };
   worksheet.getCell(`B${currentRow}`).value = formatInTimeZone(new Date(), "Europe/Paris", "dd/MM/yyyy à HH:mm");
   worksheet.getCell(`B${currentRow}`).font = { italic: true, size: 9 };
+
+  // === FEUILLE CGV ===
+  const cgvSheet = workbook.addWorksheet("CGV");
+  cgvSheet.columns = [{ width: 100 }];
+  
+  let cgvRow = 1;
+  
+  // Titre CGV
+  cgvSheet.getCell(`A${cgvRow}`).value = `CONDITIONS GÉNÉRALES DE VENTE - ${fournisseurConfig.nom}`;
+  cgvSheet.getCell(`A${cgvRow}`).font = { size: 14, bold: true, color: { argb: "FF003366" } };
+  cgvRow += 2;
+  
+  // Contenu CGV
+  const cgvLines = fournisseurConfig.cgv.split('\n');
+  for (const line of cgvLines) {
+    cgvSheet.getCell(`A${cgvRow}`).value = line;
+    cgvSheet.getCell(`A${cgvRow}`).alignment = { wrapText: true };
+    cgvSheet.getCell(`A${cgvRow}`).font = { size: 10 };
+    cgvRow++;
+  }
+  
+  cgvRow += 2;
+  cgvSheet.getCell(`A${cgvRow}`).value = `Annexe CGV - Commande ${order.orderCode}`;
+  cgvSheet.getCell(`A${cgvRow}`).font = { italic: true, size: 9, color: { argb: "FF666666" } };
 
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -47,10 +48,13 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFont("helvetica", "normal");
   doc.text(order.salesRepName, margin + 32, yPos + 6);
 
+  // Récupérer le fournisseur
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+
   // Titre principal - aligné tout à droite
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("BON DE COMMANDE 2026", pageWidth - margin, yPos + 3, { align: "right" });
+  doc.text(`BON DE COMMANDE ${fournisseurConfig.nom} 2026`, pageWidth - margin, yPos + 3, { align: "right" });
 
   yPos += 16;
 
@@ -302,10 +306,64 @@ export function generateOrderPDF(order: Order): Buffer {
 
   // Mention légale
   doc.setFontSize(4.5);
+  const mentionLegale = fournisseurConfig.nomComplet 
+    ? `Pour toutes les contestations relatives aux ventes réalisées par la société ${fournisseurConfig.nomComplet}, seul sera compétent le Tribunal de Commerce compétent.`
+    : "Pour toutes les contestations relatives aux ventes réalisées par la société BOISSELLERIE DISTRIBUTION, seul sera compétent le Tribunal de Commerce de VILLEFRANCHE-TARARE.";
   doc.text(
-    "Pour toutes les contestations relatives aux ventes réalisées par la société BOISSELLERIE DISTRIBUTION, seul sera compétent le Tribunal de Commerce de VILLEFRANCHE-TARARE.",
+    mentionLegale,
     pageWidth / 2,
     pageHeight - 3,
+    { align: "center" }
+  );
+
+  // === PAGE ANNEXE CGV ===
+  doc.addPage();
+  let cgvY = 15;
+  
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 51, 102);
+  doc.text(`CONDITIONS GÉNÉRALES DE VENTE - ${fournisseurConfig.nom}`, pageWidth / 2, cgvY, { align: "center" });
+  
+  cgvY += 10;
+  doc.setDrawColor(0, 51, 102);
+  doc.setLineWidth(0.5);
+  doc.line(margin, cgvY, pageWidth - margin, cgvY);
+  cgvY += 8;
+  
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(0, 0, 0);
+  
+  const cgvText = fournisseurConfig.cgv;
+  const cgvLines = doc.splitTextToSize(cgvText, pageWidth - 2 * margin);
+  const lineHeight = 4;
+  
+  for (let i = 0; i < cgvLines.length; i++) {
+    if (cgvY > pageHeight - 15) {
+      doc.addPage();
+      cgvY = 15;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text(`CGV ${fournisseurConfig.nom} (suite)`, pageWidth / 2, cgvY, { align: "center" });
+      cgvY += 10;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+    }
+    doc.text(cgvLines[i], margin, cgvY);
+    cgvY += lineHeight;
+  }
+  
+  // Pied de page CGV
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    `Annexe CGV - Commande ${order.orderCode} - ${fournisseurConfig.nom}`,
+    pageWidth / 2,
+    pageHeight - 5,
     { align: "center" }
   );
 

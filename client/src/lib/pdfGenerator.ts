@@ -349,6 +349,57 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
     { align: "center" }
   );
 
+  // === PAGE ANNEXE CGV ===
+  doc.addPage();
+  let cgvY = 15;
+  
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 51, 102);
+  doc.text(`CONDITIONS GÉNÉRALES DE VENTE - ${fournisseurConfig.nom}`, pageWidth / 2, cgvY, { align: "center" });
+  
+  cgvY += 10;
+  doc.setDrawColor(0, 51, 102);
+  doc.setLineWidth(0.5);
+  doc.line(margin, cgvY, pageWidth - margin, cgvY);
+  cgvY += 8;
+  
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(0, 0, 0);
+  
+  const cgvText = fournisseurConfig.cgv;
+  const cgvLines = doc.splitTextToSize(cgvText, pageWidth - 2 * margin);
+  const lineHeight = 4;
+  
+  for (let i = 0; i < cgvLines.length; i++) {
+    if (cgvY > pageHeight - 15) {
+      doc.addPage();
+      cgvY = 15;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text(`CGV ${fournisseurConfig.nom} (suite)`, pageWidth / 2, cgvY, { align: "center" });
+      cgvY += 10;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+    }
+    doc.text(cgvLines[i], margin, cgvY);
+    cgvY += lineHeight;
+  }
+  
+  // Pied de page CGV
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    `Annexe CGV - Commande ${order.orderCode} - ${fournisseurConfig.nom}`,
+    pageWidth / 2,
+    pageHeight - 5,
+    { align: "center" }
+  );
+
   return doc.output("blob");
 }
 
