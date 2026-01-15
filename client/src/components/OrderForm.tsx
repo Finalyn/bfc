@@ -634,14 +634,13 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               </CardContent>
             </Card>
 
-            {/* Sélection du Fournisseur - Section dédiée */}
-            <Card className="border-2 border-primary bg-primary/5">
+            {/* Sélection du Fournisseur */}
+            <Card className="border-2">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="w-5 h-5 text-primary" />
+                  <Package className="w-5 h-5" />
                   Choix du fournisseur
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Sélectionnez le fournisseur pour cette commande</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -656,7 +655,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                         field.onChange(value);
                         setThemeSelections([]);
                       }}>
-                        <SelectTrigger className="h-12 text-base border-primary/30" data-testid="select-fournisseur">
+                        <SelectTrigger className="h-12 text-base" data-testid="select-fournisseur">
                           <SelectValue placeholder="Sélectionner un fournisseur" />
                         </SelectTrigger>
                         <SelectContent>
