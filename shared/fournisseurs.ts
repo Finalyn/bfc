@@ -1,3 +1,13 @@
+export interface ChampPersonnalise {
+  id: string;
+  label: string;
+  type: "text" | "email" | "tel" | "date" | "textarea" | "checkbox" | "select";
+  required?: boolean;
+  placeholder?: string;
+  options?: string[]; // Pour le type select
+  section?: "magasin" | "livraison" | "facturation" | "autre";
+}
+
 export interface FournisseurConfig {
   id: string;
   nom: string;
@@ -12,6 +22,10 @@ export interface FournisseurConfig {
     items: string[];
   }[];
   cgv: string;
+  // Champs personnalisés spécifiques au fournisseur
+  champsPersonnalises?: ChampPersonnalise[];
+  // Champs standard à masquer pour ce fournisseur
+  champsMasques?: string[];
 }
 
 export const FOURNISSEURS_CONFIG: FournisseurConfig[] = [
@@ -173,6 +187,13 @@ OBLIGATIONS DE L'ACHETEUR
 • Règlement à réception de facture.
 
 En cas de refus d'une foire ou de sa non mise en vente, les frais de livraison et de retour seront à la charge du client.`,
+    champsPersonnalises: [
+      { id: "dateDebutOperation", label: "Date de début d'opération", type: "date", section: "livraison" },
+      { id: "dateFinOperation", label: "Date de fin d'opération", type: "date", section: "livraison" },
+      { id: "siretClient", label: "N° de SIRET (joindre un RIB)", type: "text", section: "magasin", placeholder: "N° SIRET" },
+      { id: "horairesLivraison", label: "Jours et horaires de livraison", type: "text", section: "livraison", placeholder: "Ex: Lundi-Vendredi 8h-12h" },
+      { id: "observations", label: "Observations", type: "textarea", section: "autre" },
+    ],
   },
   {
     id: "SIROCO",
@@ -244,6 +265,12 @@ PRIX ET PAIEMENT
 Tout retard de règlement entraînera des pénalités égales à une fois et demi le taux d'intérêt légal.
 Tous les paiements sont réputés être effectués à Tournon sur Rhône.
 En cas de litige, le tribunal de commerce d'Aubenas est le seul compétent.`,
+    champsPersonnalises: [
+      { id: "siren", label: "Numéro SIREN", type: "text", section: "magasin", placeholder: "N° SIREN" },
+      { id: "emailFacturation", label: "Email facturation", type: "email", section: "facturation", placeholder: "email@exemple.com" },
+      { id: "emailContact", label: "Email contact", type: "email", section: "magasin", placeholder: "email@exemple.com" },
+      { id: "observations", label: "Observations", type: "textarea", section: "autre" },
+    ],
   },
   {
     id: "MAEVA",
@@ -284,6 +311,11 @@ REPRISE DES INVENDUS
 • En cas de retour sur un autre support : facturation du Présentoir : 35€ HT
 • Enlèvement des invendus par le transporteur du Fournisseur
 • Reprise des invendus avant le 4/12/2026 impératif`,
+    champsPersonnalises: [
+      { id: "dateLivraisonSouhaitee", label: "Date de livraison souhaitée", type: "date", section: "livraison" },
+      { id: "horaireLivraison", label: "Horaire de livraison", type: "text", section: "livraison", placeholder: "Ex: 8h-12h" },
+      { id: "fax", label: "Fax", type: "tel", section: "magasin", placeholder: "Numéro de fax" },
+    ],
   },
   {
     id: "NAYATS",
@@ -333,6 +365,10 @@ IMPORTANT
 CONDITIONS DE PAIEMENT
 • Vente ferme : 30 jours fin de mois
 • Dépôt vente : paiement comptant à la fin du dépôt vente`,
+    champsPersonnalises: [
+      { id: "tvaClient", label: "Numéro de TVA", type: "text", section: "magasin", placeholder: "FR XX XXX XXX XXX" },
+      { id: "responsableRayon", label: "Responsable Rayon", type: "text", section: "magasin", placeholder: "Nom du responsable" },
+    ],
   },
 ];
 
