@@ -116,12 +116,10 @@ export const orderSchema = z.object({
   facturationCpVille: z.string().min(1, "Le CP/Ville de facturation est requis"),
   facturationMode: z.enum(["VIREMENT", "CHEQUE", "LCR"]),
   facturationRib: z.string().optional(), // Numéro de RIB pour mode LCR
+  numeroTva: z.string().optional(), // Numéro de TVA intracommunautaire
   
   // Remarques
   remarks: z.string().optional(),
-  
-  // Champs personnalisés du fournisseur (JSON)
-  champsPersonnalises: z.string().optional().default("{}"),
   
   // CGV
   cgvAccepted: z.boolean().refine(val => val === true, { message: "Vous devez accepter les CGV" }),
@@ -243,6 +241,7 @@ export const orders = pgTable("orders", {
   facturationCpVille: text("facturation_cp_ville").notNull(),
   facturationMode: text("facturation_mode").notNull(),
   facturationRib: text("facturation_rib").default(""),
+  numeroTva: text("numero_tva").default(""), // N° de TVA intracommunautaire
   
   // Remarques
   remarks: text("remarks").default(""),

@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
-import { FOURNISSEURS_CONFIG, getFournisseurConfig, type ChampPersonnalise } from "@shared/fournisseurs";
+import { FOURNISSEURS_CONFIG, getFournisseurConfig } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -226,6 +226,10 @@ export function generateOrderPDF(order: Order): Buffer {
     facY += 5;
     doc.text(`RIB : ${order.facturationRib}`, margin + boxWidth + gap + 2, facY);
   }
+  if (order.numeroTva) {
+    facY += 5;
+    doc.text(`N° TVA : ${order.numeroTva}`, margin + boxWidth + gap + 2, facY);
+  }
 
   // CGV extrait
   doc.setFontSize(6);
@@ -252,48 +256,6 @@ export function generateOrderPDF(order: Order): Buffer {
     doc.text(remarksLines, margin + 2, yPos + 5);
   }
   yPos += 22;
-
-  // === CHAMPS PERSONNALISÉS DU FOURNISSEUR ===
-  const champsPersonnalises: Record<string, string> = order.champsPersonnalises ? JSON.parse(order.champsPersonnalises) : {};
-  const fournisseurChamps = getFournisseurConfig(order.fournisseur)?.champsPersonnalises || [];
-  
-  if (fournisseurChamps.length > 0 && Object.keys(champsPersonnalises).length > 0) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text(`INFORMATIONS SPÉCIFIQUES ${fournisseurConfig.nom.toUpperCase()}`, margin, yPos);
-    yPos += 5;
-    
-    doc.setDrawColor(150, 150, 150);
-    const champsBoxHeight = fournisseurChamps.length * 6 + 6;
-    doc.rect(margin, yPos, pageWidth - 2 * margin, champsBoxHeight);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    let champY = yPos + 5;
-    
-    fournisseurChamps.forEach((champ) => {
-      const value = champsPersonnalises[champ.id] || "";
-      if (value) {
-        let displayValue = value;
-        if (champ.type === "date" && value) {
-          try {
-            displayValue = formatInTimeZone(new Date(value), "Europe/Paris", "dd/MM/yyyy", { locale: fr });
-          } catch (e) {
-            displayValue = value;
-          }
-        } else if (champ.type === "checkbox") {
-          displayValue = value === "true" ? "Oui" : "Non";
-        }
-        doc.setFont("helvetica", "bold");
-        doc.text(`${champ.label} : `, margin + 2, champY);
-        doc.setFont("helvetica", "normal");
-        doc.text(displayValue, margin + 2 + doc.getTextWidth(`${champ.label} : `), champY);
-        champY += 6;
-      }
-    });
-    
-    yPos += champsBoxHeight + 4;
-  }
 
   // === SIGNATURES ===
   const sigBoxWidth = (pageWidth - 2 * margin - 20) / 2;

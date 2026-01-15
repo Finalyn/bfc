@@ -176,6 +176,11 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
     worksheet.getCell(`E${currentRow}`).value = "RIB";
     worksheet.getCell(`F${currentRow}`).value = order.facturationRib;
   }
+  currentRow++;
+  if (order.numeroTva) {
+    worksheet.getCell(`E${currentRow}`).value = "N° TVA";
+    worksheet.getCell(`F${currentRow}`).value = order.numeroTva;
+  }
   currentRow += 2;
 
   // Remarques
@@ -187,38 +192,6 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
     worksheet.getCell(`A${currentRow}`).value = order.remarks;
     worksheet.getCell(`A${currentRow}`).alignment = { wrapText: true };
     currentRow += 2;
-  }
-
-  // Champs personnalisés du fournisseur
-  const champsPersonnalises: Record<string, string> = order.champsPersonnalises ? JSON.parse(order.champsPersonnalises) : {};
-  const fournisseurChamps = getFournisseurConfig(order.fournisseur)?.champsPersonnalises || [];
-  
-  if (fournisseurChamps.length > 0 && Object.keys(champsPersonnalises).length > 0) {
-    worksheet.getCell(`A${currentRow}`).value = `INFORMATIONS SPÉCIFIQUES ${fournisseurConfig.nom.toUpperCase()}`;
-    worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 11, color: { argb: "FF003366" } };
-    currentRow++;
-    
-    fournisseurChamps.forEach((champ) => {
-      const value = champsPersonnalises[champ.id];
-      if (value) {
-        let displayValue = value;
-        if (champ.type === "date" && value) {
-          try {
-            displayValue = formatInTimeZone(new Date(value), "Europe/Paris", "dd/MM/yyyy");
-          } catch (e) {
-            displayValue = value;
-          }
-        } else if (champ.type === "checkbox") {
-          displayValue = value === "true" ? "Oui" : "Non";
-        }
-        worksheet.getCell(`A${currentRow}`).value = champ.label;
-        worksheet.getCell(`A${currentRow}`).font = { bold: true };
-        worksheet.getCell(`B${currentRow}`).value = displayValue;
-        currentRow++;
-      }
-    });
-    
-    currentRow++;
   }
 
   // Signature
