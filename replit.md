@@ -27,7 +27,13 @@ The application uses a client-server architecture.
     2.  **E-Signature**: HTML5 canvas for signature capture, `signatureLocation`, `signatureDate` (pre-filled), and `clientSignedName`.
     3.  **Review**: Comprehensive summary of all captured order details.
     4.  **Success & Dispatch**: Displays a unique order number, enables PDF/Excel downloads, triggers automatic email sending, and offers manual re-send and "New Order" options.
-- **Automatic Generation**: Generates a unique order code, a PDF containing all order details and signature based on the BDIS 2026 template, and an Excel file with structured data including the signature image. All dates are in "Europe/Paris" timezone.
+- **Automatic Generation**: Generates a unique order code, a PDF containing all order details, signature, and complete supplier-specific CGV as an appendix, plus an Excel file with structured data including the signature image and a CGV worksheet. All dates are in "Europe/Paris" timezone.
+- **Multi-Supplier Support**: The app supports multiple suppliers (BDIS, VDH Lots, Éditions G. Cottreau, SIROCO, MAEVA Créations, NAYATS) with:
+  - Supplier-specific products and themes
+  - Dynamic CGV display at signature step (excerpt with "Voir plus" dialog for full text)
+  - Supplier filtering in dashboards and statistics
+  - PDF/Excel documents include supplier name in title and complete CGV as appendix
+  - Configuration in `shared/fournisseurs.ts`
 - **Email Dispatch**: Two automated emails: one to the client with the PDF, and another to `jack@finalyn.com` with both PDF and Excel, including detailed order information.
 - **Data Storage**: All order data is stored in PostgreSQL database with orders table.
 - **Personal Dashboard (MyDashboard)**: Each commercial sees their orders list and multi-view calendar with delivery dates. Admin can filter by commercial.
