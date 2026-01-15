@@ -851,8 +851,8 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               </CardHeader>
               <CardContent>
                 {selectedFournisseur === "BDIS" ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Colonne TOUTE L'ANNEE - BDIS uniquement */}
+                  <div className="space-y-6">
+                    {/* Catégorie TOUTE L'ANNEE - BDIS */}
                     <div>
                       <h3 className="font-bold text-sm bg-primary text-primary-foreground p-2 rounded-t-md text-center">TOUTE L'ANNEE</h3>
                       <div className="border border-t-0 rounded-b-md">
@@ -893,7 +893,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                       </div>
                     </div>
 
-                    {/* Colonne SAISONNIER - BDIS uniquement */}
+                    {/* Catégorie SAISONNIER - BDIS */}
                     <div>
                       <h3 className="font-bold text-sm bg-gray-400 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
                       <div className="border border-t-0 rounded-b-md">
