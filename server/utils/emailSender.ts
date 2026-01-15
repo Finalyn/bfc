@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { type Order, type ThemeSelection } from "@shared/schema";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -48,6 +49,10 @@ export async function sendOrderEmails(
 
   const orderDate = formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
   
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  const fournisseurNom = fournisseurConfig.nom;
+  const fournisseurNomComplet = fournisseurConfig.nomComplet || fournisseurNom;
+  
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
   const themesHtml = themeSelections
     .filter(t => t.quantity || t.deliveryDate)
@@ -58,22 +63,23 @@ export async function sendOrderEmails(
   const clientMailOptions = {
     from: FROM_EMAIL,
     to: clientEmail,
-    subject: `Votre bon de commande n° ${order.orderCode} – ${orderDate}`,
+    subject: `Votre bon de commande ${fournisseurNom} n° ${order.orderCode} – ${orderDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #003366;">Votre bon de commande BDIS 2026</h2>
+        <h2 style="color: #003366;">Votre bon de commande ${fournisseurNom} 2026</h2>
         <p>Bonjour <strong>${order.responsableName}</strong>,</p>
         <p>Nous vous confirmons la réception de votre commande.</p>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Numéro de commande :</strong> ${order.orderCode}</p>
+          <p style="margin: 5px 0;"><strong>Fournisseur :</strong> ${fournisseurNom}</p>
           <p style="margin: 5px 0;"><strong>Date :</strong> ${orderDate}</p>
           <p style="margin: 5px 0;"><strong>Commercial :</strong> ${order.salesRepName}</p>
         </div>
         
         ${themesHtml ? `
         <div style="background-color: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Thèmes commandés</h3>
+          <h3 style="margin-top: 0;">Produits commandés</h3>
           <ul style="margin: 0; padding-left: 20px;">${themesHtml}</ul>
         </div>
         ` : ""}
@@ -86,15 +92,11 @@ export async function sendOrderEmails(
         </div>
         
         <p>Vous trouverez le bon de commande en pièce jointe.</p>
-        <p>Bien cordialement,<br/>L'équipe BDIS</p>
+        <p>Bien cordialement,<br/>L'équipe ${fournisseurNom}</p>
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-          <p style="margin: 0; color: #6b7280; font-size: 14px;">
-            Découvrez tous nos produits sur 
-            <a href="https://bdis.fr" style="color: #003366; font-weight: bold; text-decoration: none;">bdis.fr</a>
-          </p>
           <p style="margin: 10px 0 0 0; color: #9ca3af; font-size: 12px;">
-            BOISSELLERIE DISTRIBUTION - Votre partenaire depuis plus de 30 ans
+            ${fournisseurNomComplet}
           </p>
         </div>
       </div>
@@ -111,14 +113,15 @@ export async function sendOrderEmails(
   const agencyMailOptions = {
     from: FROM_EMAIL,
     to: AGENCY_EMAIL,
-    subject: `Commande n° ${order.orderCode} – ${order.livraisonEnseigne} – ${orderDate}`,
+    subject: `[${fournisseurNom}] Commande n° ${order.orderCode} – ${order.livraisonEnseigne} – ${orderDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #003366;">Nouvelle commande BDIS 2026</h2>
+        <h2 style="color: #003366;">Nouvelle commande ${fournisseurNom} 2026</h2>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Informations générales</h3>
           <p style="margin: 5px 0;"><strong>Numéro :</strong> ${order.orderCode}</p>
+          <p style="margin: 5px 0;"><strong>Fournisseur :</strong> ${fournisseurNom}</p>
           <p style="margin: 5px 0;"><strong>Date :</strong> ${orderDate}</p>
           <p style="margin: 5px 0;"><strong>Commercial :</strong> ${order.salesRepName}</p>
         </div>

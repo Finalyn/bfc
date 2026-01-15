@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
@@ -57,9 +58,11 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   doc.setFont("helvetica", "normal");
   doc.text(order.salesRepName, margin + 32, yPos + 6);
 
-  doc.setFontSize(18);
+  const fournisseur = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("BON DE COMMANDE 2026", pageWidth - margin, yPos + 3, { align: "right" });
+  doc.text(`BON DE COMMANDE ${fournisseur.nom} 2026`, pageWidth - margin, yPos + 3, { align: "right" });
 
   yPos += 16;
 
@@ -220,11 +223,14 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
     doc.text(`RIB : ${order.facturationRib}`, margin + boxWidth + gap + 2, facY);
   }
 
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  const cgvExtrait = fournisseurConfig.cgv.split("\n").slice(0, 3).join(" ").substring(0, 80);
+  
   doc.setFontSize(6);
   doc.setFont("helvetica", "bold");
-  doc.text("EXTRAIT DES CGV", margin + boxWidth + gap + 2, yPos + 33);
+  doc.text(`EXTRAIT DES CGV ${fournisseurConfig.nom}`, margin + boxWidth + gap + 2, yPos + 33);
   doc.setFont("helvetica", "normal");
-  doc.text("Règlement à 30 jours date de facture - Escompte 2% si paiement comptant", margin + boxWidth + gap + 2, yPos + 38);
+  doc.text(cgvExtrait + "...", margin + boxWidth + gap + 2, yPos + 38);
 
   yPos += boxHeight + 6;
 
@@ -290,8 +296,11 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   );
 
   doc.setFontSize(4.5);
+  const mentionLegale = fournisseurConfig.nomComplet 
+    ? `Pour toutes les contestations relatives aux ventes réalisées par la société ${fournisseurConfig.nomComplet}, seul sera compétent le Tribunal de Commerce compétent.`
+    : "Pour toutes les contestations relatives aux ventes, seul sera compétent le Tribunal de Commerce compétent.";
   doc.text(
-    "Pour toutes les contestations relatives aux ventes réalisées par la société BOISSELLERIE DISTRIBUTION, seul sera compétent le Tribunal de Commerce de VILLEFRANCHE-TARARE.",
+    mentionLegale,
     pageWidth / 2,
     pageHeight - 3,
     { align: "center" }
