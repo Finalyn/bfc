@@ -66,7 +66,7 @@ export async function sendOrderEmails(
     subject: `Votre bon de commande ${fournisseurNom} n° ${order.orderCode} – ${orderDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #003366;">Votre bon de commande ${fournisseurNom} 2026</h2>
+        <h2 style="color: #003366;">Votre bon de commande ${fournisseurNom}</h2>
         <p>Bonjour <strong>${order.responsableName}</strong>,</p>
         <p>Nous vous confirmons la réception de votre commande.</p>
         
@@ -116,7 +116,7 @@ export async function sendOrderEmails(
     subject: `[${fournisseurNom}] Commande n° ${order.orderCode} – ${order.livraisonEnseigne} – ${orderDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #003366;">Nouvelle commande ${fournisseurNom} 2026</h2>
+        <h2 style="color: #003366;">Nouvelle commande ${fournisseurNom}</h2>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Informations générales</h3>

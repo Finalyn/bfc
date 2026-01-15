@@ -54,7 +54,7 @@ export function generateOrderPDF(order: Order): Buffer {
   // Titre principal - aligné tout à droite
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(`BON DE COMMANDE ${fournisseurConfig.nom} 2026`, pageWidth - margin, yPos + 3, { align: "right" });
+  doc.text(`BON DE COMMANDE ${fournisseurConfig.nom}`, pageWidth - margin, yPos + 3, { align: "right" });
 
   yPos += 16;
 

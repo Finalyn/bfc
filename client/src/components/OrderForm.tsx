@@ -101,34 +101,42 @@ function DateInput({ value, onChange, testId }: {
   );
 }
 
-// Version compacte pour les tableaux de thèmes (jour + mois seulement, année = 2026)
+// Version compacte pour les tableaux de thèmes (jour + mois + année)
 function CompactDateInput({ value, onChange, testId, hasError }: { 
   value: string; 
   onChange: (value: string) => void;
   testId?: string;
   hasError?: boolean;
 }) {
+  const currentYear = new Date().getFullYear().toString();
   const parts = value ? value.split("-") : ["", "", ""];
+  const savedYear = parts[0] || currentYear;
   const savedMonth = parts[1] || "";
   const savedDay = parts[2] || "";
   
   // État local pour les sélections partielles
   const [localDay, setLocalDay] = useState(savedDay);
   const [localMonth, setLocalMonth] = useState(savedMonth);
+  const [localYear, setLocalYear] = useState(savedYear || currentYear);
 
   const handleDayChange = (d: string) => {
     setLocalDay(d);
-    // Mettre à jour immédiatement si le mois est déjà sélectionné
     if (d && localMonth) {
-      onChange(`2026-${localMonth}-${d}`);
+      onChange(`${localYear}-${localMonth}-${d}`);
     }
   };
 
   const handleMonthChange = (m: string) => {
     setLocalMonth(m);
-    // Mettre à jour immédiatement si le jour est déjà sélectionné
     if (localDay && m) {
-      onChange(`2026-${m}-${localDay}`);
+      onChange(`${localYear}-${m}-${localDay}`);
+    }
+  };
+
+  const handleYearChange = (y: string) => {
+    setLocalYear(y);
+    if (localDay && localMonth) {
+      onChange(`${y}-${localMonth}-${localDay}`);
     }
   };
 
@@ -137,7 +145,7 @@ function CompactDateInput({ value, onChange, testId, hasError }: {
   return (
     <div className="flex items-center gap-1" data-testid={testId}>
       <Select value={localDay || savedDay} onValueChange={handleDayChange}>
-        <SelectTrigger className={`w-14 h-8 text-xs px-1 ${errorClass}`}>
+        <SelectTrigger className={`w-12 h-8 text-xs px-1 ${errorClass}`}>
           <SelectValue placeholder="JJ" />
         </SelectTrigger>
         <SelectContent>
@@ -147,12 +155,22 @@ function CompactDateInput({ value, onChange, testId, hasError }: {
         </SelectContent>
       </Select>
       <Select value={localMonth || savedMonth} onValueChange={handleMonthChange}>
-        <SelectTrigger className={`w-16 h-8 text-xs px-1 ${errorClass}`}>
+        <SelectTrigger className={`w-14 h-8 text-xs px-1 ${errorClass}`}>
           <SelectValue placeholder="MM" />
         </SelectTrigger>
         <SelectContent>
           {MONTHS.map((m) => (
             <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={localYear || savedYear} onValueChange={handleYearChange}>
+        <SelectTrigger className={`w-16 h-8 text-xs px-1 ${errorClass}`}>
+          <SelectValue placeholder="AA" />
+        </SelectTrigger>
+        <SelectContent>
+          {YEARS.map((y) => (
+            <SelectItem key={y} value={y}>{y}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -579,7 +597,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                 <ClipboardList className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">BON DE COMMANDE 2026</h1>
+                <h1 className="text-2xl font-bold text-foreground">BON DE COMMANDE</h1>
                 <p className="text-sm text-muted-foreground">Remplissez tous les champs obligatoires (*)</p>
               </div>
             </div>

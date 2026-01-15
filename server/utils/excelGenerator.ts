@@ -28,7 +28,7 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   // Titre
   worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
   const titleCell = worksheet.getCell(`A${currentRow}`);
-  titleCell.value = `BON DE COMMANDE ${fournisseurConfig.nom} 2026`;
+  titleCell.value = `BON DE COMMANDE ${fournisseurConfig.nom}`;
   titleCell.font = { size: 18, bold: true, color: { argb: "FF003366" } };
   titleCell.alignment = { horizontal: "center" };
   currentRow += 2;

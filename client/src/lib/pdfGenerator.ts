@@ -62,7 +62,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(`BON DE COMMANDE ${fournisseur.nom} 2026`, pageWidth - margin, yPos + 3, { align: "right" });
+  doc.text(`BON DE COMMANDE ${fournisseur.nom}`, pageWidth - margin, yPos + 3, { align: "right" });
 
   yPos += 16;
 
