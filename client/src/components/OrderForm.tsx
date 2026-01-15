@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { FOURNISSEURS_CONFIG, type FournisseurConfig } from "@shared/fournisseurs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -179,6 +180,7 @@ interface Client {
 
 const formSchema = z.object({
   orderDate: z.string().min(1, "La date est requise"),
+  fournisseur: z.string().min(1, "Le fournisseur est requis"),
   salesRepName: z.string().min(1, "Le nom du commercial est requis"),
   responsableName: z.string().min(1, "Le nom du responsable est requis"),
   responsableTel: z.string().min(1, "Le téléphone du responsable est requis"),
@@ -269,6 +271,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       orderDate: initialData?.orderDate || today,
+      fournisseur: initialData?.fournisseur || "BDIS",
       salesRepName: initialData?.salesRepName || connectedUserName,
       responsableName: initialData?.responsableName || "",
       responsableTel: initialData?.responsableTel || "",
@@ -397,7 +400,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     }
   };
 
-  const updateThemeSelection = (theme: string, category: "TOUTE_ANNEE" | "SAISONNIER", field: "quantity" | "deliveryDate", value: string) => {
+  const updateThemeSelection = (theme: string, category: string, field: "quantity" | "deliveryDate", value: string) => {
     setThemeSelections(prev => {
       const existing = prev.find(t => t.theme === theme && t.category === category);
       if (existing) {
@@ -407,12 +410,12 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
             : t
         );
       } else {
-        return [...prev, { theme, category, [field]: value }];
+        return [...prev, { theme, category: category as any, [field]: value }];
       }
     });
   };
 
-  const getThemeValue = (theme: string, category: "TOUTE_ANNEE" | "SAISONNIER", field: "quantity" | "deliveryDate"): string => {
+  const getThemeValue = (theme: string, category: string, field: "quantity" | "deliveryDate"): string => {
     const selection = themeSelections.find(t => t.theme === theme && t.category === category);
     return selection?.[field] || "";
   };
@@ -459,10 +462,11 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     
     onNext({
       ...data,
+      fournisseur: data.fournisseur,
       themeSelections: JSON.stringify(filteredSelections),
       clientName: data.responsableName,
       clientEmail: data.responsableEmail,
-      supplier: "BDIS",
+      supplier: data.fournisseur,
       productTheme: filteredSelections.map(t => t.theme).join(", ") || "Divers",
       quantity: filteredSelections.map(t => t.quantity).filter(Boolean).join(", ") || "1",
       deliveryDate: filteredSelections[0]?.deliveryDate || data.orderDate,
@@ -559,6 +563,11 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   };
 
   const facturationMode = watch("facturationMode");
+  const selectedFournisseur = watch("fournisseur");
+  
+  const currentFournisseurConfig = useMemo(() => {
+    return FOURNISSEURS_CONFIG.find(f => f.id === selectedFournisseur);
+  }, [selectedFournisseur]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -587,6 +596,33 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      FOURNISSEUR <span className="text-destructive">*</span>
+                    </Label>
+                    <Controller
+                      name="fournisseur"
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={(value) => {
+                          field.onChange(value);
+                          setThemeSelections([]);
+                        }}>
+                          <SelectTrigger className="h-12 text-base" data-testid="select-fournisseur">
+                            <SelectValue placeholder="Sélectionner un fournisseur" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FOURNISSEURS_CONFIG.map((f) => (
+                              <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.fournisseur && (
+                      <p className="text-xs text-destructive">{errors.fournisseur.message}</p>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="orderDate" className="text-sm font-medium">
                       DATE <span className="text-destructive">*</span>
@@ -777,96 +813,144 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               </CardContent>
             </Card>
 
-            {/* Thèmes - Tableau */}
+            {/* Thèmes - Tableau dynamique selon fournisseur */}
             <Card className="border-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Sélection des thèmes</CardTitle>
-                <p className="text-sm text-muted-foreground">Indiquez la quantité et la date de livraison pour chaque thème souhaité</p>
+                <CardTitle className="text-lg">Sélection des produits - {currentFournisseurConfig?.nom || "BDIS"}</CardTitle>
+                <p className="text-sm text-muted-foreground">Indiquez la quantité et la date de livraison pour chaque produit souhaité</p>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Colonne TOUTE L'ANNEE */}
-                  <div>
-                    <h3 className="font-bold text-sm bg-primary text-primary-foreground p-2 rounded-t-md text-center">TOUTE L'ANNEE</h3>
-                    <div className="border border-t-0 rounded-b-md">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="p-2 text-left font-medium">THEME</th>
-                            <th className="p-2 text-center font-medium w-16">QTE</th>
-                            <th className="p-2 text-center font-medium w-28">Date livr.</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {THEMES_TOUTE_ANNEE.map((theme, idx) => (
-                            <tr key={theme} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
-                              <td className="p-1.5 text-xs font-medium">{theme}</td>
-                              <td className="p-1">
-                                <Input
-                                  className="h-9 text-sm text-center px-1"
-                                  placeholder=""
-                                  inputMode="numeric"
-                                  value={getThemeValue(theme, "TOUTE_ANNEE", "quantity")}
-                                  onChange={(e) => updateThemeSelection(theme, "TOUTE_ANNEE", "quantity", e.target.value)}
-                                  data-testid={`input-qty-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
-                                />
-                              </td>
-                              <td className="p-1">
-                                <CompactDateInput
-                                  value={getThemeValue(theme, "TOUTE_ANNEE", "deliveryDate")}
-                                  onChange={(val) => updateThemeSelection(theme, "TOUTE_ANNEE", "deliveryDate", val)}
-                                  testId={`input-date-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
-                                  hasError={themeDateErrors.has(`${theme}-TOUTE_ANNEE`)}
-                                />
-                              </td>
+                {selectedFournisseur === "BDIS" ? (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Colonne TOUTE L'ANNEE - BDIS uniquement */}
+                    <div>
+                      <h3 className="font-bold text-sm bg-primary text-primary-foreground p-2 rounded-t-md text-center">TOUTE L'ANNEE</h3>
+                      <div className="border border-t-0 rounded-b-md">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="p-2 text-left font-medium">THEME</th>
+                              <th className="p-2 text-center font-medium w-16">QTE</th>
+                              <th className="p-2 text-center font-medium w-28">Date livr.</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {THEMES_TOUTE_ANNEE.map((theme, idx) => (
+                              <tr key={theme} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
+                                <td className="p-1.5 text-xs font-medium">{theme}</td>
+                                <td className="p-1">
+                                  <Input
+                                    className="h-9 text-sm text-center px-1"
+                                    placeholder=""
+                                    inputMode="numeric"
+                                    value={getThemeValue(theme, "TOUTE_ANNEE", "quantity")}
+                                    onChange={(e) => updateThemeSelection(theme, "TOUTE_ANNEE", "quantity", e.target.value)}
+                                    data-testid={`input-qty-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <CompactDateInput
+                                    value={getThemeValue(theme, "TOUTE_ANNEE", "deliveryDate")}
+                                    onChange={(val) => updateThemeSelection(theme, "TOUTE_ANNEE", "deliveryDate", val)}
+                                    testId={`input-date-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                    hasError={themeDateErrors.has(`${theme}-TOUTE_ANNEE`)}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Colonne SAISONNIER */}
-                  <div>
-                    <h3 className="font-bold text-sm bg-gray-400 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
-                    <div className="border border-t-0 rounded-b-md">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="p-2 text-left font-medium">THEME</th>
-                            <th className="p-2 text-center font-medium w-16">QTE</th>
-                            <th className="p-2 text-center font-medium w-28">Date livr.</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {THEMES_SAISONNIER.map((theme, idx) => (
-                            <tr key={theme} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
-                              <td className="p-1.5 text-xs font-medium">{theme}</td>
-                              <td className="p-1">
-                                <Input
-                                  className="h-9 text-sm text-center px-1"
-                                  placeholder=""
-                                  inputMode="numeric"
-                                  value={getThemeValue(theme, "SAISONNIER", "quantity")}
-                                  onChange={(e) => updateThemeSelection(theme, "SAISONNIER", "quantity", e.target.value)}
-                                  data-testid={`input-qty-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
-                                />
-                              </td>
-                              <td className="p-1">
-                                <CompactDateInput
-                                  value={getThemeValue(theme, "SAISONNIER", "deliveryDate")}
-                                  onChange={(val) => updateThemeSelection(theme, "SAISONNIER", "deliveryDate", val)}
-                                  testId={`input-date-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
-                                  hasError={themeDateErrors.has(`${theme}-SAISONNIER`)}
-                                />
-                              </td>
+                    {/* Colonne SAISONNIER - BDIS uniquement */}
+                    <div>
+                      <h3 className="font-bold text-sm bg-gray-400 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
+                      <div className="border border-t-0 rounded-b-md">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="p-2 text-left font-medium">THEME</th>
+                              <th className="p-2 text-center font-medium w-16">QTE</th>
+                              <th className="p-2 text-center font-medium w-28">Date livr.</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {THEMES_SAISONNIER.map((theme, idx) => (
+                              <tr key={theme} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
+                                <td className="p-1.5 text-xs font-medium">{theme}</td>
+                                <td className="p-1">
+                                  <Input
+                                    className="h-9 text-sm text-center px-1"
+                                    placeholder=""
+                                    inputMode="numeric"
+                                    value={getThemeValue(theme, "SAISONNIER", "quantity")}
+                                    onChange={(e) => updateThemeSelection(theme, "SAISONNIER", "quantity", e.target.value)}
+                                    data-testid={`input-qty-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                  />
+                                </td>
+                                <td className="p-1">
+                                  <CompactDateInput
+                                    value={getThemeValue(theme, "SAISONNIER", "deliveryDate")}
+                                    onChange={(val) => updateThemeSelection(theme, "SAISONNIER", "deliveryDate", val)}
+                                    testId={`input-date-sais-${theme.replace(/\s|\//g, "-").toLowerCase()}`}
+                                    hasError={themeDateErrors.has(`${theme}-SAISONNIER`)}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-6">
+                    {currentFournisseurConfig?.themes.map((categorie, catIdx) => (
+                      <div key={categorie.categorie}>
+                        <h3 className={`font-bold text-sm p-2 rounded-t-md text-center text-white ${catIdx % 2 === 0 ? "bg-primary" : "bg-gray-500"}`}>
+                          {categorie.categorie}
+                        </h3>
+                        <div className="border border-t-0 rounded-b-md">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b bg-muted/50">
+                                <th className="p-2 text-left font-medium">PRODUIT</th>
+                                <th className="p-2 text-center font-medium w-16">QTE</th>
+                                <th className="p-2 text-center font-medium w-28">Date livr.</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {categorie.items.map((item, idx) => (
+                                <tr key={item} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
+                                  <td className="p-1.5 text-xs font-medium">{item}</td>
+                                  <td className="p-1">
+                                    <Input
+                                      className="h-9 text-sm text-center px-1"
+                                      placeholder=""
+                                      inputMode="numeric"
+                                      value={getThemeValue(item, categorie.categorie as any, "quantity")}
+                                      onChange={(e) => updateThemeSelection(item, categorie.categorie as any, "quantity", e.target.value)}
+                                      data-testid={`input-qty-${item.replace(/\s|\//g, "-").toLowerCase().slice(0, 20)}`}
+                                    />
+                                  </td>
+                                  <td className="p-1">
+                                    <CompactDateInput
+                                      value={getThemeValue(item, categorie.categorie as any, "deliveryDate")}
+                                      onChange={(val) => updateThemeSelection(item, categorie.categorie as any, "deliveryDate", val)}
+                                      testId={`input-date-${item.replace(/\s|\//g, "-").toLowerCase().slice(0, 20)}`}
+                                      hasError={themeDateErrors.has(`${item}-${categorie.categorie}`)}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -73,7 +73,7 @@ export const THEMES_SAISONNIER = [
 // Schema pour une sélection de thème
 export const themeSelectionSchema = z.object({
   theme: z.string(),
-  category: z.enum(["TOUTE_ANNEE", "SAISONNIER"]),
+  category: z.string(),
   quantity: z.string().optional(),
   deliveryDate: z.string().optional(),
 });
