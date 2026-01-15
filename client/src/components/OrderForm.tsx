@@ -3,7 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
-import { FOURNISSEURS_CONFIG, type FournisseurConfig } from "@shared/fournisseurs";
+import { FOURNISSEURS_CONFIG, type FournisseurConfig, type ChampPersonnalise, getFournisseurConfig } from "@shared/fournisseurs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -243,6 +243,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const [themeDateErrors, setThemeDateErrors] = useState<Set<string>>(new Set());
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [manualClientMode, setManualClientMode] = useState(false);
+  const [champsPersonnalisesData, setChampsPersonnalisesData] = useState<Record<string, string>>(
+    initialData?.champsPersonnalises ? JSON.parse(initialData.champsPersonnalises) : {}
+  );
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -490,6 +493,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       quantity: filteredSelections.map(t => t.quantity).filter(Boolean).join(", ") || "1",
       deliveryDate: filteredSelections[0]?.deliveryDate || data.orderDate,
       originalClientData: originalClientData ? JSON.stringify(originalClientData) : null,
+      champsPersonnalises: JSON.stringify(champsPersonnalisesData),
     });
   };
 
@@ -691,6 +695,82 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Champs personnalisés du fournisseur */}
+            {currentFournisseurConfig?.champsPersonnalises && currentFournisseurConfig.champsPersonnalises.length > 0 && (
+              <Card className="border-2 border-primary/30 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Informations spécifiques {currentFournisseurConfig.nom}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Champs requis pour ce fournisseur
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {currentFournisseurConfig.champsPersonnalises.map((champ) => (
+                    <div key={champ.id} className="space-y-2">
+                      <Label htmlFor={`champ-${champ.id}`} className="text-sm font-medium">
+                        {champ.label.toUpperCase()} {champ.required && <span className="text-destructive">*</span>}
+                      </Label>
+                      {champ.type === "textarea" ? (
+                        <Textarea
+                          id={`champ-${champ.id}`}
+                          value={champsPersonnalisesData[champ.id] || ""}
+                          onChange={(e) => setChampsPersonnalisesData(prev => ({ ...prev, [champ.id]: e.target.value }))}
+                          placeholder={champ.placeholder}
+                          className="min-h-[80px]"
+                          data-testid={`input-custom-${champ.id}`}
+                        />
+                      ) : champ.type === "date" ? (
+                        <DateInput
+                          value={champsPersonnalisesData[champ.id] || ""}
+                          onChange={(value) => setChampsPersonnalisesData(prev => ({ ...prev, [champ.id]: value }))}
+                          testId={`input-custom-${champ.id}`}
+                        />
+                      ) : champ.type === "checkbox" ? (
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`champ-${champ.id}`}
+                            checked={champsPersonnalisesData[champ.id] === "true"}
+                            onCheckedChange={(checked) => setChampsPersonnalisesData(prev => ({ ...prev, [champ.id]: checked ? "true" : "false" }))}
+                            data-testid={`input-custom-${champ.id}`}
+                          />
+                          <Label htmlFor={`champ-${champ.id}`} className="text-sm cursor-pointer">
+                            {champ.placeholder || champ.label}
+                          </Label>
+                        </div>
+                      ) : champ.type === "select" && champ.options ? (
+                        <Select
+                          value={champsPersonnalisesData[champ.id] || ""}
+                          onValueChange={(value) => setChampsPersonnalisesData(prev => ({ ...prev, [champ.id]: value }))}
+                        >
+                          <SelectTrigger className="h-12 text-base" data-testid={`input-custom-${champ.id}`}>
+                            <SelectValue placeholder={champ.placeholder || "Sélectionner..."} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {champ.options.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id={`champ-${champ.id}`}
+                          type={champ.type}
+                          value={champsPersonnalisesData[champ.id] || ""}
+                          onChange={(e) => setChampsPersonnalisesData(prev => ({ ...prev, [champ.id]: e.target.value }))}
+                          placeholder={champ.placeholder}
+                          className="h-12 text-base"
+                          data-testid={`input-custom-${champ.id}`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Sélection Client (pré-remplissage) */}
             <Card className={`border-2 ${isOffline || manualClientMode ? "border-amber-500/50 bg-amber-50 dark:bg-amber-950/20" : "border-primary/30 bg-primary/5"}`}>

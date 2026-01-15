@@ -244,6 +244,9 @@ export const orders = pgTable("orders", {
   // Remarques
   remarks: text("remarks").default(""),
   
+  // Champs personnalisés du fournisseur (JSON)
+  champsPersonnalises: text("champs_personnalises").default("{}"),
+  
   // Signature
   signature: text("signature").notNull(),
   signatureLocation: text("signature_location").notNull(),
