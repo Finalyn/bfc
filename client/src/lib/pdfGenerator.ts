@@ -107,79 +107,122 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   const gap = 6;
   const tableWidth = (pageWidth - 2 * margin - gap) / 2;
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+  
+  const filledSelections = themeSelections.filter(t => t.quantity && parseInt(t.quantity) > 0);
+  
+  if (order.fournisseur === "BDIS" || !order.fournisseur) {
+    const headerHeight = 7;
+    doc.setFillColor(60, 60, 60);
+    doc.rect(margin, yPos, tableWidth, headerHeight, "F");
+    doc.rect(margin + tableWidth + gap, yPos, tableWidth, headerHeight, "F");
 
-  const headerHeight = 7;
-  doc.setFillColor(60, 60, 60);
-  doc.rect(margin, yPos, tableWidth, headerHeight, "F");
-  doc.rect(margin + tableWidth + gap, yPos, tableWidth, headerHeight, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("THEME", margin + 2, yPos + 5);
+    doc.text("QTE", margin + tableWidth - 20, yPos + 5);
+    doc.text("Date", margin + tableWidth - 10, yPos + 5);
 
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text("THEME", margin + 2, yPos + 5);
-  doc.text("QTE", margin + tableWidth - 20, yPos + 5);
-  doc.text("Date", margin + tableWidth - 10, yPos + 5);
+    doc.text("THEME", margin + tableWidth + gap + 2, yPos + 5);
+    doc.text("QTE", margin + 2 * tableWidth + gap - 20, yPos + 5);
+    doc.text("Date", margin + 2 * tableWidth + gap - 10, yPos + 5);
+    doc.setTextColor(0, 0, 0);
 
-  doc.text("THEME", margin + tableWidth + gap + 2, yPos + 5);
-  doc.text("QTE", margin + 2 * tableWidth + gap - 20, yPos + 5);
-  doc.text("Date", margin + 2 * tableWidth + gap - 10, yPos + 5);
-  doc.setTextColor(0, 0, 0);
+    yPos += headerHeight;
+    const subHeaderHeight = 6;
+    doc.setFillColor(200, 200, 200);
+    doc.rect(margin, yPos, tableWidth, subHeaderHeight, "F");
+    doc.rect(margin + tableWidth + gap, yPos, tableWidth, subHeaderHeight, "F");
 
-  yPos += headerHeight;
-  const subHeaderHeight = 6;
-  doc.setFillColor(200, 200, 200);
-  doc.rect(margin, yPos, tableWidth, subHeaderHeight, "F");
-  doc.rect(margin + tableWidth + gap, yPos, tableWidth, subHeaderHeight, "F");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOUTE L'ANNEE", margin + 2, yPos + 4);
+    doc.text("SAISONNIER", margin + tableWidth + gap + 2, yPos + 4);
+    yPos += subHeaderHeight;
 
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.text("TOUTE L'ANNEE", margin + 2, yPos + 4);
-  doc.text("SAISONNIER", margin + tableWidth + gap + 2, yPos + 4);
-  yPos += subHeaderHeight;
+    const rowHeight = 5.5;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
 
-  const rowHeight = 5.5;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
+    THEMES_TOUTE_ANNEE.forEach((theme, idx) => {
+      const rowY = yPos + idx * rowHeight;
+      if (idx % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(margin, rowY, tableWidth, rowHeight, "F");
+      }
+      doc.setDrawColor(180, 180, 180);
+      doc.rect(margin, rowY, tableWidth, rowHeight);
+      
+      const selection = themeSelections.find(t => t.theme === theme && (t.category === "TOUTE_ANNEE" || t.category === "TOUTE L'ANNÉE"));
+      doc.text(theme, margin + 2, rowY + 4);
+      if (selection?.quantity) {
+        doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
+      }
+      if (selection?.deliveryDate) {
+        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
+      }
+    });
 
-  THEMES_TOUTE_ANNEE.forEach((theme, idx) => {
-    const rowY = yPos + idx * rowHeight;
-    if (idx % 2 === 0) {
-      doc.setFillColor(245, 245, 245);
-      doc.rect(margin, rowY, tableWidth, rowHeight, "F");
-    }
-    doc.setDrawColor(180, 180, 180);
-    doc.rect(margin, rowY, tableWidth, rowHeight);
-    
-    const selection = themeSelections.find(t => t.theme === theme && t.category === "TOUTE_ANNEE");
-    doc.text(theme, margin + 2, rowY + 4);
-    if (selection?.quantity) {
-      doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
-    }
-    if (selection?.deliveryDate) {
-      doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
-    }
-  });
+    THEMES_SAISONNIER.forEach((theme, idx) => {
+      const rowY = yPos + idx * rowHeight;
+      if (idx % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight, "F");
+      }
+      doc.setDrawColor(180, 180, 180);
+      doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
+      
+      const selection = themeSelections.find(t => t.theme === theme && t.category === "SAISONNIER");
+      doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
+      if (selection?.quantity) {
+        doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
+      }
+      if (selection?.deliveryDate) {
+        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+      }
+    });
 
-  THEMES_SAISONNIER.forEach((theme, idx) => {
-    const rowY = yPos + idx * rowHeight;
-    if (idx % 2 === 0) {
-      doc.setFillColor(245, 245, 245);
-      doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight, "F");
-    }
-    doc.setDrawColor(180, 180, 180);
-    doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
-    
-    const selection = themeSelections.find(t => t.theme === theme && t.category === "SAISONNIER");
-    doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
-    if (selection?.quantity) {
-      doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
-    }
-    if (selection?.deliveryDate) {
-      doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
-    }
-  });
+    yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * 5.5 + 8;
+  } else {
+    const fullTableWidth = pageWidth - 2 * margin;
+    const headerHeight = 7;
+    doc.setFillColor(60, 60, 60);
+    doc.rect(margin, yPos, fullTableWidth, headerHeight, "F");
 
-  yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * rowHeight + 8;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("PRODUIT", margin + 2, yPos + 5);
+    doc.text("CATEGORIE", margin + fullTableWidth * 0.5, yPos + 5);
+    doc.text("QTE", margin + fullTableWidth - 30, yPos + 5);
+    doc.text("Date livr.", margin + fullTableWidth - 18, yPos + 5);
+    doc.setTextColor(0, 0, 0);
+
+    yPos += headerHeight;
+    const rowHeight = 5.5;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+
+    filledSelections.forEach((selection, idx) => {
+      const rowY = yPos + idx * rowHeight;
+      if (idx % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(margin, rowY, fullTableWidth, rowHeight, "F");
+      }
+      doc.setDrawColor(180, 180, 180);
+      doc.rect(margin, rowY, fullTableWidth, rowHeight);
+      
+      const themeName = selection.theme.length > 35 ? selection.theme.substring(0, 32) + "..." : selection.theme;
+      doc.text(themeName, margin + 2, rowY + 4);
+      doc.text(selection.category || "", margin + fullTableWidth * 0.5, rowY + 4);
+      doc.text(selection.quantity || "", margin + fullTableWidth - 28, rowY + 4);
+      if (selection.deliveryDate) {
+        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + fullTableWidth - 15, rowY + 4);
+      }
+    });
+
+    yPos += Math.max(filledSelections.length, 1) * rowHeight + 8;
+  }
 
   const boxWidth = (pageWidth - 2 * margin - gap) / 2;
   const boxHeight = 42;

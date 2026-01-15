@@ -714,6 +714,9 @@ export default function MyDashboard() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
+                          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                            {order.fournisseur || "BDIS"}
+                          </Badge>
                           <Badge variant="outline" className="text-xs whitespace-nowrap">
                             Liv: {formatDateShort(order.dateLivraison)}
                           </Badge>
@@ -1425,6 +1428,7 @@ export default function MyDashboard() {
               <div className="p-4 bg-muted/30 rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xl font-bold">{previewOrder.orderCode}</p>
+                  <Badge variant="secondary">{previewOrder.fournisseur || "BDIS"}</Badge>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
                   <div className="p-2 bg-background rounded">
