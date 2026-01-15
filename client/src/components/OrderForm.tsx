@@ -46,7 +46,8 @@ const MONTHS = [
   { value: "11", label: "nov." },
   { value: "12", label: "déc." },
 ];
-const YEARS = ["2025", "2026", "2027"];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 11 }, (_, i) => String(CURRENT_YEAR + i));
 
 // Composant de saisie de date avec sélecteurs déroulants
 function DateInput({ value, onChange, testId }: { 
