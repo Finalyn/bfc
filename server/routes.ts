@@ -1554,6 +1554,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let allOrders = await db.select().from(orders);
       
+      // Filter by fournisseur
+      const fournisseur = req.query.fournisseur as string | undefined;
+      if (fournisseur && fournisseur !== "ALL") {
+        allOrders = allOrders.filter(o => o.fournisseur === fournisseur);
+      }
+      
       // Filter by search
       if (search) {
         const searchLower = search.toLowerCase();

@@ -6,10 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle, FileText, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PenTool, Eraser, ArrowRight, ArrowLeft, AlertCircle, FileText, Mail, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 
 interface SignatureData {
   signature: string;
@@ -25,12 +28,18 @@ interface SignatureStepProps {
   onBack: () => void;
   stepNumber?: number;
   totalSteps?: number;
+  fournisseur?: string;
 }
 
-export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }: SignatureStepProps) {
+export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, fournisseur = "BDIS" }: SignatureStepProps) {
   const signatureRef = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string>("");
+  const [cgvDialogOpen, setCgvDialogOpen] = useState(false);
+  
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === fournisseur) || FOURNISSEURS_CONFIG[0];
+  const cgvLines = fournisseurConfig.cgv.split('\n').slice(0, 8);
+  const cgvExtrait = cgvLines.join('\n');
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: {
@@ -144,30 +153,55 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4 }
             </CardContent>
           </Card>
 
-          {/* Extrait des CGV */}
+          {/* Extrait des CGV du fournisseur */}
           <Card className="border-2 bg-muted/30">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                EXTRAIT DES CONDITIONS GÉNÉRALES DE VENTE
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  CGV - {fournisseurConfig.nom}
+                </CardTitle>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCgvDialogOpen(true)}
+                  className="h-7 text-xs"
+                  data-testid="button-voir-cgv"
+                >
+                  <Eye className="w-3 h-3 mr-1" />
+                  Voir plus
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground space-y-3">
-              <div className="space-y-1">
-                <p>• RÈGLEMENT À 30 JOURS DATE DE FACTURE</p>
-                <p>• Escompte de 2% pour paiement comptant</p>
-                <p>• Port payé aller et retour à notre charge uniquement pour les box mis en surface de vente</p>
-                <p className="text-[10px] pt-2 italic">
-                  Nous nous réservons la propriété des marchandises fournies jusqu'au dernier jour de leur parfait paiement, conformément aux dispositions de la loi n°80335 du 12 mai 1980
-                </p>
+              <div className="whitespace-pre-wrap text-[11px] leading-relaxed max-h-32 overflow-hidden">
+                {cgvExtrait}...
               </div>
               <div className="pt-3 border-t">
                 <p className="text-sm font-medium text-foreground text-center bg-primary/10 p-3 rounded-lg">
-                  En signant ci-dessous, vous acceptez les Conditions Générales de Vente
+                  En signant ci-dessous, vous acceptez les CGV de {fournisseurConfig.nom}
                 </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Dialogue CGV complet */}
+          <Dialog open={cgvDialogOpen} onOpenChange={setCgvDialogOpen}>
+            <DialogContent className="max-w-lg max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Conditions Générales de Vente - {fournisseurConfig.nom}
+                </DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh] pr-4">
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                  {fournisseurConfig.cgv}
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
 
           {/* Newsletter */}
           <Card className="border-2">

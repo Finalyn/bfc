@@ -83,6 +83,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 
 interface Client {
   id: number;
@@ -173,6 +174,7 @@ export default function AdminDashboard() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [clientBadgeFilter, setClientBadgeFilter] = useState<"ALL" | "NEW" | "MODIFIED" | "LAMBDA">("ALL");
+  const [orderFournisseurFilter, setOrderFournisseurFilter] = useState<string>("ALL");
   const pageSize = 50;
   const { toast } = useToast();
 
@@ -298,8 +300,8 @@ export default function AdminDashboard() {
   });
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery<PaginatedResponse<OrderDb>>({
-    queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}`).then(r => r.json()),
+    queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection, orderFournisseurFilter],
+    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
   });
 
@@ -1143,7 +1145,20 @@ export default function AdminDashboard() {
             <Card>
               <CardContent className="p-0">
                 <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">Toutes les commandes</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Fournisseur :</span>
+                    <Select value={orderFournisseurFilter} onValueChange={setOrderFournisseurFilter}>
+                      <SelectTrigger className="w-40" data-testid="select-order-fournisseur-filter">
+                        <SelectValue placeholder="Tous" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Tous</SelectItem>
+                        {FOURNISSEURS_CONFIG.map(f => (
+                          <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"

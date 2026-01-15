@@ -108,6 +108,7 @@ export default function OrderPage() {
           orderCode,
           orderDate: data.orderDate || now.split('T')[0],
           salesRepName: data.salesRepName,
+          fournisseur: data.fournisseur || "BDIS",
           responsableName: data.responsableName,
           responsableTel: data.responsableTel,
           responsableEmail: data.responsableEmail,
@@ -208,6 +209,7 @@ export default function OrderPage() {
             orderCode,
             orderDate: variables.orderDate || now.split('T')[0],
             salesRepName: variables.salesRepName,
+            fournisseur: variables.fournisseur || "BDIS",
             responsableName: variables.responsableName,
             responsableTel: variables.responsableTel,
             responsableEmail: variables.responsableEmail,
@@ -402,6 +404,7 @@ export default function OrderPage() {
           onBack={() => setCurrentStep("preview")}
           stepNumber={3}
           totalSteps={5}
+          fournisseur={orderData.fournisseur || "BDIS"}
         />
       )}
       {currentStep === "review" && orderData.signature && (
