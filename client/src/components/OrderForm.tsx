@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit, Loader2, WifiOff } from "lucide-react";
+import { ClipboardList, ArrowRight, Building2, Truck, FileText, User, Store, UserPlus, Edit, Loader2, WifiOff, Package } from "lucide-react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
@@ -586,6 +586,46 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Sélection du Fournisseur - Section dédiée */}
+            <Card className="border-2 border-primary bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="w-5 h-5 text-primary" />
+                  Choix du fournisseur
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Sélectionnez le fournisseur pour cette commande</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    FOURNISSEUR <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="fournisseur"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={(value) => {
+                        field.onChange(value);
+                        setThemeSelections([]);
+                      }}>
+                        <SelectTrigger className="h-12 text-base border-primary/30" data-testid="select-fournisseur">
+                          <SelectValue placeholder="Sélectionner un fournisseur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FOURNISSEURS_CONFIG.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.fournisseur && (
+                    <p className="text-xs text-destructive">{errors.fournisseur.message}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* En-tête : Date et Commercial */}
             <Card className="border-2">
               <CardHeader className="pb-3">
@@ -596,33 +636,6 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      FOURNISSEUR <span className="text-destructive">*</span>
-                    </Label>
-                    <Controller
-                      name="fournisseur"
-                      control={control}
-                      render={({ field }) => (
-                        <Select value={field.value} onValueChange={(value) => {
-                          field.onChange(value);
-                          setThemeSelections([]);
-                        }}>
-                          <SelectTrigger className="h-12 text-base" data-testid="select-fournisseur">
-                            <SelectValue placeholder="Sélectionner un fournisseur" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FOURNISSEURS_CONFIG.map((f) => (
-                              <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.fournisseur && (
-                      <p className="text-xs text-destructive">{errors.fournisseur.message}</p>
-                    )}
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="orderDate" className="text-sm font-medium">
                       DATE <span className="text-destructive">*</span>
