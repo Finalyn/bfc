@@ -46,6 +46,7 @@ import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, sta
 import { fr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from "recharts";
 import type { OrderDb } from "@shared/schema";
+import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 
 const formatDateShort = (date: string | null | undefined): string => {
   if (!date) return "-";
@@ -113,6 +114,7 @@ export default function MyDashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
   const [selectedCommercial, setSelectedCommercial] = useState<string>("mine");
+  const [selectedFournisseur, setSelectedFournisseur] = useState<string>("all");
   const [selectedAnalyticsClient, setSelectedAnalyticsClient] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
   const [datesDialogOpen, setDatesDialogOpen] = useState(false);
@@ -310,14 +312,20 @@ export default function MyDashboard() {
   };
 
   const filteredOrders = useMemo(() => {
+    let orders = allOrders;
+    
     if (!isAdmin || selectedCommercial === "mine") {
-      return allOrders.filter(order => order.salesRepName === userName);
+      orders = orders.filter(order => order.salesRepName === userName);
+    } else if (selectedCommercial !== "all") {
+      orders = orders.filter(order => order.salesRepName === selectedCommercial);
     }
-    if (selectedCommercial === "all") {
-      return allOrders;
+    
+    if (selectedFournisseur !== "all") {
+      orders = orders.filter(order => order.fournisseur === selectedFournisseur);
     }
-    return allOrders.filter(order => order.salesRepName === selectedCommercial);
-  }, [allOrders, isAdmin, selectedCommercial, userName]);
+    
+    return orders;
+  }, [allOrders, isAdmin, selectedCommercial, selectedFournisseur, userName]);
 
 
   const monthStart = startOfMonth(currentDate);
@@ -490,8 +498,12 @@ export default function MyDashboard() {
   const globalStats = useMemo(() => {
     const themeCount: { [key: string]: number } = {};
     const monthCount: { [key: number]: number } = {};
+    const fournisseurCount: { [key: string]: number } = {};
 
     filteredOrders.forEach(order => {
+      const fournisseur = order.fournisseur || "BDIS";
+      fournisseurCount[fournisseur] = (fournisseurCount[fournisseur] || 0) + 1;
+      
       try {
         const selections: ThemeSelection[] = JSON.parse(order.themeSelections || "[]");
         selections.forEach(sel => {
@@ -521,7 +533,14 @@ export default function MyDashboard() {
       commandes: monthCount[i] || 0,
     }));
 
-    return { topThemes, monthlyData };
+    const fournisseurData = Object.entries(fournisseurCount)
+      .map(([id, count]) => {
+        const config = FOURNISSEURS_CONFIG.find(f => f.id === id);
+        return { name: config?.nom || id, value: count, id };
+      })
+      .sort((a, b) => b.value - a.value);
+
+    return { topThemes, monthlyData, fournisseurData };
   }, [filteredOrders]);
 
   const selectedClientData = useMemo(() => {
@@ -562,29 +581,44 @@ export default function MyDashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto p-4 space-y-6">
-        {isAdmin && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <Filter className="w-5 h-5 text-muted-foreground" />
-                <Select value={selectedCommercial} onValueChange={setSelectedCommercial}>
-                  <SelectTrigger className="flex-1" data-testid="select-commercial-filter">
-                    <SelectValue placeholder="Filtrer par commercial" />
+                {isAdmin && (
+                  <Select value={selectedCommercial} onValueChange={setSelectedCommercial}>
+                    <SelectTrigger className="flex-1" data-testid="select-commercial-filter">
+                      <SelectValue placeholder="Filtrer par commercial" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les commerciaux</SelectItem>
+                      <SelectItem value="mine">Mes commandes ({userName})</SelectItem>
+                      {commerciaux.filter(c => c.displayName && c.displayName !== userName).map(commercial => (
+                        <SelectItem key={commercial.id} value={commercial.displayName}>
+                          {commercial.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Select value={selectedFournisseur} onValueChange={setSelectedFournisseur}>
+                  <SelectTrigger className="flex-1" data-testid="select-fournisseur-filter">
+                    <SelectValue placeholder="Filtrer par fournisseur" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les commerciaux</SelectItem>
-                    <SelectItem value="mine">Mes commandes ({userName})</SelectItem>
-                    {commerciaux.filter(c => c.displayName && c.displayName !== userName).map(commercial => (
-                      <SelectItem key={commercial.id} value={commercial.displayName}>
-                        {commercial.displayName}
+                    <SelectItem value="all">Tous les fournisseurs</SelectItem>
+                    {FOURNISSEURS_CONFIG.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nom}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Users className="w-4 h-4" />
@@ -1194,6 +1228,55 @@ export default function MyDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Répartition par fournisseur
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {globalStats.fournisseurData.length > 0 ? (
+                  <div className="flex flex-col md:flex-row items-center gap-4">
+                    <ResponsiveContainer width="100%" height={200}>
+                      <RechartsPie>
+                        <Pie
+                          data={globalStats.fournisseurData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="value"
+                          nameKey="name"
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                          {globalStats.fournisseurData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </RechartsPie>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {globalStats.fournisseurData.map((item, index) => (
+                        <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <div>
+                            <p className="text-sm font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.value} cmd</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">Aucune donnée</p>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
