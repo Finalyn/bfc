@@ -49,8 +49,12 @@ export function ReviewStep({
     ? JSON.parse(orderData.themeSelections) 
     : [];
   
-  const themesTouteAnnee = themeSelections.filter(t => t.category === "TOUTE_ANNEE" && (t.quantity || t.deliveryDate));
-  const themesSaisonnier = themeSelections.filter(t => t.category === "SAISONNIER" && (t.quantity || t.deliveryDate));
+  const filteredThemes = themeSelections.filter(t => t.quantity || t.deliveryDate);
+  const categoriesUniques = Array.from(new Set(filteredThemes.map(t => t.category)));
+  const themesByCategory = categoriesUniques.map(cat => ({
+    category: cat,
+    themes: filteredThemes.filter(t => t.category === cat)
+  }));
 
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
@@ -145,22 +149,23 @@ export function ReviewStep({
         </Card>
 
         {/* Thèmes sélectionnés */}
-        {(themesTouteAnnee.length > 0 || themesSaisonnier.length > 0) && (
+        {themesByCategory.length > 0 && (
           <Card className="border-2 mb-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Package className="w-5 h-5 text-primary" />
-                Thèmes commandés
+                Produits commandés
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                {/* Toute l'année */}
-                {themesTouteAnnee.length > 0 && (
-                  <div>
-                    <h3 className="font-bold text-xs bg-primary text-primary-foreground p-2 rounded-t-md text-center">TOUTE L'ANNEE</h3>
+              <div className="space-y-3">
+                {themesByCategory.map((group, groupIdx) => (
+                  <div key={groupIdx}>
+                    <h3 className="font-bold text-xs bg-primary text-primary-foreground p-2 rounded-t-md text-center">
+                      {group.category}
+                    </h3>
                     <div className="border border-t-0 rounded-b-md p-2 space-y-1">
-                      {themesTouteAnnee.map((t, idx) => (
+                      {group.themes.map((t, idx) => (
                         <div key={idx} className="flex justify-between text-xs">
                           <span>{t.theme}</span>
                           <span className="text-muted-foreground">
@@ -172,26 +177,7 @@ export function ReviewStep({
                       ))}
                     </div>
                   </div>
-                )}
-
-                {/* Saisonnier */}
-                {themesSaisonnier.length > 0 && (
-                  <div>
-                    <h3 className="font-bold text-xs bg-gray-400 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
-                    <div className="border border-t-0 rounded-b-md p-2 space-y-1">
-                      {themesSaisonnier.map((t, idx) => (
-                        <div key={idx} className="flex justify-between text-xs">
-                          <span>{t.theme}</span>
-                          <span className="text-muted-foreground">
-                            {t.quantity && `Qté: ${t.quantity}`}
-                            {t.quantity && t.deliveryDate && " - "}
-                            {t.deliveryDate && format(new Date(t.deliveryDate), "dd/MM/yy")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                ))}
               </div>
             </CardContent>
           </Card>
