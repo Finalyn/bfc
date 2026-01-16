@@ -75,67 +75,121 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
 
   // Thèmes
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+  const filteredThemes = themeSelections.filter(t => t.quantity || t.deliveryDate);
+  const isBDIS = order.fournisseur === "BDIS";
 
-  // En-têtes des tableaux de thèmes
-  worksheet.getCell(`A${currentRow}`).value = "TOUTE L'ANNEE";
-  worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
-  worksheet.getCell(`A${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
-  worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+  if (isBDIS) {
+    // Layout BDIS: deux colonnes
+    worksheet.getCell(`A${currentRow}`).value = "TOUTE L'ANNEE";
+    worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    worksheet.getCell(`A${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
 
-  worksheet.getCell(`E${currentRow}`).value = "SAISONNIER";
-  worksheet.getCell(`E${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
-  worksheet.getCell(`E${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE67E22" } };
-  worksheet.mergeCells(`E${currentRow}:H${currentRow}`);
-  currentRow++;
-
-  // Sous-en-têtes
-  worksheet.getCell(`A${currentRow}`).value = "THEME";
-  worksheet.getCell(`B${currentRow}`).value = "";
-  worksheet.getCell(`C${currentRow}`).value = "QTE";
-  worksheet.getCell(`D${currentRow}`).value = "Date livr.";
-  worksheet.getCell(`E${currentRow}`).value = "THEME";
-  worksheet.getCell(`F${currentRow}`).value = "";
-  worksheet.getCell(`G${currentRow}`).value = "QTE";
-  worksheet.getCell(`H${currentRow}`).value = "Date livr.";
-  ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {
-    worksheet.getCell(`${col}${currentRow}`).font = { bold: true, size: 9 };
-    worksheet.getCell(`${col}${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
-  });
-  currentRow++;
-
-  // Lignes des thèmes
-  const maxThemes = Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length);
-  for (let i = 0; i < maxThemes; i++) {
-    const toutAnnee = THEMES_TOUTE_ANNEE[i];
-    const saisonnier = THEMES_SAISONNIER[i];
-
-    if (toutAnnee) {
-      worksheet.getCell(`A${currentRow}`).value = toutAnnee;
-      worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-      const selection = themeSelections.find(t => t.theme === toutAnnee && t.category === "TOUTE_ANNEE");
-      if (selection?.quantity) worksheet.getCell(`C${currentRow}`).value = selection.quantity;
-      if (selection?.deliveryDate) worksheet.getCell(`D${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
-    }
-
-    if (saisonnier) {
-      worksheet.getCell(`E${currentRow}`).value = saisonnier;
-      worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
-      const selection = themeSelections.find(t => t.theme === saisonnier && t.category === "SAISONNIER");
-      if (selection?.quantity) worksheet.getCell(`G${currentRow}`).value = selection.quantity;
-      if (selection?.deliveryDate) worksheet.getCell(`H${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
-    }
-
-    // Bordures
-    ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {
-      worksheet.getCell(`${col}${currentRow}`).border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" }
-      };
-    });
-
+    worksheet.getCell(`E${currentRow}`).value = "SAISONNIER";
+    worksheet.getCell(`E${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    worksheet.getCell(`E${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE67E22" } };
+    worksheet.mergeCells(`E${currentRow}:H${currentRow}`);
     currentRow++;
+
+    worksheet.getCell(`A${currentRow}`).value = "THEME";
+    worksheet.getCell(`B${currentRow}`).value = "";
+    worksheet.getCell(`C${currentRow}`).value = "QTE";
+    worksheet.getCell(`D${currentRow}`).value = "Date livr.";
+    worksheet.getCell(`E${currentRow}`).value = "THEME";
+    worksheet.getCell(`F${currentRow}`).value = "";
+    worksheet.getCell(`G${currentRow}`).value = "QTE";
+    worksheet.getCell(`H${currentRow}`).value = "Date livr.";
+    ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {
+      worksheet.getCell(`${col}${currentRow}`).font = { bold: true, size: 9 };
+      worksheet.getCell(`${col}${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+    });
+    currentRow++;
+
+    const maxThemes = Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length);
+    for (let i = 0; i < maxThemes; i++) {
+      const toutAnnee = THEMES_TOUTE_ANNEE[i];
+      const saisonnier = THEMES_SAISONNIER[i];
+
+      if (toutAnnee) {
+        worksheet.getCell(`A${currentRow}`).value = toutAnnee;
+        worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+        const selection = themeSelections.find(t => t.theme === toutAnnee && t.category === "TOUTE_ANNEE");
+        if (selection?.quantity) worksheet.getCell(`C${currentRow}`).value = selection.quantity;
+        if (selection?.deliveryDate) worksheet.getCell(`D${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
+      }
+
+      if (saisonnier) {
+        worksheet.getCell(`E${currentRow}`).value = saisonnier;
+        worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
+        const selection = themeSelections.find(t => t.theme === saisonnier && t.category === "SAISONNIER");
+        if (selection?.quantity) worksheet.getCell(`G${currentRow}`).value = selection.quantity;
+        if (selection?.deliveryDate) worksheet.getCell(`H${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
+      }
+
+      ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {
+        worksheet.getCell(`${col}${currentRow}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" }
+        };
+      });
+
+      currentRow++;
+    }
+  } else {
+    // Layout autres fournisseurs: afficher uniquement les produits commandés par catégorie
+    const categoriesUniques = Array.from(new Set(filteredThemes.map(t => t.category)));
+    
+    if (categoriesUniques.length > 0) {
+      worksheet.getCell(`A${currentRow}`).value = "PRODUITS COMMANDÉS";
+      worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+      worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+      currentRow++;
+
+      categoriesUniques.forEach((category) => {
+        const categoryThemes = filteredThemes.filter(t => t.category === category);
+        
+        // En-tête de catégorie
+        worksheet.getCell(`A${currentRow}`).value = category;
+        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
+        worksheet.getCell(`A${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+        worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+        currentRow++;
+
+        // Sous-en-têtes
+        worksheet.getCell(`A${currentRow}`).value = "PRODUIT";
+        worksheet.getCell(`B${currentRow}`).value = "";
+        worksheet.getCell(`C${currentRow}`).value = "QTE";
+        worksheet.getCell(`D${currentRow}`).value = "Date livr.";
+        ["A", "B", "C", "D"].forEach(col => {
+          worksheet.getCell(`${col}${currentRow}`).font = { bold: true, size: 9 };
+          worksheet.getCell(`${col}${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+        });
+        currentRow++;
+
+        // Lignes des produits
+        categoryThemes.forEach((t) => {
+          worksheet.getCell(`A${currentRow}`).value = t.theme;
+          worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+          if (t.quantity) worksheet.getCell(`C${currentRow}`).value = t.quantity;
+          if (t.deliveryDate) worksheet.getCell(`D${currentRow}`).value = format(new Date(t.deliveryDate), "dd/MM");
+
+          ["A", "B", "C", "D"].forEach(col => {
+            worksheet.getCell(`${col}${currentRow}`).border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+            };
+          });
+
+          currentRow++;
+        });
+        
+        currentRow++;
+      });
+    }
   }
   currentRow++;
 
