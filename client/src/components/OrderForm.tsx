@@ -1168,27 +1168,17 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     />
                   </div>
                   {facturationMode === "LCR" && (
-                    <div className="mt-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
-                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                            RIB obligatoire pour le mode LCR
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="facturationRib" className="text-sm text-amber-700 dark:text-amber-300">
-                            Numéro de RIB (IBAN)
-                          </Label>
-                          <Input
-                            id="facturationRib"
-                            {...register("facturationRib")}
-                            className="h-12 text-base bg-white dark:bg-background"
-                            placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
-                            data-testid="input-rib"
-                          />
-                        </div>
-                      </div>
+                    <div className="mt-3 space-y-2">
+                      <Label htmlFor="facturationRib" className="text-xs font-medium text-muted-foreground">
+                        IBAN
+                      </Label>
+                      <Input
+                        id="facturationRib"
+                        {...register("facturationRib")}
+                        className="h-11 text-base"
+                        placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                        data-testid="input-rib"
+                      />
                     </div>
                   )}
                   <div className="space-y-2 mt-3">
