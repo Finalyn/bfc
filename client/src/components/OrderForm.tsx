@@ -1170,7 +1170,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   {facturationMode === "LCR" && (
                     <div className="mt-3 space-y-2">
                       <Label htmlFor="facturationRib" className="text-xs font-medium text-muted-foreground">
-                        IBAN
+                        RIB
                       </Label>
                       <Input
                         id="facturationRib"
