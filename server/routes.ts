@@ -6,7 +6,8 @@ import {
   commerciaux, insertCommercialSchema,
   fournisseurs, insertFournisseurSchema,
   themes, insertThemeSchema,
-  orders, insertOrderDbSchema, updateOrderDatesSchema
+  orders, insertOrderDbSchema, updateOrderDatesSchema,
+  pushSubscriptions, insertPushSubscriptionSchema
 } from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
@@ -2558,6 +2559,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error exporting planning:", error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // === NOTIFICATIONS PUSH ===
+  
+  // Enregistrer une souscription push
+  app.post("/api/notifications/subscribe", async (req, res) => {
+    try {
+      const { subscription, userName } = req.body;
+      
+      if (!subscription || !userName || typeof userName !== 'string') {
+        return res.status(400).json({ error: "Subscription et userName requis" });
+      }
+
+      const { endpoint, keys } = subscription;
+      if (!endpoint || typeof endpoint !== 'string' || !keys?.p256dh || !keys?.auth) {
+        return res.status(400).json({ error: "Subscription invalide" });
+      }
+
+      // Valider avec le schéma
+      const validationResult = insertPushSubscriptionSchema.safeParse({
+        userName: userName.trim(),
+        endpoint: endpoint.trim(),
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+      });
+
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Données de souscription invalides" });
+      }
+
+      // Supprimer l'ancienne souscription si elle existe
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+
+      // Insérer la nouvelle souscription
+      await db.insert(pushSubscriptions).values(validationResult.data);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error subscribing to push:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Désinscrire une souscription push
+  app.post("/api/notifications/unsubscribe", async (req, res) => {
+    try {
+      const { userName } = req.body;
+      
+      if (!userName || typeof userName !== 'string') {
+        return res.status(400).json({ error: "userName requis" });
+      }
+
+      const trimmedUserName = userName.trim();
+      if (!trimmedUserName) {
+        return res.status(400).json({ error: "userName invalide" });
+      }
+
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.userName, trimmedUserName));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error unsubscribing from push:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Vérifier si un utilisateur est inscrit aux notifications
+  app.get("/api/notifications/status/:userName", async (req, res) => {
+    try {
+      const { userName } = req.params;
+      const subscriptions = await db.select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userName, userName));
+      
+      res.json({ subscribed: subscriptions.length > 0 });
+    } catch (error: any) {
+      console.error("Error checking notification status:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Récupérer les événements à venir pour notifications (livraisons, inventaires, retours)
+  app.get("/api/notifications/events/:userName", async (req, res) => {
+    try {
+      const { userName } = req.params;
+      const { days = "7" } = req.query;
+      const daysAhead = parseInt(days as string) || 7;
+      
+      const parisNow = formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd");
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + daysAhead);
+      const futureStr = formatInTimeZone(futureDate, "Europe/Paris", "yyyy-MM-dd");
+
+      // Récupérer les commandes du commercial
+      const userOrders = await db.select().from(orders)
+        .where(eq(orders.salesRepName, userName));
+
+      const events: Array<{
+        type: 'livraison' | 'inventaire_prevu' | 'inventaire' | 'retour';
+        date: string;
+        orderCode: string;
+        clientName: string;
+      }> = [];
+
+      for (const order of userOrders) {
+        // Vérifier les livraisons
+        if (order.dateLivraison && order.dateLivraison >= parisNow && order.dateLivraison <= futureStr) {
+          events.push({
+            type: 'livraison',
+            date: order.dateLivraison,
+            orderCode: order.orderCode,
+            clientName: order.clientName || '',
+          });
+        }
+
+        // Vérifier les inventaires prévus
+        if (order.dateInventairePrevu && order.dateInventairePrevu >= parisNow && order.dateInventairePrevu <= futureStr) {
+          events.push({
+            type: 'inventaire_prevu',
+            date: order.dateInventairePrevu,
+            orderCode: order.orderCode,
+            clientName: order.clientName || '',
+          });
+        }
+
+        // Vérifier les retours
+        if (order.dateRetour && order.dateRetour >= parisNow && order.dateRetour <= futureStr) {
+          events.push({
+            type: 'retour',
+            date: order.dateRetour,
+            orderCode: order.orderCode,
+            clientName: order.clientName || '',
+          });
+        }
+      }
+
+      // Trier par date
+      events.sort((a, b) => a.date.localeCompare(b.date));
+
+      res.json({ events });
+    } catch (error: any) {
+      console.error("Error fetching notification events:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

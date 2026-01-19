@@ -286,3 +286,21 @@ export const updateOrderDatesSchema = z.object({
 export type OrderDb = typeof orders.$inferSelect;
 export type InsertOrderDb = z.infer<typeof insertOrderDbSchema>;
 export type UpdateOrderDates = z.infer<typeof updateOrderDatesSchema>;
+
+// Table des souscriptions push notifications
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userName: text("user_name").notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
