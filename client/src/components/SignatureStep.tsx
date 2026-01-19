@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
+import { DateInput } from "@/components/ui/date-input";
 
 interface SignatureData {
   signature: string;
@@ -41,7 +42,7 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
   const cgvLines = fournisseurConfig.cgv.split('\n').slice(0, 8);
   const cgvExtrait = cgvLines.join('\n');
   
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, control, formState: { errors } } = useForm({
     defaultValues: {
       signatureLocation: "",
       signatureDate: formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd"),
@@ -122,12 +123,17 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
                   <Label htmlFor="signatureDate" className="text-sm font-medium">
                     Date de signature <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="signatureDate"
-                    type="date"
-                    data-testid="input-signature-date"
-                    {...register("signatureDate", { required: "La date est requise" })}
-                    className="h-12 text-sm sm:text-base text-right"
+                  <Controller
+                    name="signatureDate"
+                    control={control}
+                    rules={{ required: "La date est requise" }}
+                    render={({ field }) => (
+                      <DateInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        testId="input-signature-date"
+                      />
+                    )}
                   />
                   {errors.signatureDate && (
                     <p className="text-xs text-destructive">{errors.signatureDate.message}</p>
