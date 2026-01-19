@@ -315,6 +315,70 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
   const { data: commerciaux = [] } = useQuery<any[]>({ queryKey: ["/api/data/commerciaux"] });
   const { data: clients = [] } = useQuery<Client[]>({ queryKey: ["/api/data/clients"] });
+  
+  // Charger les fournisseurs depuis la base de données
+  const { data: dbFournisseurs = [] } = useQuery<{ id: number; nom: string; nomCourt: string }[]>({
+    queryKey: ["/api/data/fournisseurs"],
+  });
+  
+  // Charger les thèmes depuis la base de données
+  const { data: dbThemes = [] } = useQuery<{ id: number; theme: string; fournisseur: string }[]>({
+    queryKey: ["/api/data/themes"],
+  });
+  
+  // Fusionner les fournisseurs BDD avec la config statique (fallback)
+  const fournisseursList = useMemo(() => {
+    if (dbFournisseurs.length > 0) {
+      return dbFournisseurs.map(f => ({
+        id: f.nomCourt || f.nom,
+        nom: f.nom,
+        nomCourt: f.nomCourt || f.nom,
+      }));
+    }
+    // Fallback sur la config statique
+    return FOURNISSEURS_CONFIG.map(f => ({
+      id: f.id,
+      nom: f.nom,
+      nomCourt: f.id,
+    }));
+  }, [dbFournisseurs]);
+  
+  // Obtenir les thèmes pour le fournisseur sélectionné
+  const themesForFournisseur = useMemo(() => {
+    const fournisseur = watch("fournisseur");
+    if (!fournisseur) return { touteAnnee: [] as string[], saisonnier: [] as string[], autres: [] as string[] };
+    
+    // Chercher les thèmes en BDD pour ce fournisseur
+    const dbThemesForFournisseur = dbThemes.filter(t => t.fournisseur === fournisseur);
+    
+    if (dbThemesForFournisseur.length > 0) {
+      // Utiliser les thèmes de la BDD
+      const themeNames = dbThemesForFournisseur.map(t => t.theme);
+      return {
+        touteAnnee: themeNames,
+        saisonnier: [],
+        autres: [],
+      };
+    }
+    
+    // Fallback sur la config statique
+    const staticConfig = FOURNISSEURS_CONFIG.find(f => f.id === fournisseur);
+    if (staticConfig && staticConfig.themes) {
+      const touteAnnee = staticConfig.themes.find(c => c.categorie.includes("TOUTE"))?.items || [];
+      const saisonnier = staticConfig.themes.find(c => c.categorie.includes("SAISONNIER"))?.items || [];
+      const autres = staticConfig.themes
+        .filter(c => !c.categorie.includes("TOUTE") && !c.categorie.includes("SAISONNIER"))
+        .flatMap(c => c.items);
+      return { touteAnnee, saisonnier, autres };
+    }
+    
+    // Dernier fallback sur les constantes BDIS
+    return {
+      touteAnnee: [...THEMES_TOUTE_ANNEE],
+      saisonnier: [...THEMES_SAISONNIER],
+      autres: [],
+    };
+  }, [dbThemes, watch("fournisseur")]);
 
   const commerciauxOptions = useMemo<ComboboxOption[]>(() => 
     commerciaux.map(c => ({
@@ -586,10 +650,6 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
   const facturationMode = watch("facturationMode");
   const selectedFournisseur = watch("fournisseur");
-  
-  const currentFournisseurConfig = useMemo(() => {
-    return FOURNISSEURS_CONFIG.find(f => f.id === selectedFournisseur);
-  }, [selectedFournisseur]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -681,7 +741,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                           <SelectValue placeholder="Sélectionner un fournisseur" />
                         </SelectTrigger>
                         <SelectContent>
-                          {FOURNISSEURS_CONFIG.map((f) => (
+                          {fournisseursList.map((f) => (
                             <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
                           ))}
                         </SelectContent>
@@ -850,15 +910,18 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
             {/* Thèmes - Tableau dynamique selon fournisseur */}
             <Card className="border-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Sélection des produits - {currentFournisseurConfig?.nom || "BDIS"}</CardTitle>
+                <CardTitle className="text-lg">Sélection des produits - {fournisseursList.find(f => f.id === selectedFournisseur)?.nom || selectedFournisseur || "BDIS"}</CardTitle>
                 <p className="text-sm text-muted-foreground">Indiquez la quantité et la date de livraison pour chaque produit souhaité</p>
               </CardHeader>
               <CardContent>
-                {selectedFournisseur === "BDIS" ? (
+                {themesForFournisseur.touteAnnee.length > 0 || themesForFournisseur.saisonnier.length > 0 ? (
                   <div className="space-y-6">
-                    {/* Catégorie TOUTE L'ANNEE - BDIS */}
+                    {/* Catégorie TOUTE L'ANNEE ou Produits */}
+                    {themesForFournisseur.touteAnnee.length > 0 && (
                     <div>
-                      <h3 className="font-bold text-sm bg-primary text-primary-foreground p-2 rounded-t-md text-center">TOUTE L'ANNEE</h3>
+                      <h3 className="font-bold text-sm bg-primary text-primary-foreground p-2 rounded-t-md text-center">
+                        {themesForFournisseur.saisonnier.length > 0 ? "TOUTE L'ANNEE" : "PRODUITS"}
+                      </h3>
                       <div className="border border-t-0 rounded-b-md">
                         <table className="w-full text-xs">
                           <thead>
@@ -869,7 +932,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                             </tr>
                           </thead>
                           <tbody>
-                            {THEMES_TOUTE_ANNEE.map((theme, idx) => (
+                            {themesForFournisseur.touteAnnee.map((theme, idx) => (
                               <tr key={theme} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
                                 <td className="p-1.5 text-xs font-medium">{theme}</td>
                                 <td className="p-1">
@@ -896,8 +959,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                         </table>
                       </div>
                     </div>
+                    )}
 
-                    {/* Catégorie SAISONNIER - BDIS */}
+                    {/* Catégorie SAISONNIER */}
+                    {themesForFournisseur.saisonnier.length > 0 && (
                     <div>
                       <h3 className="font-bold text-sm bg-gray-400 text-white p-2 rounded-t-md text-center">SAISONNIER</h3>
                       <div className="border border-t-0 rounded-b-md">
@@ -910,7 +975,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                             </tr>
                           </thead>
                           <tbody>
-                            {THEMES_SAISONNIER.map((theme, idx) => (
+                            {themesForFournisseur.saisonnier.map((theme, idx) => (
                               <tr key={theme} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
                                 <td className="p-1.5 text-xs font-medium">{theme}</td>
                                 <td className="p-1">
@@ -937,52 +1002,12 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                         </table>
                       </div>
                     </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {currentFournisseurConfig?.themes.map((categorie, catIdx) => (
-                      <div key={categorie.categorie}>
-                        <h3 className={`font-bold text-sm p-2 rounded-t-md text-center text-white ${catIdx % 2 === 0 ? "bg-primary" : "bg-gray-500"}`}>
-                          {categorie.categorie}
-                        </h3>
-                        <div className="border border-t-0 rounded-b-md">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b bg-muted/50">
-                                <th className="p-2 text-left font-medium">PRODUIT</th>
-                                <th className="p-2 text-center font-medium w-16">QTE</th>
-                                <th className="p-2 text-center font-medium w-28">Date livr.</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {categorie.items.map((item, idx) => (
-                                <tr key={item} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
-                                  <td className="p-1.5 text-xs font-medium">{item}</td>
-                                  <td className="p-1">
-                                    <Input
-                                      className="h-9 text-sm text-center px-1"
-                                      placeholder=""
-                                      inputMode="numeric"
-                                      value={getThemeValue(item, categorie.categorie as any, "quantity")}
-                                      onChange={(e) => updateThemeSelection(item, categorie.categorie as any, "quantity", e.target.value)}
-                                      data-testid={`input-qty-${item.replace(/\s|\//g, "-").toLowerCase().slice(0, 20)}`}
-                                    />
-                                  </td>
-                                  <td className="p-1">
-                                    <CompactDateInput
-                                      value={getThemeValue(item, categorie.categorie as any, "deliveryDate")}
-                                      onChange={(val) => updateThemeSelection(item, categorie.categorie as any, "deliveryDate", val)}
-                                      testId={`input-date-${item.replace(/\s|\//g, "-").toLowerCase().slice(0, 20)}`}
-                                      hasError={themeDateErrors.has(`${item}-${categorie.categorie}`)}
-                                    />
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="p-4 text-center text-muted-foreground">
+                    <p>Aucun produit/thème disponible pour ce fournisseur.</p>
+                    <p className="text-sm mt-2">Veuillez ajouter des thèmes dans la base de données pour ce fournisseur.</p>
                   </div>
                 )}
               </CardContent>
