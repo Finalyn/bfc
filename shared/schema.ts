@@ -198,6 +198,7 @@ export const themes = pgTable("themes", {
   id: serial("id").primaryKey(),
   theme: text("theme").notNull(),
   fournisseur: text("fournisseur").notNull(),
+  categorie: text("categorie").default("TOUTE_ANNEE"),
 });
 
 export const insertThemeSchema = createInsertSchema(themes).omit({

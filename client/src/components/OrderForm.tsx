@@ -322,7 +322,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   });
   
   // Charger les thèmes depuis la base de données
-  const { data: dbThemes = [] } = useQuery<{ id: number; theme: string; fournisseur: string }[]>({
+  const { data: dbThemes = [] } = useQuery<{ id: number; theme: string; fournisseur: string; categorie?: string }[]>({
     queryKey: ["/api/data/themes"],
   });
   
@@ -352,13 +352,17 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     const dbThemesForFournisseur = dbThemes.filter(t => t.fournisseur === fournisseur);
     
     if (dbThemesForFournisseur.length > 0) {
-      // Utiliser les thèmes de la BDD
-      const themeNames = dbThemesForFournisseur.map(t => t.theme);
-      return {
-        touteAnnee: themeNames,
-        saisonnier: [],
-        autres: [],
-      };
+      // Utiliser les thèmes de la BDD avec catégorisation
+      const touteAnnee = dbThemesForFournisseur
+        .filter(t => !t.categorie || t.categorie === "TOUTE_ANNEE")
+        .map(t => t.theme);
+      const saisonnier = dbThemesForFournisseur
+        .filter(t => t.categorie === "SAISONNIER")
+        .map(t => t.theme);
+      const autres = dbThemesForFournisseur
+        .filter(t => t.categorie && t.categorie !== "TOUTE_ANNEE" && t.categorie !== "SAISONNIER")
+        .map(t => t.theme);
+      return { touteAnnee, saisonnier, autres };
     }
     
     // Fallback sur la config statique
@@ -372,12 +376,17 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       return { touteAnnee, saisonnier, autres };
     }
     
-    // Dernier fallback sur les constantes BDIS
-    return {
-      touteAnnee: [...THEMES_TOUTE_ANNEE],
-      saisonnier: [...THEMES_SAISONNIER],
-      autres: [],
-    };
+    // Dernier fallback sur les constantes BDIS (seulement pour BDIS)
+    if (fournisseur === "BDIS") {
+      return {
+        touteAnnee: [...THEMES_TOUTE_ANNEE],
+        saisonnier: [...THEMES_SAISONNIER],
+        autres: [],
+      };
+    }
+    
+    // Pour les autres fournisseurs sans config, retourner vide
+    return { touteAnnee: [], saisonnier: [], autres: [] };
   }, [dbThemes, watch("fournisseur")]);
 
   const commerciauxOptions = useMemo<ComboboxOption[]>(() => 

@@ -464,7 +464,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let result = dbThemes.map(t => ({
           id: t.id,
           theme: t.theme,
-          fournisseur: t.fournisseur
+          fournisseur: t.fournisseur,
+          categorie: t.categorie || "TOUTE_ANNEE"
         }));
         
         if (fournisseur) {
