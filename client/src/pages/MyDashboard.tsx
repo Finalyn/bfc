@@ -1040,59 +1040,69 @@ export default function MyDashboard() {
                     {filteredOrders.slice(0, 15).map((order) => (
                       <div 
                         key={order.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/30 gap-2"
+                        className="p-3 rounded-lg bg-muted/30"
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{order.clientName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {order.orderCode} • {order.orderDate}
-                            {isAdmin && selectedCommercial === "all" && (
-                              <span className="ml-2 text-primary">• {order.salesRepName}</span>
-                            )}
-                          </p>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{order.livraisonEnseigne || order.clientName}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {order.orderCode}
+                              {isAdmin && selectedCommercial === "all" && (
+                                <span className="ml-1 text-primary">• {order.salesRepName}</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => openPreviewDialog(order)}
+                              data-testid={`button-preview-order-${order.id}`}
+                              title="Voir détails"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => openDatesDialog(order)}
+                              data-testid={`button-edit-dates-${order.id}`}
+                              title="Modifier dates"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => sendEmailMutation.mutate({ 
+                                orderCode: order.orderCode, 
+                                clientEmail: order.clientEmail || "" 
+                              })}
+                              disabled={sendingEmailFor === order.orderCode || !order.clientEmail}
+                              data-testid={`button-send-email-${order.id}`}
+                              title={order.clientEmail ? "Envoyer les emails" : "Email client manquant"}
+                            >
+                              {sendingEmailFor === order.orderCode ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Mail className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="secondary" className="text-xs">
                             {order.fournisseur || "BDIS"}
                           </Badge>
-                          <Badge variant="outline" className="text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="text-xs">
                             Liv: {formatDateShort(order.dateLivraison)}
                           </Badge>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => openPreviewDialog(order)}
-                            data-testid={`button-preview-order-${order.id}`}
-                            title="Voir détails"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => openDatesDialog(order)}
-                            data-testid={`button-edit-dates-${order.id}`}
-                            title="Modifier dates"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => sendEmailMutation.mutate({ 
-                              orderCode: order.orderCode, 
-                              clientEmail: order.clientEmail || "" 
-                            })}
-                            disabled={sendingEmailFor === order.orderCode || !order.clientEmail}
-                            data-testid={`button-send-email-${order.id}`}
-                            title={order.clientEmail ? "Envoyer les emails" : "Email client manquant"}
-                          >
-                            {sendingEmailFor === order.orderCode ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Mail className="h-4 w-4" />
-                            )}
-                          </Button>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {order.orderDate}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -1977,29 +1987,43 @@ export default function MyDashboard() {
                     </div>
 
                     {Object.keys(selectedClientData.themes).length > 0 && (
-                      <ResponsiveContainer width="100%" height={180}>
-                        <RechartsPie>
-                          <Pie
-                            data={Object.entries(selectedClientData.themes)
-                              .sort((a, b) => b[1] - a[1])
-                              .slice(0, 6)
-                              .map(([name, value]) => ({ name, value }))}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={70}
-                            label={({ name, percent }) => `${name.substring(0, 10)}${name.length > 10 ? '...' : ''} (${(percent * 100).toFixed(0)}%)`}
-                          >
-                            {Object.entries(selectedClientData.themes)
-                              .slice(0, 6)
-                              .map((_, i) => (
-                                <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                              ))}
-                          </Pie>
-                          <Tooltip />
-                        </RechartsPie>
-                      </ResponsiveContainer>
+                      <div>
+                        <ResponsiveContainer width="100%" height={150}>
+                          <RechartsPie>
+                            <Pie
+                              data={Object.entries(selectedClientData.themes)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 6)
+                                .map(([name, value]) => ({ name, value }))}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={55}
+                              innerRadius={25}
+                            >
+                              {Object.entries(selectedClientData.themes)
+                                .slice(0, 6)
+                                .map((_, i) => (
+                                  <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip formatter={(value: number, name: string) => [`${value} unités`, name]} />
+                          </RechartsPie>
+                        </ResponsiveContainer>
+                        <div className="grid grid-cols-2 gap-1 mt-2">
+                          {Object.entries(selectedClientData.themes)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 6)
+                            .map(([name, value], i) => (
+                              <div key={name} className="flex items-center gap-1 text-xs">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="truncate">{name}</span>
+                                <span className="font-medium ml-auto">{value}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
