@@ -136,16 +136,16 @@ export async function sendOrderEmails(
           ` : ""}
           
           <!-- Livraison -->
-          <div style="background-color: #f0fdf4; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #22c55e;">
-            <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 16px;">Adresse de livraison</h3>
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #0369a1;">
+            <h3 style="margin: 0 0 10px 0; color: #0369a1; font-size: 16px;">Adresse de livraison</h3>
             <p style="margin: 0; color: #333; line-height: 1.6;">
               <strong>${order.livraisonEnseigne}</strong><br/>
               ${order.livraisonAdresse}<br/>
               ${order.livraisonCpVille}
             </p>
             ${firstDeliveryDate ? `
-            <p style="margin: 15px 0 0 0; padding-top: 15px; border-top: 1px solid #bbf7d0;">
-              <span style="color: #166534; font-weight: 600;">Première livraison prévue :</span> 
+            <p style="margin: 15px 0 0 0; padding-top: 15px; border-top: 1px solid #bae6fd;">
+              <span style="color: #0369a1; font-weight: 600;">Première livraison prévue :</span> 
               <span style="color: #333;">${firstDeliveryDate}</span>
             </p>
             ` : ''}
