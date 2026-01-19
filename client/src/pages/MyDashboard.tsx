@@ -57,6 +57,29 @@ const formatDateShort = (date: string | null | undefined): string => {
   }
 };
 
+const parseFlexibleDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null;
+  
+  // Try ISO format first (yyyy-MM-dd or 2026-08-07T00:00:00)
+  try {
+    const isoDate = parseISO(dateStr);
+    if (!isNaN(isoDate.getTime())) return isoDate;
+  } catch {}
+  
+  // Try dd/MM/yyyy format
+  const slashParts = dateStr.split("/");
+  if (slashParts.length === 3) {
+    const [day, month, year] = slashParts;
+    const isoStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    try {
+      const parsed = parseISO(isoStr);
+      if (!isNaN(parsed.getTime())) return parsed;
+    } catch {}
+  }
+  
+  return null;
+};
+
 type CalendarView = "day" | "week" | "month" | "year";
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
@@ -100,6 +123,7 @@ interface OrderEvent {
   order: OrderDb;
   eventType: DateEventType;
   dateLabel: string;
+  themeName?: string;
 }
 
 const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string }> = {
@@ -350,17 +374,23 @@ export default function MyDashboard() {
     const events: OrderEvent[] = [];
     
     filteredOrders.forEach(order => {
-      const checkDate = (dateStr: string | null | undefined, eventType: DateEventType) => {
+      const checkDate = (dateStr: string | null | undefined, eventType: DateEventType, themeName?: string) => {
         if (!dateStr) return;
-        try {
-          const d = parseISO(dateStr);
-          if (isSameDay(d, date)) {
-            events.push({ order, eventType, dateLabel: formatDateShort(dateStr) });
-          }
-        } catch {}
+        const d = parseFlexibleDate(dateStr);
+        if (d && isSameDay(d, date)) {
+          events.push({ order, eventType, dateLabel: format(d, "dd/MM/yy", { locale: fr }), themeName });
+        }
       };
 
-      checkDate(order.dateLivraison, "livraison");
+      // Parcourir chaque thème pour les dates de livraison individuelles
+      const themes = parseThemeSelections(order.themeSelections);
+      themes.forEach(theme => {
+        if (theme.deliveryDate && (theme.quantity || theme.deliveryDate)) {
+          checkDate(theme.deliveryDate, "livraison", theme.theme);
+        }
+      });
+
+      // Autres dates de la commande (inventaire, retour)
       checkDate(order.dateInventairePrevu, "inventairePrevu");
       checkDate(order.dateInventaire, "inventaire");
       checkDate(order.dateRetour, "retour");
@@ -983,11 +1013,14 @@ export default function MyDashboard() {
                         return (
                           <div className="space-y-2">
                             {dayEvents.slice(0, 5).map((event, idx) => (
-                              <div key={`${event.order.id}-${event.eventType}-${idx}`} className={`p-2 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded text-sm`}>
+                              <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`p-2 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded text-sm`}>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-xs font-medium ${DATE_EVENT_CONFIG[event.eventType].color}`}>
                                     {DATE_EVENT_CONFIG[event.eventType].label}
                                   </span>
+                                  {event.themeName && (
+                                    <span className="text-xs bg-background/50 px-1 rounded" data-testid="text-theme-name">{event.themeName}</span>
+                                  )}
                                 </div>
                                 <p className="font-medium">{event.order.clientName}</p>
                                 <p className="text-xs text-muted-foreground">{event.order.orderCode}</p>
@@ -1030,8 +1063,8 @@ export default function MyDashboard() {
                           >
                             <span className={`font-medium ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</span>
                             {dayEvents.slice(0, 3).map((event, idx) => (
-                              <div key={`${event.order.id}-${event.eventType}-${idx}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate`}>
-                                <span className={`${DATE_EVENT_CONFIG[event.eventType].color} font-medium`}>{DATE_EVENT_CONFIG[event.eventType].label.substring(0, 3)}</span> {event.order.clientName}
+                              <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate`}>
+                                <span className={`${DATE_EVENT_CONFIG[event.eventType].color} font-medium`}>{DATE_EVENT_CONFIG[event.eventType].label.substring(0, 3)}</span> {event.themeName ? `${event.themeName} - ` : ""}{event.order.clientName}
                               </div>
                             ))}
                             {dayEvents.length > 3 && (
@@ -1449,7 +1482,7 @@ export default function MyDashboard() {
                     <div className="space-y-2 pl-5">
                       {events.map((event, idx) => (
                         <div 
-                          key={`${event.order.id}-${eventType}-${idx}`}
+                          key={`${event.order.id}-${eventType}-${idx}-${event.themeName || ''}`}
                           className={`p-3 ${config.bgColor} rounded-lg cursor-pointer hover-elevate`}
                           onClick={() => {
                             setDayDetailDialogOpen(false);
@@ -1461,6 +1494,9 @@ export default function MyDashboard() {
                             <p className="font-medium text-sm">{event.order.clientName}</p>
                             <Badge variant="outline" className="text-xs">{event.order.orderCode}</Badge>
                           </div>
+                          {event.themeName && (
+                            <p className="text-xs font-medium text-primary mt-1" data-testid="text-event-theme">{event.themeName}</p>
+                          )}
                           <p className="text-xs text-muted-foreground mt-1">{event.order.salesRepName}</p>
                           <div className="flex items-center justify-between mt-2">
                             <p className="text-xs text-muted-foreground">
