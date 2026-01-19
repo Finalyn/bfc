@@ -263,6 +263,22 @@ export default function OrderPage() {
           console.error("Erreur sauvegarde offline:", e);
         }
       }
+      // Vérifier si c'est une erreur de signature
+      if (error.message && (
+        error.message.includes("signature") || 
+        error.message.includes("Signature")
+      )) {
+        // Effacer la signature invalide et retourner à l'étape signature
+        setOrderData(prev => ({ ...prev, signature: undefined }));
+        setCurrentStep("signature");
+        toast({
+          title: "Signature invalide",
+          description: error.message || "Veuillez signer à nouveau",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Erreur",
         description: error.message || "Impossible de générer la commande",

@@ -94,10 +94,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Validation de la signature
+  const validateSignature = (signature: string | null | undefined): { valid: boolean; error?: string } => {
+    if (!signature) {
+      return { valid: false, error: "Signature manquante" };
+    }
+    
+    // Vérifier le format base64 PNG/JPEG
+    const validPrefixes = [
+      "data:image/png;base64,",
+      "data:image/jpeg;base64,",
+      "data:image/jpg;base64,"
+    ];
+    
+    const hasValidPrefix = validPrefixes.some(prefix => signature.startsWith(prefix));
+    if (!hasValidPrefix) {
+      return { valid: false, error: "Format de signature invalide. Attendu: image PNG ou JPEG" };
+    }
+    
+    // Vérifier la taille (max 500KB en base64 ~ 375KB image)
+    const maxSizeBytes = 500 * 1024;
+    if (signature.length > maxSizeBytes) {
+      return { valid: false, error: "Signature trop volumineuse (max 500KB)" };
+    }
+    
+    // Vérifier que le contenu base64 est valide
+    try {
+      const base64Content = signature.split(",")[1];
+      if (!base64Content || base64Content.length < 100) {
+        return { valid: false, error: "Contenu de signature invalide ou vide" };
+      }
+      Buffer.from(base64Content, "base64");
+    } catch (e) {
+      return { valid: false, error: "Données de signature corrompues" };
+    }
+    
+    return { valid: true };
+  };
+
   // Générer une commande avec PDF et Excel
   app.post("/api/orders/generate", async (req, res) => {
     try {
       const validatedData = insertOrderSchema.parse(req.body);
+      
+      // Valider la signature
+      const signatureValidation = validateSignature(validatedData.signature);
+      if (!signatureValidation.valid) {
+        return res.status(400).json({ 
+          message: signatureValidation.error,
+          signatureError: true
+        });
+      }
       
       const orderCode = generateOrderCode();
       const order: Order = {
