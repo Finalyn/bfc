@@ -1409,7 +1409,7 @@ export default function MyDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics" className="mt-4 space-y-4">
+          <TabsContent value="analytics" className="mt-4 space-y-6">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
@@ -1493,189 +1493,163 @@ export default function MyDashboard() {
               </div>
             </div>
 
-            <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="general" data-testid="tab-stats-general">
-                  <BarChart3 className="w-4 h-4 mr-1" />
-                  Général
-                </TabsTrigger>
-                <TabsTrigger value="clients" data-testid="tab-stats-clients">
-                  <Users className="w-4 h-4 mr-1" />
-                  Clients
-                </TabsTrigger>
-                <TabsTrigger value="fournisseurs" data-testid="tab-stats-fournisseurs">
-                  <Truck className="w-4 h-4 mr-1" />
-                  Fournisseurs
-                </TabsTrigger>
-                <TabsTrigger value="themes" data-testid="tab-stats-themes">
-                  <Package className="w-4 h-4 mr-1" />
-                  Thèmes
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="general" className="mt-4 space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold">{clientAnalytics.length}</p>
-                          <p className="text-xs text-muted-foreground">Clients</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                          <ShoppingCart className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold">{filteredOrders.length}</p>
-                          <p className="text-xs text-muted-foreground">Commandes</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold">{globalStats.totalQuantity}</p>
-                          <p className="text-xs text-muted-foreground">Quantité totale</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                          <Truck className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold">{globalStats.fournisseurData.length}</p>
-                          <p className="text-xs text-muted-foreground">Fournisseurs</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Commandes par mois
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={globalStats.monthlyData}>
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="commandes" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Répartition par fournisseur</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={180}>
-                        <RechartsPie>
-                          <Pie
-                            data={globalStats.fournisseurData}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={70}
-                            dataKey="quantity"
-                            nameKey="name"
-                            label={({ name, percent }) => `${name.substring(0, 10)} (${(percent * 100).toFixed(0)}%)`}
-                          >
-                            {globalStats.fournisseurData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [`${value} unités`, 'Quantité']} />
-                        </RechartsPie>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Top 5 Thèmes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {globalStats.allThemes.slice(0, 5).map((theme, index) => (
-                          <div key={theme.name} className="flex items-center justify-between">
-                            <span className="text-sm truncate flex-1">{index + 1}. {theme.name}</span>
-                            <Badge variant="secondary" className="ml-2">{theme.quantity}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="clients" className="mt-4 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Star className="w-4 h-4" />
-                      Top 10 Clients
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {clientAnalytics.slice(0, 10).map((client, index) => (
-                        <div 
-                          key={client.name || client.enseigne} 
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{client.enseigne || client.name}</p>
-                              <p className="text-xs text-muted-foreground">{client.name}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-primary">{client.totalOrders} cmd</p>
-                            <p className="text-xs text-muted-foreground">{client.totalQuantity} unités</p>
-                          </div>
-                        </div>
-                      ))}
-                      {clientAnalytics.length === 0 && (
-                        <p className="text-muted-foreground text-center py-4">Aucun client</p>
-                      )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-primary" />
                     </div>
-                  </CardContent>
-                </Card>
+                    <div>
+                      <p className="text-xl font-bold">{clientAnalytics.length}</p>
+                      <p className="text-xs text-muted-foreground">Clients</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <ShoppingCart className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{filteredOrders.length}</p>
+                      <p className="text-xs text-muted-foreground">Commandes</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{globalStats.totalQuantity}</p>
+                      <p className="text-xs text-muted-foreground">Quantité</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <Package className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{globalStats.allThemes.length}</p>
+                      <p className="text-xs text-muted-foreground">Thèmes</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Search className="w-4 h-4" />
-                      Analyser un client spécifique
-                    </CardTitle>
-                  </CardHeader>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Commandes par mois
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={globalStats.monthlyData}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="commandes" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Truck className="w-4 h-4" />
+                    Par fournisseur
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {globalStats.fournisseurData.map((item, index) => (
+                      <div key={item.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-muted-foreground">{item.value} cmd</span>
+                          <span className="font-bold text-primary">{item.quantity} u</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Top 10 Thèmes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1">
+                    {globalStats.allThemes.slice(0, 10).map((theme, index) => (
+                      <div key={theme.name} className="flex items-center justify-between text-sm">
+                        <span className="truncate flex-1 pr-2">{index + 1}. {theme.name}</span>
+                        <Badge variant="secondary" className="text-xs">{theme.quantity}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Star className="w-4 h-4" />
+                  Top 10 Clients
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-2">
+                  {clientAnalytics.slice(0, 10).map((client, index) => (
+                    <div 
+                      key={client.name || client.enseigne} 
+                      className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                          {index + 1}
+                        </span>
+                        <span className="text-sm truncate max-w-[120px]">{client.enseigne || client.name}</span>
+                      </div>
+                      <div className="text-right text-sm">
+                        <span className="font-bold text-primary">{client.totalOrders}</span>
+                        <span className="text-muted-foreground ml-1">({client.totalQuantity}u)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Search className="w-4 h-4" />
+                  Analyser un client
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-4">
                 <Select value={selectedAnalyticsClient} onValueChange={setSelectedAnalyticsClient}>
                   <SelectTrigger data-testid="select-analytics-client">
@@ -1774,151 +1748,6 @@ export default function MyDashboard() {
                 )}
               </CardContent>
             </Card>
-              </TabsContent>
-
-              <TabsContent value="fournisseurs" className="mt-4 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Truck className="w-4 h-4" />
-                      Statistiques par fournisseur
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {globalStats.fournisseurData.length > 0 ? (
-                      <div className="space-y-4">
-                        <ResponsiveContainer width="100%" height={220}>
-                          <RechartsPie>
-                            <Pie
-                              data={globalStats.fournisseurData}
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={80}
-                              dataKey="quantity"
-                              nameKey="name"
-                              label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            >
-                              {globalStats.fournisseurData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(value: number) => [`${value} unités`, 'Quantité']} />
-                          </RechartsPie>
-                        </ResponsiveContainer>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {globalStats.fournisseurData.map((item, index) => (
-                            <div key={item.id} className="p-3 bg-muted/50 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full flex-shrink-0" 
-                                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                                />
-                                <p className="font-semibold">{item.name}</p>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-sm mb-2">
-                                <div>
-                                  <p className="text-muted-foreground text-xs">Commandes</p>
-                                  <p className="font-bold">{item.value}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground text-xs">Quantité</p>
-                                  <p className="font-bold text-primary">{item.quantity}</p>
-                                </div>
-                              </div>
-                              {item.topThemes.length > 0 && (
-                                <div className="border-t pt-2">
-                                  <p className="text-xs text-muted-foreground mb-1">Top thèmes:</p>
-                                  <div className="space-y-1">
-                                    {item.topThemes.slice(0, 3).map((theme, i) => (
-                                      <div key={theme.name} className="flex justify-between text-xs">
-                                        <span className="truncate flex-1">{i + 1}. {theme.name}</span>
-                                        <span className="font-medium ml-2">{theme.quantity}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-center py-8">Aucune donnée</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="themes" className="mt-4 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Package className="w-4 h-4" />
-                      Top 10 Thèmes (par quantité)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {globalStats.topThemes.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={globalStats.topThemes} layout="vertical">
-                          <XAxis type="number" />
-                          <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
-                          <Tooltip 
-                            formatter={(value: number, name: string, props: any) => [
-                              `${value} unités (${props.payload.orders} cmd)`, 
-                              props.payload.fullName
-                            ]}
-                          />
-                          <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-muted-foreground text-center py-8">Aucune donnée</p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Package className="w-4 h-4" />
-                      Tous les thèmes commandés
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">Thème</th>
-                            <th className="text-left p-2">Fournisseur</th>
-                            <th className="text-right p-2">Commandes</th>
-                            <th className="text-right p-2">Quantité</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {globalStats.allThemes.slice(0, 30).map((theme, index) => (
-                            <tr key={theme.name} className={index % 2 === 0 ? 'bg-muted/30' : ''}>
-                              <td className="p-2 truncate max-w-[200px]" title={theme.name}>{theme.name}</td>
-                              <td className="p-2">
-                                <Badge variant="outline" className="text-xs">{theme.fournisseur}</Badge>
-                              </td>
-                              <td className="p-2 text-right">{theme.orders}</td>
-                              <td className="p-2 text-right font-bold text-primary">{theme.quantity}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {globalStats.allThemes.length > 30 && (
-                        <p className="text-xs text-muted-foreground text-center mt-2">
-                          ... et {globalStats.allThemes.length - 30} autres thèmes
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
           </TabsContent>
         </Tabs>
       </main>
