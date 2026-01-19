@@ -1410,73 +1410,107 @@ export default function MyDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              <Card>
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">{clientAnalytics.length}</p>
-                    <p className="text-xs text-muted-foreground">Clients</p>
-                  </div>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-600">{clientAnalytics.length}</p>
+                  <p className="text-xs text-blue-600/70">Clients</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">{filteredOrders.length}</p>
-                    <p className="text-xs text-muted-foreground">Commandes</p>
-                  </div>
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-green-600">{filteredOrders.length}</p>
+                  <p className="text-xs text-green-600/70">Commandes</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{globalStats.totalQuantity}</p>
-                    <p className="text-xs text-muted-foreground">Quantité</p>
-                  </div>
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-purple-600">{globalStats.totalQuantity}</p>
+                  <p className="text-xs text-purple-600/70">Quantité totale</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-purple-600">{globalStats.allThemes.length}</p>
-                    <p className="text-xs text-muted-foreground">Thèmes</p>
-                  </div>
+              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/30 border-orange-200 dark:border-orange-800">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-orange-600">{globalStats.allThemes.length}</p>
+                  <p className="text-xs text-orange-600/70">Thèmes vendus</p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-orange-600">{globalStats.fournisseurData.length}</p>
-                    <p className="text-xs text-muted-foreground">Fournisseurs</p>
-                  </div>
+              <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/50 dark:to-cyan-900/30 border-cyan-200 dark:border-cyan-800">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-cyan-600">
+                    {filteredOrders.length > 0 ? Math.round(globalStats.totalQuantity / filteredOrders.length) : 0}
+                  </p>
+                  <p className="text-xs text-cyan-600/70">Moy/commande</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/30 border-pink-200 dark:border-pink-800">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-pink-600">
+                    {clientAnalytics.length > 0 ? Math.round(filteredOrders.length / clientAnalytics.length * 10) / 10 : 0}
+                  </p>
+                  <p className="text-xs text-pink-600/70">Cmd/client</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-3">
+              <Card className="border-l-4 border-l-green-500">
                 <CardContent className="p-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-cyan-600">
-                      {filteredOrders.length > 0 ? Math.round(globalStats.totalQuantity / filteredOrders.length) : 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Moy/cmd</p>
-                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">Meilleur mois</p>
+                  <p className="font-bold text-green-600">
+                    {globalStats.monthlyData.length > 0 
+                      ? globalStats.monthlyData.reduce((a, b) => a.commandes > b.commandes ? a : b).name 
+                      : "-"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {globalStats.monthlyData.length > 0 
+                      ? `${globalStats.monthlyData.reduce((a, b) => a.commandes > b.commandes ? a : b).commandes} commandes` 
+                      : ""}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-blue-500">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Top fournisseur</p>
+                  <p className="font-bold text-blue-600">
+                    {globalStats.fournisseurData.length > 0 
+                      ? globalStats.fournisseurData.reduce((a, b) => a.quantity > b.quantity ? a : b).name 
+                      : "-"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {globalStats.fournisseurData.length > 0 
+                      ? `${globalStats.fournisseurData.reduce((a, b) => a.quantity > b.quantity ? a : b).quantity} unités` 
+                      : ""}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-purple-500">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Meilleur client</p>
+                  <p className="font-bold text-purple-600 truncate">
+                    {clientAnalytics.length > 0 ? (clientAnalytics[0].enseigne || clientAnalytics[0].name) : "-"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {clientAnalytics.length > 0 ? `${clientAnalytics[0].totalOrders} cmd, ${clientAnalytics[0].totalQuantity} u` : ""}
+                  </p>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Commandes par mois
-                </CardTitle>
+                <CardTitle className="text-base font-semibold">Évolution mensuelle des commandes</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={globalStats.monthlyData}>
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="commandes" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={globalStats.monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                      formatter={(value: number) => [`${value} commandes`, 'Total']}
+                    />
+                    <Bar dataKey="commandes" fill="#10b981" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -1485,23 +1519,35 @@ export default function MyDashboard() {
             <div className="grid md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Truck className="w-4 h-4" />
-                    Par fournisseur
-                  </CardTitle>
+                  <CardTitle className="text-base font-semibold">Répartition par fournisseur</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="flex flex-col md:flex-row items-center gap-4">
+                    <ResponsiveContainer width="100%" height={180}>
+                      <RechartsPie>
+                        <Pie
+                          data={globalStats.fournisseurData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={70}
+                          dataKey="quantity"
+                          nameKey="name"
+                        >
+                          {globalStats.fournisseurData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} unités`, 'Quantité']} />
+                      </RechartsPie>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
                     {globalStats.fournisseurData.map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span className="text-sm font-medium">{item.name}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="text-muted-foreground">{item.value} cmd</span>
-                          <span className="font-bold text-primary">{item.quantity} u</span>
-                        </div>
+                      <div key={item.id} className="flex items-center gap-2 text-xs">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="truncate">{item.name}</span>
+                        <span className="font-bold ml-auto">{item.quantity}</span>
                       </div>
                     ))}
                   </div>
@@ -1510,47 +1556,53 @@ export default function MyDashboard() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Top 10 Thèmes
-                  </CardTitle>
+                  <CardTitle className="text-base font-semibold">Top 10 Thèmes les plus vendus</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-1">
-                    {globalStats.allThemes.slice(0, 10).map((theme, index) => (
-                      <div key={theme.name} className="flex items-center justify-between text-sm">
-                        <span className="truncate flex-1 pr-2">{index + 1}. {theme.name}</span>
-                        <Badge variant="secondary" className="text-xs">{theme.quantity}</Badge>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={globalStats.allThemes.slice(0, 10).map(t => ({ 
+                      name: t.name.length > 15 ? t.name.substring(0, 15) + '...' : t.name, 
+                      fullName: t.name,
+                      quantity: t.quantity 
+                    }))} layout="vertical" margin={{ left: 0, right: 10 }}>
+                      <XAxis type="number" tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
+                      <Tooltip 
+                        formatter={(value: number, name: string, props: any) => [`${value} unités`, props.payload.fullName]}
+                        contentStyle={{ borderRadius: '8px' }}
+                      />
+                      <Bar dataKey="quantity" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Star className="w-4 h-4" />
-                  Top 10 Clients
-                </CardTitle>
+                <CardTitle className="text-base font-semibold">Top 10 Clients</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-2">
                   {clientAnalytics.slice(0, 10).map((client, index) => (
                     <div 
                       key={client.name || client.enseigne} 
-                      className="flex items-center justify-between p-2 bg-muted/30 rounded"
+                      className="flex items-center justify-between p-2 bg-muted/30 rounded hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+                          index === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' :
+                          index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
+                          'bg-primary/10 text-primary'
+                        }`}>
                           {index + 1}
                         </span>
-                        <span className="text-sm truncate max-w-[120px]">{client.enseigne || client.name}</span>
+                        <span className="text-sm truncate max-w-[140px]">{client.enseigne || client.name}</span>
                       </div>
                       <div className="text-right text-sm">
-                        <span className="font-bold text-primary">{client.totalOrders}</span>
-                        <span className="text-muted-foreground ml-1">({client.totalQuantity}u)</span>
+                        <span className="font-bold text-primary">{client.totalOrders} cmd</span>
+                        <span className="text-muted-foreground ml-1">· {client.totalQuantity}u</span>
                       </div>
                     </div>
                   ))}
