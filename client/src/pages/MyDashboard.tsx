@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import html2canvas from "html2canvas";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,12 @@ export default function MyDashboard() {
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
   const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["commande", "livraison", "inventairePrevu", "inventaire", "retour"]));
   const [calendarSearch, setCalendarSearch] = useState("");
+  const [exportingStats, setExportingStats] = useState(false);
   const { toast } = useToast();
+
+  const monthlyChartRef = useRef<HTMLDivElement>(null);
+  const fournisseurChartRef = useRef<HTMLDivElement>(null);
+  const themesChartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadOfflineOrders = async () => {
@@ -1498,73 +1504,78 @@ export default function MyDashboard() {
             </div>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Évolution mensuelle des commandes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={globalStats.monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                      formatter={(value: number) => [`${value} commandes`, 'Total']}
-                    />
-                    <Bar dataKey="commandes" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
+              <div ref={monthlyChartRef} className="bg-background">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold">Évolution mensuelle des commandes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={globalStats.monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                        formatter={(value: number) => [`${value} commandes`, 'Total']}
+                      />
+                      <Bar dataKey="commandes" fill="#10b981" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </div>
             </Card>
 
             <div className="grid md:grid-cols-2 gap-4">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">Répartition par fournisseur</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col md:flex-row items-center gap-4">
-                    <ResponsiveContainer width="100%" height={180}>
-                      <RechartsPie>
-                        <Pie
-                          data={globalStats.fournisseurData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          dataKey="quantity"
-                          nameKey="name"
-                        >
-                          {globalStats.fournisseurData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => [`${value} unités`, 'Quantité']} />
-                      </RechartsPie>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {globalStats.fournisseurData.map((item, index) => (
-                      <div key={item.id} className="flex items-center gap-2 text-xs">
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                        <span className="truncate">{item.name}</span>
-                        <span className="font-bold ml-auto">{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
+                <div ref={fournisseurChartRef} className="bg-background">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold">Répartition par fournisseur</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                      <ResponsiveContainer width="100%" height={180}>
+                        <RechartsPie>
+                          <Pie
+                            data={globalStats.fournisseurData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            dataKey="quantity"
+                            nameKey="name"
+                          >
+                            {globalStats.fournisseurData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => [`${value} unités`, 'Quantité']} />
+                        </RechartsPie>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {globalStats.fournisseurData.map((item, index) => (
+                        <div key={item.id} className="flex items-center gap-2 text-xs">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span className="truncate">{item.name}</span>
+                          <span className="font-bold ml-auto">{item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </div>
               </Card>
 
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">Top 10 Thèmes les plus vendus</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={globalStats.allThemes.slice(0, 10).map(t => ({ 
-                      name: t.name.length > 15 ? t.name.substring(0, 15) + '...' : t.name, 
-                      fullName: t.name,
-                      quantity: t.quantity 
-                    }))} layout="vertical" margin={{ left: 0, right: 10 }}>
+                <div ref={themesChartRef} className="bg-background">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold">Top 10 Thèmes les plus vendus</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={globalStats.allThemes.slice(0, 10).map(t => ({ 
+                        name: t.name.length > 15 ? t.name.substring(0, 15) + '...' : t.name, 
+                        fullName: t.name,
+                        quantity: t.quantity 
+                      }))} layout="vertical" margin={{ left: 0, right: 10 }}>
                       <XAxis type="number" tick={{ fontSize: 10 }} />
                       <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
                       <Tooltip 
@@ -1574,7 +1585,8 @@ export default function MyDashboard() {
                       <Bar dataKey="quantity" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </CardContent>
+                  </CardContent>
+                </div>
               </Card>
             </div>
 
@@ -1720,8 +1732,27 @@ export default function MyDashboard() {
               <Button
                 size="sm"
                 variant="outline"
+                disabled={exportingStats}
                 onClick={async () => {
                   try {
+                    setExportingStats(true);
+                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
+                    
+                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
+                    
+                    if (monthlyChartRef.current) {
+                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.monthly = canvas.toDataURL('image/png');
+                    }
+                    if (fournisseurChartRef.current) {
+                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.fournisseur = canvas.toDataURL('image/png');
+                    }
+                    if (themesChartRef.current) {
+                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.themes = canvas.toDataURL('image/png');
+                    }
+                    
                     const response = await fetch('/api/stats/export-pdf', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -1730,7 +1761,8 @@ export default function MyDashboard() {
                         allThemes: globalStats.allThemes,
                         clientAnalytics: clientAnalytics.slice(0, 50),
                         monthlyData: globalStats.monthlyData,
-                        totalQuantity: globalStats.totalQuantity
+                        totalQuantity: globalStats.totalQuantity,
+                        chartImages
                       })
                     });
                     if (response.ok) {
@@ -1741,24 +1773,45 @@ export default function MyDashboard() {
                       a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
                       a.click();
                       URL.revokeObjectURL(url);
-                      toast({ title: "Export réussi", description: "Fichier PDF téléchargé" });
+                      toast({ title: "Export réussi", description: "PDF avec graphiques téléchargé" });
                     } else {
                       throw new Error('Export failed');
                     }
                   } catch (e) {
                     toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
+                  } finally {
+                    setExportingStats(false);
                   }
                 }}
                 data-testid="button-export-pdf"
               >
                 <Download className="w-4 h-4 mr-1" />
-                Exporter PDF
+                {exportingStats ? "Export..." : "Exporter PDF"}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
+                disabled={exportingStats}
                 onClick={async () => {
                   try {
+                    setExportingStats(true);
+                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
+                    
+                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
+                    
+                    if (monthlyChartRef.current) {
+                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.monthly = canvas.toDataURL('image/png');
+                    }
+                    if (fournisseurChartRef.current) {
+                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.fournisseur = canvas.toDataURL('image/png');
+                    }
+                    if (themesChartRef.current) {
+                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.themes = canvas.toDataURL('image/png');
+                    }
+                    
                     const response = await fetch('/api/stats/export-excel', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -1767,7 +1820,8 @@ export default function MyDashboard() {
                         allThemes: globalStats.allThemes,
                         clientAnalytics: clientAnalytics.slice(0, 50),
                         monthlyData: globalStats.monthlyData,
-                        totalQuantity: globalStats.totalQuantity
+                        totalQuantity: globalStats.totalQuantity,
+                        chartImages
                       })
                     });
                     if (response.ok) {
@@ -1778,18 +1832,20 @@ export default function MyDashboard() {
                       a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
                       a.click();
                       URL.revokeObjectURL(url);
-                      toast({ title: "Export réussi", description: "Fichier Excel téléchargé" });
+                      toast({ title: "Export réussi", description: "Excel avec graphiques téléchargé" });
                     } else {
                       throw new Error('Export failed');
                     }
                   } catch (e) {
                     toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
+                  } finally {
+                    setExportingStats(false);
                   }
                 }}
                 data-testid="button-export-excel"
               >
                 <Download className="w-4 h-4 mr-1" />
-                Exporter Excel
+                {exportingStats ? "Export..." : "Exporter Excel"}
               </Button>
             </div>
           </TabsContent>

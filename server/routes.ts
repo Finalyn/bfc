@@ -1757,7 +1757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export stats to PDF
   app.post("/api/stats/export-pdf", async (req, res) => {
     try {
-      const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity } = req.body;
+      const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF();
@@ -1794,10 +1794,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       doc.text(`Nombre de fournisseurs: ${fournisseurData?.length || 0}`, 14, yPos);
       yPos += 12;
       
+      // Add chart images if available
+      if (chartImages?.monthly) {
+        doc.addPage();
+        yPos = 20;
+        doc.setFontSize(14);
+        doc.setTextColor(blue);
+        doc.text("Évolution mensuelle des commandes", 14, yPos);
+        yPos += 8;
+        try {
+          doc.addImage(chartImages.monthly, 'PNG', 14, yPos, 180, 70);
+          yPos += 80;
+        } catch (e) { console.log("Failed to add monthly chart"); }
+      }
+      
+      if (chartImages?.fournisseur) {
+        if (yPos > 180) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(14);
+        doc.setTextColor(blue);
+        doc.text("Répartition par fournisseur", 14, yPos);
+        yPos += 8;
+        try {
+          doc.addImage(chartImages.fournisseur, 'PNG', 14, yPos, 90, 70);
+          yPos += 80;
+        } catch (e) { console.log("Failed to add fournisseur chart"); }
+      }
+      
+      if (chartImages?.themes) {
+        if (yPos > 120) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(14);
+        doc.setTextColor(blue);
+        doc.text("Top 10 Thèmes les plus vendus", 14, yPos);
+        yPos += 8;
+        try {
+          doc.addImage(chartImages.themes, 'PNG', 14, yPos, 180, 80);
+          yPos += 90;
+        } catch (e) { console.log("Failed to add themes chart"); }
+      }
+      
+      // New page for data tables
+      doc.addPage();
+      yPos = 20;
+      
       // By Supplier
       doc.setFontSize(14);
       doc.setTextColor(blue);
-      doc.text("Par Fournisseur", 14, yPos);
+      doc.text("Données par Fournisseur", 14, yPos);
       yPos += 8;
       
       doc.setFontSize(10);
@@ -1855,7 +1897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export stats to Excel
   app.post("/api/stats/export-excel", async (req, res) => {
     try {
-      const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity } = req.body;
+      const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
       const ExcelJS = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
@@ -1932,6 +1974,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       monthlySheet.getRow(1).font = { bold: true };
       monthlySheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
       monthlySheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      // Add charts sheet with images
+      if (chartImages && (chartImages.monthly || chartImages.fournisseur || chartImages.themes)) {
+        const chartsSheet = workbook.addWorksheet("Graphiques");
+        chartsSheet.getColumn(1).width = 80;
+        
+        let rowNum = 1;
+        
+        if (chartImages.monthly) {
+          try {
+            const base64Data = chartImages.monthly.replace(/^data:image\/\w+;base64,/, '');
+            const imageId = workbook.addImage({ base64: base64Data, extension: 'png' });
+            chartsSheet.addImage(imageId, { tl: { col: 0, row: rowNum }, ext: { width: 600, height: 200 } });
+            rowNum += 15;
+          } catch (e) { console.log("Failed to add monthly chart to Excel"); }
+        }
+        
+        if (chartImages.fournisseur) {
+          try {
+            const base64Data = chartImages.fournisseur.replace(/^data:image\/\w+;base64,/, '');
+            const imageId = workbook.addImage({ base64: base64Data, extension: 'png' });
+            chartsSheet.addImage(imageId, { tl: { col: 0, row: rowNum }, ext: { width: 400, height: 200 } });
+            rowNum += 15;
+          } catch (e) { console.log("Failed to add fournisseur chart to Excel"); }
+        }
+        
+        if (chartImages.themes) {
+          try {
+            const base64Data = chartImages.themes.replace(/^data:image\/\w+;base64,/, '');
+            const imageId = workbook.addImage({ base64: base64Data, extension: 'png' });
+            chartsSheet.addImage(imageId, { tl: { col: 0, row: rowNum }, ext: { width: 600, height: 250 } });
+          } catch (e) { console.log("Failed to add themes chart to Excel"); }
+        }
+      }
       
       const buffer = await workbook.xlsx.writeBuffer();
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
