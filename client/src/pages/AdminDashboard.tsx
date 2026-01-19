@@ -339,6 +339,13 @@ export default function AdminDashboard() {
     enabled: !isCheckingAuth,
   });
 
+  // Liste complète des fournisseurs pour les formulaires (thèmes)
+  const { data: allFournisseurs } = useQuery<PaginatedResponse<Fournisseur>>({
+    queryKey: ["/api/admin/fournisseurs", "all"],
+    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=100`).then(r => r.json()),
+    enabled: !isCheckingAuth,
+  });
+
   const { data: ordersTotals } = useQuery<PaginatedResponse<OrderDb>>({
     queryKey: ["/api/admin/orders", "totals"],
     queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1`).then(r => r.json()),
@@ -654,12 +661,41 @@ export default function AdminDashboard() {
         return (
           <div className="grid gap-4">
             <div>
-              <Label htmlFor="theme">Thème</Label>
-              <Input id="theme" value={editFormData.theme || ""} onChange={e => setEditFormData({...editFormData, theme: e.target.value})} />
+              <Label htmlFor="theme">Thème / Produit</Label>
+              <Input id="theme" value={editFormData.theme || ""} onChange={e => setEditFormData({...editFormData, theme: e.target.value})} data-testid="input-theme-name" />
             </div>
             <div>
               <Label htmlFor="fournisseur">Fournisseur</Label>
-              <Input id="fournisseur" value={editFormData.fournisseur || ""} onChange={e => setEditFormData({...editFormData, fournisseur: e.target.value})} />
+              <Select 
+                value={editFormData.fournisseur || ""} 
+                onValueChange={(value) => setEditFormData({...editFormData, fournisseur: value})}
+              >
+                <SelectTrigger data-testid="select-theme-fournisseur">
+                  <SelectValue placeholder="Sélectionner un fournisseur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allFournisseurs?.data?.map((f) => (
+                    <SelectItem key={f.id} value={f.nomCourt || f.nom}>
+                      {f.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="categorie">Catégorie</Label>
+              <Select 
+                value={editFormData.categorie || "TOUTE_ANNEE"} 
+                onValueChange={(value) => setEditFormData({...editFormData, categorie: value})}
+              >
+                <SelectTrigger data-testid="select-theme-categorie">
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TOUTE_ANNEE">Toute l'année</SelectItem>
+                  <SelectItem value="SAISONNIER">Saisonnier</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         );
