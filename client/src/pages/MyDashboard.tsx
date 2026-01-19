@@ -159,8 +159,12 @@ export default function MyDashboard() {
   const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["commande", "livraison", "inventairePrevu", "inventaire", "retour"]));
   const [calendarSearch, setCalendarSearch] = useState("");
   const [statsYear, setStatsYear] = useState<number>(new Date().getFullYear());
-  const [statsSeason, setStatsSeason] = useState<"all" | "printemps" | "ete" | "automne" | "hiver">("all");
+  const [statsMonth, setStatsMonth] = useState<number>(new Date().getMonth());
+  const [statsSeason, setStatsSeason] = useState<number>(Math.floor(new Date().getMonth() / 3));
+  const [statsViewMode, setStatsViewMode] = useState<"year" | "month" | "season">("year");
   const { toast } = useToast();
+
+  const SEASON_NAMES = ["Hiver", "Printemps", "Été", "Automne"];
 
   useEffect(() => {
     const loadOfflineOrders = async () => {
@@ -359,13 +363,6 @@ export default function MyDashboard() {
   }, [allOrders, isAdmin, selectedCommercial, selectedFournisseur, userName]);
 
   const statsFilteredOrders = useMemo(() => {
-    const getSeasonFromMonth = (month: number): "printemps" | "ete" | "automne" | "hiver" => {
-      if (month >= 2 && month <= 4) return "printemps";
-      if (month >= 5 && month <= 7) return "ete";
-      if (month >= 8 && month <= 10) return "automne";
-      return "hiver";
-    };
-    
     return filteredOrders.filter(order => {
       try {
         const rawDate = order.orderDate || order.createdAt;
@@ -377,8 +374,10 @@ export default function MyDashboard() {
         
         if (orderYear !== statsYear) return false;
         
-        if (statsSeason !== "all") {
-          const orderSeason = getSeasonFromMonth(orderMonth);
+        if (statsViewMode === "month") {
+          if (orderMonth !== statsMonth) return false;
+        } else if (statsViewMode === "season") {
+          const orderSeason = Math.floor(orderMonth / 3);
           if (orderSeason !== statsSeason) return false;
         }
         
@@ -387,7 +386,7 @@ export default function MyDashboard() {
         return false;
       }
     });
-  }, [filteredOrders, statsYear, statsSeason]);
+  }, [filteredOrders, statsYear, statsMonth, statsSeason, statsViewMode]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -1445,77 +1444,96 @@ export default function MyDashboard() {
           <TabsContent value="analytics" className="mt-4 space-y-4">
             <Card className="p-3">
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-3 gap-2">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setStatsYear(y => y - 1)}
-                    data-testid="button-stats-prev-year"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
-                  <span className="text-lg font-bold">{statsYear}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setStatsYear(y => y + 1)}
-                    disabled={statsYear >= new Date().getFullYear()}
-                    data-testid="button-stats-next-year"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  <Button
-                    variant={statsSeason === "all" ? "default" : "outline"}
+                    variant={statsViewMode === "year" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setStatsSeason("all")}
-                    className="text-xs"
-                    data-testid="button-stats-all"
+                    onClick={() => setStatsViewMode("year")}
+                    data-testid="button-stats-mode-year"
                   >
                     Année
                   </Button>
                   <Button
-                    variant={statsSeason === "printemps" ? "default" : "outline"}
+                    variant={statsViewMode === "month" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setStatsSeason("printemps")}
-                    className="text-xs"
-                    data-testid="button-stats-printemps"
+                    onClick={() => setStatsViewMode("month")}
+                    data-testid="button-stats-mode-month"
                   >
-                    Printemps
+                    Mois
                   </Button>
                   <Button
-                    variant={statsSeason === "ete" ? "default" : "outline"}
+                    variant={statsViewMode === "season" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setStatsSeason("ete")}
-                    className="text-xs"
-                    data-testid="button-stats-ete"
+                    onClick={() => setStatsViewMode("season")}
+                    data-testid="button-stats-mode-season"
                   >
-                    Été
-                  </Button>
-                  <Button
-                    variant={statsSeason === "automne" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatsSeason("automne")}
-                    className="text-xs"
-                    data-testid="button-stats-automne"
-                  >
-                    Automne
-                  </Button>
-                  <Button
-                    variant={statsSeason === "hiver" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatsSeason("hiver")}
-                    className="text-xs"
-                    data-testid="button-stats-hiver"
-                  >
-                    Hiver
+                    Saison
                   </Button>
                 </div>
+                
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (statsViewMode === "year") {
+                        setStatsYear(y => y - 1);
+                      } else if (statsViewMode === "month") {
+                        if (statsMonth === 0) {
+                          setStatsMonth(11);
+                          setStatsYear(y => y - 1);
+                        } else {
+                          setStatsMonth(m => m - 1);
+                        }
+                      } else {
+                        if (statsSeason === 0) {
+                          setStatsSeason(3);
+                          setStatsYear(y => y - 1);
+                        } else {
+                          setStatsSeason(s => s - 1);
+                        }
+                      }
+                    }}
+                    data-testid="button-stats-prev"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <span className="text-lg font-bold">
+                    {statsViewMode === "year" && statsYear}
+                    {statsViewMode === "month" && `${MONTH_NAMES[statsMonth]} ${statsYear}`}
+                    {statsViewMode === "season" && `${SEASON_NAMES[statsSeason]} ${statsYear}`}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (statsViewMode === "year") {
+                        setStatsYear(y => y + 1);
+                      } else if (statsViewMode === "month") {
+                        if (statsMonth === 11) {
+                          setStatsMonth(0);
+                          setStatsYear(y => y + 1);
+                        } else {
+                          setStatsMonth(m => m + 1);
+                        }
+                      } else {
+                        if (statsSeason === 3) {
+                          setStatsSeason(0);
+                          setStatsYear(y => y + 1);
+                        } else {
+                          setStatsSeason(s => s + 1);
+                        }
+                      }
+                    }}
+                    data-testid="button-stats-next"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+
                 <div className="flex justify-center">
                   <Badge variant="secondary">
-                    {statsFilteredOrders.length} commande{statsFilteredOrders.length > 1 ? 's' : ''} 
-                    {statsSeason === "all" ? ` en ${statsYear}` : ` - ${statsSeason} ${statsYear}`}
+                    {statsFilteredOrders.length} commande{statsFilteredOrders.length > 1 ? 's' : ''}
                   </Badge>
                 </div>
               </div>
