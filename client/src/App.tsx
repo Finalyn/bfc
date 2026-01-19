@@ -12,6 +12,11 @@ import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import MyDashboard from "@/pages/MyDashboard";
 
+function HomeRedirect() {
+  const isAuthenticated = localStorage.getItem("authenticated") === "true";
+  return <Redirect to={isAuthenticated ? "/hub" : "/login"} />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -22,7 +27,7 @@ function Router() {
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/">
-        <Redirect to="/login" />
+        <HomeRedirect />
       </Route>
     </Switch>
   );
