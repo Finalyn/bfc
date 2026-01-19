@@ -127,7 +127,7 @@ interface OrderEvent {
 }
 
 const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string; dotColor: string }> = {
-  commande: { label: "Prise de commande", color: "text-slate-600", bgColor: "bg-slate-100 dark:bg-slate-800", dotColor: "bg-slate-400" },
+  commande: { label: "Prise de commande", color: "text-pink-500", bgColor: "bg-pink-50 dark:bg-pink-950", dotColor: "bg-pink-300" },
   livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900", dotColor: "bg-blue-500" },
   inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900", dotColor: "bg-amber-500" },
   inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900", dotColor: "bg-green-500" },
