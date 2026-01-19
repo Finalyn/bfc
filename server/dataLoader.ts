@@ -55,6 +55,7 @@ export interface Theme {
   id: string;
   fournisseur: string;
   theme: string;
+  categorie: string;
 }
 
 export interface DatabaseData {
@@ -182,6 +183,7 @@ export function loadExcelData(): DatabaseData {
       id: `theme-${index}`,
       fournisseur: row[0] || "",
       theme: row[1] || "",
+      categorie: row[2] || "TOUTE_ANNEE",
     }));
 
   cachedData = {

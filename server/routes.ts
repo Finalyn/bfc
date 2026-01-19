@@ -1293,7 +1293,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingThemes = await db.select().from(themes);
       if (existingThemes.length === 0) {
         for (const t of excelData.themes) {
-          await db.insert(themes).values({ theme: t.theme, fournisseur: t.fournisseur });
+          await db.insert(themes).values({ 
+            theme: t.theme, 
+            fournisseur: t.fournisseur,
+            categorie: t.categorie || "TOUTE_ANNEE"
+          });
         }
         imported.themes = excelData.themes.length;
       }
