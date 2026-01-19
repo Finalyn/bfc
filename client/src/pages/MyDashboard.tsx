@@ -1259,8 +1259,9 @@ export default function MyDashboard() {
                               )}
                             </div>
                             {dayEvents.slice(0, 3).map((event, idx) => (
-                              <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate`}>
-                                <span className={`${DATE_EVENT_CONFIG[event.eventType].color} font-medium`}>{DATE_EVENT_CONFIG[event.eventType].label.substring(0, 3)}</span> {event.themeName ? `${event.themeName} - ` : ""}{event.order.clientName}
+                              <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate flex items-center gap-1`}>
+                                <div className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[event.eventType].dotColor} flex-shrink-0`} />
+                                <span className="truncate">{event.themeName ? `${event.themeName} - ` : ""}{event.order.clientName}</span>
                               </div>
                             ))}
                             {dayEvents.length > 3 && (
@@ -1674,7 +1675,7 @@ export default function MyDashboard() {
             <p className="text-center text-muted-foreground py-8">Aucun événement ce jour</p>
           ) : (
             <div className="space-y-4">
-              {(["livraison", "inventairePrevu", "inventaire", "retour"] as DateEventType[]).map(eventType => {
+              {(["commande", "livraison", "inventairePrevu", "inventaire", "retour"] as DateEventType[]).map(eventType => {
                 const events = groupedEvents[eventType];
                 if (!events || events.length === 0) return null;
                 const config = DATE_EVENT_CONFIG[eventType];
