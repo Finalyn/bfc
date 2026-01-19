@@ -61,7 +61,6 @@ import {
   CheckCircle2,
   Check,
   AlertCircle,
-  Mail,
   Copy,
   FileSpreadsheet
 } from "lucide-react";
@@ -389,22 +388,6 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection, orderFournisseurFilter],
     queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
-  });
-
-  interface NewsletterEmail {
-    email: string;
-    clientName: string;
-    orderCode: string;
-    orderDate: string;
-  }
-  interface NewsletterResponse {
-    total: number;
-    emails: NewsletterEmail[];
-  }
-  const { data: newsletterData, isLoading: newsletterLoading } = useQuery<NewsletterResponse>({
-    queryKey: ["/api/admin/newsletter-emails"],
-    queryFn: () => fetch(`/api/admin/newsletter-emails`).then(r => r.json()),
-    enabled: !isCheckingAuth && activeTab === "newsletter",
   });
 
   const createMutation = useMutation({
@@ -908,10 +891,6 @@ export default function AdminDashboard() {
                 <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Commandes</span><span className="sm:hidden">Cmd.</span> ({ordersTotals?.pagination.total || 0})
               </TabsTrigger>
-              <TabsTrigger value="newsletter" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-newsletter">
-                <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Newsletter</span><span className="sm:hidden">News.</span>
-              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1356,83 +1335,6 @@ export default function AdminDashboard() {
                     </div>
                     {ordersData?.pagination && <Pagination pagination={ordersData.pagination} />}
                   </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="newsletter">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold">Emails Newsletter</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Liste des emails des clients ayant accepté la newsletter ({newsletterData?.total || 0})
-                    </p>
-                  </div>
-                  {newsletterData && newsletterData.emails.length > 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        const emailList = newsletterData.emails.map(e => e.email).join("\n");
-                        navigator.clipboard.writeText(emailList);
-                        toast({ title: "Copié", description: `${newsletterData.emails.length} emails copiés dans le presse-papiers` });
-                      }}
-                      data-testid="button-copy-emails"
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copier tous les emails
-                    </Button>
-                  )}
-                </div>
-                
-                {newsletterLoading ? (
-                  <div className="p-8 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                  </div>
-                ) : newsletterData?.emails.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun email pour la newsletter</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Nom du client</TableHead>
-                          <TableHead className="hidden md:table-cell">Code commande</TableHead>
-                          <TableHead className="hidden lg:table-cell">Date commande</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {newsletterData?.emails.map((item, index) => (
-                          <TableRow key={index} data-testid={`row-newsletter-${index}`}>
-                            <TableCell className="font-medium">{item.email}</TableCell>
-                            <TableCell>{item.clientName}</TableCell>
-                            <TableCell className="hidden md:table-cell font-mono text-sm">{item.orderCode}</TableCell>
-                            <TableCell className="hidden lg:table-cell">{item.orderDate}</TableCell>
-                            <TableCell>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(item.email);
-                                  toast({ title: "Copié", description: "Email copié dans le presse-papiers" });
-                                }}
-                                data-testid={`button-copy-email-${index}`}
-                              >
-                                <Copy className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
                 )}
               </CardContent>
             </Card>
