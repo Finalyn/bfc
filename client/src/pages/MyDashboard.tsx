@@ -48,7 +48,6 @@ import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, sta
 import { fr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from "recharts";
 import type { OrderDb } from "@shared/schema";
-import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 
 const formatDateShort = (date: string | null | undefined): string => {
   if (!date) return "-";
@@ -232,6 +231,21 @@ export default function MyDashboard() {
     queryKey: ["/api/admin/commerciaux?pageSize=100"],
     enabled: isAdmin,
   });
+
+  interface FournisseursResponse {
+    data: Array<{ id: number; nom: string; nomCourt: string }>;
+  }
+  
+  const { data: fournisseursResponse } = useQuery<FournisseursResponse>({
+    queryKey: ["/api/admin/fournisseurs?pageSize=100"],
+  });
+
+  const fournisseursList = useMemo(() => {
+    return (fournisseursResponse?.data || []).map(f => ({
+      id: f.nomCourt || f.nom,
+      nom: f.nom
+    }));
+  }, [fournisseursResponse]);
 
   const allOrders = ordersResponse?.data || [];
   const commerciaux = useMemo(() => {
@@ -778,7 +792,7 @@ export default function MyDashboard() {
 
     const fournisseurData = Object.entries(fournisseurStats)
       .map(([id, stats]) => {
-        const config = FOURNISSEURS_CONFIG.find(f => f.id === id);
+        const config = fournisseursList.find(f => f.id === id);
         const topThemesForFournisseur = Object.entries(stats.themes)
           .sort((a, b) => b[1].quantity - a[1].quantity)
           .slice(0, 5)
@@ -861,7 +875,7 @@ export default function MyDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les fournisseurs</SelectItem>
-                    {FOURNISSEURS_CONFIG.map(f => (
+                    {fournisseursList.map(f => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.nom}
                       </SelectItem>

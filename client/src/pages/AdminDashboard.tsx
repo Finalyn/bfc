@@ -84,7 +84,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 
 interface Client {
   id: number;
@@ -1272,8 +1271,8 @@ export default function AdminDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ALL">Tous</SelectItem>
-                        {FOURNISSEURS_CONFIG.map(f => (
-                          <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>
+                        {allFournisseurs?.data?.map(f => (
+                          <SelectItem key={f.id} value={f.nomCourt || f.nom}>{f.nom}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
