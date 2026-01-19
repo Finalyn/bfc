@@ -144,7 +144,7 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "newsletter" | "planning";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "newsletter";
 
 
 export default function AdminDashboard() {
@@ -378,39 +378,6 @@ export default function AdminDashboard() {
     queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
   });
-
-  // Query pour le planning - récupère toutes les commandes avec leurs dates de livraison
-  const { data: planningData, isLoading: planningLoading } = useQuery<PaginatedResponse<OrderDb>>({
-    queryKey: ["/api/admin/orders", "planning"],
-    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=10000`).then(r => r.json()),
-    enabled: !isCheckingAuth && activeTab === "planning",
-  });
-
-  const [exportingPlanning, setExportingPlanning] = useState(false);
-
-  const handleExportPlanning = async () => {
-    if (!planningData?.data) return;
-    setExportingPlanning(true);
-    try {
-      const response = await fetch('/api/admin/planning/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orders: planningData.data }),
-      });
-      if (!response.ok) throw new Error('Erreur export');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `planning_${new Date().toISOString().split('T')[0]}.xlsx`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      toast({ title: "Export réussi", description: "Le planning a été exporté en Excel" });
-    } catch (error) {
-      toast({ title: "Erreur", description: "Impossible d'exporter le planning", variant: "destructive" });
-    }
-    setExportingPlanning(false);
-  };
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -926,10 +893,6 @@ export default function AdminDashboard() {
                 <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Commandes</span><span className="sm:hidden">Cmd.</span> ({ordersTotals?.pagination.total || 0})
               </TabsTrigger>
-              <TabsTrigger value="planning" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-planning">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Planning</span><span className="sm:hidden">Plan.</span>
-              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1360,76 +1323,6 @@ export default function AdminDashboard() {
                     </div>
                     {ordersData?.pagination && <Pagination pagination={ordersData.pagination} />}
                   </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="planning">
-            <Card>
-              <CardContent className="p-0">
-                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Planning des livraisons</span>
-                    <Badge variant="secondary">{planningData?.data?.length || 0} commandes</Badge>
-                  </div>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleExportPlanning}
-                    disabled={exportingPlanning || !planningData?.data?.length}
-                    data-testid="button-export-planning"
-                  >
-                    {exportingPlanning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                    Exporter Excel
-                  </Button>
-                </div>
-                {planningLoading ? (
-                  <div className="p-8 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Code</TableHead>
-                          <TableHead>Commercial</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Fournisseur</TableHead>
-                          <TableHead>Date Commande</TableHead>
-                          <TableHead>Date Livraison</TableHead>
-                          <TableHead>Inventaire Prévu</TableHead>
-                          <TableHead>Inventaire</TableHead>
-                          <TableHead>Retour</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {planningData?.data?.sort((a, b) => {
-                          const dateA = a.dateLivraison || a.orderDate || '';
-                          const dateB = b.dateLivraison || b.orderDate || '';
-                          return dateA.localeCompare(dateB);
-                        }).map((order) => (
-                          <TableRow key={order.id} data-testid={`row-planning-${order.id}`}>
-                            <TableCell className="font-mono text-sm">{order.orderCode}</TableCell>
-                            <TableCell>{order.salesRepName}</TableCell>
-                            <TableCell>{order.clientName}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{order.fournisseur || '-'}</Badge>
-                            </TableCell>
-                            <TableCell>{order.orderDate || '-'}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{order.dateLivraison || '-'}</Badge>
-                            </TableCell>
-                            <TableCell>{order.dateInventairePrevu || '-'}</TableCell>
-                            <TableCell>{order.dateInventaire || '-'}</TableCell>
-                            <TableCell>{order.dateRetour || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
                 )}
               </CardContent>
             </Card>

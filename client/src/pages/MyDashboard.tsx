@@ -39,8 +39,11 @@ import {
   AlertCircle,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download,
+  Loader2
 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getOfflineOrders, deleteOfflineOrder, type OfflineOrder, isOnline, onOnlineStatusChange, onOfflineOrdersChange } from "@/lib/offlineStorage";
 import { syncPendingOrders, initAutoSync, addSyncListener } from "@/lib/offlineSync";
 import { generateOrderPDFClient, downloadPDFBlob } from "@/lib/pdfGenerator";
@@ -141,6 +144,7 @@ export default function MyDashboard() {
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
   const [selectedCommercial, setSelectedCommercial] = useState<string>("mine");
   const [selectedFournisseur, setSelectedFournisseur] = useState<string>("all");
+  const [exportingPlanning, setExportingPlanning] = useState(false);
   const [selectedAnalyticsClient, setSelectedAnalyticsClient] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
   const [datesDialogOpen, setDatesDialogOpen] = useState(false);
@@ -355,6 +359,30 @@ export default function MyDashboard() {
     } finally {
       setDownloadingExcel(false);
     }
+  };
+
+  const handleExportPlanning = async () => {
+    if (filteredOrders.length === 0) return;
+    setExportingPlanning(true);
+    try {
+      const response = await fetch('/api/planning/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders: filteredOrders }),
+      });
+      if (!response.ok) throw new Error('Erreur export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `planning_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Export réussi", description: "Le planning a été exporté en Excel" });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible d'exporter le planning", variant: "destructive" });
+    }
+    setExportingPlanning(false);
   };
 
   const parseThemeSelections = (themeSelections: string | null): ThemeSelection[] => {
@@ -965,27 +993,36 @@ export default function MyDashboard() {
         </div>
 
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="orders" data-testid="tab-orders">
-              <ClipboardList className="w-4 h-4 mr-2" />
-              Commandes
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="orders" data-testid="tab-orders" className="text-xs px-1">
+              <ClipboardList className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Commandes</span>
+              <span className="sm:hidden">Cmd</span>
             </TabsTrigger>
-            <TabsTrigger value="offline" data-testid="tab-offline" className="relative">
-              <CloudOff className="w-4 h-4 mr-2" />
-              Hors ligne
+            <TabsTrigger value="planning" data-testid="tab-planning" className="text-xs px-1">
+              <Calendar className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Planning</span>
+              <span className="sm:hidden">Plan</span>
+            </TabsTrigger>
+            <TabsTrigger value="offline" data-testid="tab-offline" className="relative text-xs px-1">
+              <CloudOff className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Hors ligne</span>
+              <span className="sm:hidden">Offline</span>
               {offlineOrders.length > 0 && (
                 <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
                   {offlineOrders.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="calendar" data-testid="tab-calendar">
-              <Calendar className="w-4 h-4 mr-2" />
-              Calendrier
+            <TabsTrigger value="calendar" data-testid="tab-calendar" className="text-xs px-1">
+              <Calendar className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Calendrier</span>
+              <span className="sm:hidden">Cal</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" data-testid="tab-analytics">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analyse
+            <TabsTrigger value="analytics" data-testid="tab-analytics" className="text-xs px-1">
+              <BarChart3 className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Analyse</span>
+              <span className="sm:hidden">Stats</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1061,6 +1098,107 @@ export default function MyDashboard() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="planning" className="mt-4">
+            <Card>
+              <CardContent className="p-0">
+                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Planning des livraisons</span>
+                    <Badge variant="secondary">{filteredOrders.length} commandes</Badge>
+                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleExportPlanning}
+                    disabled={exportingPlanning || filteredOrders.length === 0}
+                    data-testid="button-export-planning"
+                  >
+                    {exportingPlanning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                    Exporter Excel
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        {isAdmin && selectedCommercial === "all" && <TableHead>Commercial</TableHead>}
+                        <TableHead>Client</TableHead>
+                        <TableHead>Enseigne</TableHead>
+                        <TableHead>Fournisseur</TableHead>
+                        <TableHead>Date Cmd</TableHead>
+                        <TableHead>Livraison</TableHead>
+                        <TableHead>Inv. Prévu</TableHead>
+                        <TableHead>Inventaire</TableHead>
+                        <TableHead>Retour</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={isAdmin && selectedCommercial === "all" ? 11 : 10} className="text-center py-8 text-muted-foreground">
+                            Aucune commande
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredOrders
+                          .sort((a, b) => {
+                            const dateA = a.dateLivraison || a.orderDate || '';
+                            const dateB = b.dateLivraison || b.orderDate || '';
+                            return dateA.localeCompare(dateB);
+                          })
+                          .map((order) => (
+                            <TableRow key={order.id} data-testid={`row-planning-${order.id}`}>
+                              <TableCell className="font-mono text-sm">{order.orderCode}</TableCell>
+                              {isAdmin && selectedCommercial === "all" && (
+                                <TableCell>{order.salesRepName}</TableCell>
+                              )}
+                              <TableCell>{order.clientName}</TableCell>
+                              <TableCell className="text-sm">{order.livraisonEnseigne || '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{order.fournisseur || '-'}</Badge>
+                              </TableCell>
+                              <TableCell className="text-sm">{order.orderDate || '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{order.dateLivraison || '-'}</Badge>
+                              </TableCell>
+                              <TableCell className="text-sm">{order.dateInventairePrevu || '-'}</TableCell>
+                              <TableCell className="text-sm">{order.dateInventaire || '-'}</TableCell>
+                              <TableCell className="text-sm">{order.dateRetour || '-'}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => openPreviewDialog(order)}
+                                    data-testid={`button-planning-preview-${order.id}`}
+                                    title="Voir détails"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => openDatesDialog(order)}
+                                    data-testid={`button-planning-edit-dates-${order.id}`}
+                                    title="Modifier dates"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

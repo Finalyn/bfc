@@ -2437,8 +2437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export planning to Excel
-  app.post("/api/admin/planning/export", async (req, res) => {
+  // Export planning to Excel (accessible to all authenticated users)
+  app.post("/api/planning/export", async (req, res) => {
     try {
       const { orders } = req.body;
       
