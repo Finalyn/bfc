@@ -1839,12 +1839,12 @@ export default function MyDashboard() {
                         </RechartsPie>
                       </ResponsiveContainer>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="flex flex-col gap-2 mt-2">
                       {globalStats.fournisseurData.map((item, index) => (
                         <div key={item.id} className="flex items-center gap-2 text-xs">
                           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span className="truncate">{item.name}</span>
-                          <span className="font-bold ml-auto">{item.quantity}</span>
+                          <span className="flex-1">{item.name}</span>
+                          <span className="font-bold">{item.quantity}</span>
                         </div>
                       ))}
                     </div>
