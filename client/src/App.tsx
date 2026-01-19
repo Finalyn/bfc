@@ -11,6 +11,7 @@ import HubPage from "@/pages/HubPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import MyDashboard from "@/pages/MyDashboard";
+import LegalPage from "@/pages/LegalPage";
 
 function HomeRedirect() {
   const isAuthenticated = localStorage.getItem("authenticated") === "true";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/dashboard" component={MyDashboard} />
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/legal" component={LegalPage} />
       <Route path="/">
         <HomeRedirect />
       </Route>

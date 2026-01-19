@@ -16,7 +16,8 @@ import {
   Calendar,
   Truck,
   Package,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from "lucide-react";
 import { 
   getNotificationPermission, 
@@ -261,6 +262,16 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         )}
+
+        <Button 
+          variant="ghost" 
+          className="w-full"
+          onClick={() => setLocation("/legal")}
+          data-testid="button-legal"
+        >
+          <FileText className="w-4 h-4 mr-2" />
+          Mentions légales et CGU
+        </Button>
 
         <Button 
           variant="outline" 
