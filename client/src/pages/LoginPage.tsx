@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Lock, User } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { APP_VERSION } from "@/lib/version";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -131,6 +132,9 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-600 mt-6">
           Application réservée aux commerciaux BFC
+        </p>
+        <p className="text-center text-xs text-gray-400 mt-4" data-testid="text-app-version">
+          Version {APP_VERSION}
         </p>
       </div>
     </div>

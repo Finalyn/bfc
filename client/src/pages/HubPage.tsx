@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipboardList, Database, LogOut, User, LayoutDashboard } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 export default function HubPage() {
   const [, setLocation] = useLocation();
@@ -135,6 +136,11 @@ export default function HubPage() {
         </div>
         </div>
       </div>
+      <footer className="py-4 text-center">
+        <p className="text-xs text-gray-400" data-testid="text-app-version">
+          Version {APP_VERSION}
+        </p>
+      </footer>
     </div>
   );
 }
