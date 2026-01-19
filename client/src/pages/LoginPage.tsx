@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, User, FileText } from "lucide-react";
-import { Link } from "wouter";
+import { Lock, User } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { APP_VERSION } from "@/lib/version";
 
@@ -134,13 +133,7 @@ export default function LoginPage() {
         <p className="text-center text-sm text-gray-600 mt-6">
           Application réservée aux commerciaux BFC
         </p>
-        <div className="text-center mt-4">
-          <Link href="/legal" className="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center gap-1" data-testid="link-legal">
-            <FileText className="w-3 h-3" />
-            Mentions légales et CGU
-          </Link>
-        </div>
-        <p className="text-center text-xs text-gray-400 mt-2" data-testid="text-app-version">
+        <p className="text-center text-xs text-gray-400 mt-4" data-testid="text-app-version">
           Version {APP_VERSION}
         </p>
       </div>
