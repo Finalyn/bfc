@@ -1409,140 +1409,55 @@ export default function MyDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics" className="mt-4 space-y-6">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Statistiques
-              </h2>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/stats/export-pdf', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          fournisseurData: globalStats.fournisseurData,
-                          allThemes: globalStats.allThemes,
-                          clientAnalytics: clientAnalytics.slice(0, 50),
-                          monthlyData: globalStats.monthlyData,
-                          totalQuantity: globalStats.totalQuantity
-                        })
-                      });
-                      if (response.ok) {
-                        const blob = await response.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        toast({ title: "Export réussi", description: "Fichier PDF téléchargé" });
-                      } else {
-                        throw new Error('Export failed');
-                      }
-                    } catch (e) {
-                      toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
-                    }
-                  }}
-                  data-testid="button-export-pdf"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  PDF
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/stats/export-excel', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          fournisseurData: globalStats.fournisseurData,
-                          allThemes: globalStats.allThemes,
-                          clientAnalytics: clientAnalytics.slice(0, 50),
-                          monthlyData: globalStats.monthlyData,
-                          totalQuantity: globalStats.totalQuantity
-                        })
-                      });
-                      if (response.ok) {
-                        const blob = await response.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        toast({ title: "Export réussi", description: "Fichier Excel téléchargé" });
-                      } else {
-                        throw new Error('Export failed');
-                      }
-                    } catch (e) {
-                      toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
-                    }
-                  }}
-                  data-testid="button-export-excel"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Excel
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <TabsContent value="analytics" className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
               <Card>
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Users className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{clientAnalytics.length}</p>
-                      <p className="text-xs text-muted-foreground">Clients</p>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-primary">{clientAnalytics.length}</p>
+                    <p className="text-xs text-muted-foreground">Clients</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <ShoppingCart className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{filteredOrders.length}</p>
-                      <p className="text-xs text-muted-foreground">Commandes</p>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{filteredOrders.length}</p>
+                    <p className="text-xs text-muted-foreground">Commandes</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <TrendingUp className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{globalStats.totalQuantity}</p>
-                      <p className="text-xs text-muted-foreground">Quantité</p>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{globalStats.totalQuantity}</p>
+                    <p className="text-xs text-muted-foreground">Quantité</p>
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <Package className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{globalStats.allThemes.length}</p>
-                      <p className="text-xs text-muted-foreground">Thèmes</p>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">{globalStats.allThemes.length}</p>
+                    <p className="text-xs text-muted-foreground">Thèmes</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-orange-600">{globalStats.fournisseurData.length}</p>
+                    <p className="text-xs text-muted-foreground">Fournisseurs</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-cyan-600">
+                      {filteredOrders.length > 0 ? Math.round(globalStats.totalQuantity / filteredOrders.length) : 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Moy/cmd</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1748,6 +1663,83 @@ export default function MyDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            <div className="flex justify-center gap-2 pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/stats/export-pdf', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        fournisseurData: globalStats.fournisseurData,
+                        allThemes: globalStats.allThemes,
+                        clientAnalytics: clientAnalytics.slice(0, 50),
+                        monthlyData: globalStats.monthlyData,
+                        totalQuantity: globalStats.totalQuantity
+                      })
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast({ title: "Export réussi", description: "Fichier PDF téléchargé" });
+                    } else {
+                      throw new Error('Export failed');
+                    }
+                  } catch (e) {
+                    toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
+                  }
+                }}
+                data-testid="button-export-pdf"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Exporter PDF
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/stats/export-excel', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        fournisseurData: globalStats.fournisseurData,
+                        allThemes: globalStats.allThemes,
+                        clientAnalytics: clientAnalytics.slice(0, 50),
+                        monthlyData: globalStats.monthlyData,
+                        totalQuantity: globalStats.totalQuantity
+                      })
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast({ title: "Export réussi", description: "Fichier Excel téléchargé" });
+                    } else {
+                      throw new Error('Export failed');
+                    }
+                  } catch (e) {
+                    toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
+                  }
+                }}
+                data-testid="button-export-excel"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Exporter Excel
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
