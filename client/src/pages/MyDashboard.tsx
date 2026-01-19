@@ -225,16 +225,21 @@ export default function MyDashboard() {
   });
 
   interface CommerciauxResponse {
-    data: Array<{ id: number; prenom: string; nom: string; displayName: string }>;
+    data: Array<{ id: number; prenom: string; nom: string }>;
   }
   
   const { data: commerciauxResponse } = useQuery<CommerciauxResponse>({
-    queryKey: ["/api/admin/commerciaux"],
+    queryKey: ["/api/admin/commerciaux?pageSize=100"],
     enabled: isAdmin,
   });
 
   const allOrders = ordersResponse?.data || [];
-  const commerciaux = commerciauxResponse?.data || [];
+  const commerciaux = useMemo(() => {
+    return (commerciauxResponse?.data || []).map(c => ({
+      ...c,
+      displayName: c.prenom ? `${c.prenom} ${c.nom}`.trim() : c.nom
+    }));
+  }, [commerciauxResponse]);
 
   const updateDatesMutation = useMutation({
     mutationFn: async ({ orderId, data }: { orderId: number; data: DateUpdateData }) => {
