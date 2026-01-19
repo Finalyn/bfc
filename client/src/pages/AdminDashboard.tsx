@@ -445,22 +445,6 @@ export default function AdminDashboard() {
     },
   });
 
-  const syncThemesMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/admin/themes/sync-from-orders");
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/themes'] });
-      toast({ 
-        title: "Synchronisation réussie", 
-        description: data.message || `${data.added} thèmes ajoutés depuis les bons de commande` 
-      });
-    },
-    onError: (error: any) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    },
-  });
-
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -1067,24 +1051,10 @@ export default function AdminDashboard() {
           <TabsContent value="themes">
             <Card>
               <CardContent className="p-0">
-                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
+                <div className="p-3 border-b">
                   <span className="text-sm text-muted-foreground">
-                    Thèmes liés aux fournisseurs et bons de commande
+                    Thèmes liés aux fournisseurs - Les modifications sont automatiquement reflétées dans les bons de commande
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => syncThemesMutation.mutate()}
-                    disabled={syncThemesMutation.isPending}
-                    data-testid="button-sync-themes"
-                  >
-                    {syncThemesMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Package className="w-4 h-4 mr-2" />
-                    )}
-                    Synchroniser depuis commandes
-                  </Button>
                 </div>
                 {themesLoading ? (
                   <div className="p-8 text-center">
