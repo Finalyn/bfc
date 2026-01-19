@@ -1766,7 +1766,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allThemes = data.themes.map((t, i) => ({
           id: i + 1,
           theme: t.theme,
-          fournisseur: t.fournisseur
+          fournisseur: t.fournisseur,
+          categorie: null
         }));
       }
       
@@ -2432,6 +2433,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(Buffer.from(buffer as ArrayBuffer));
     } catch (error: any) {
       console.error("Error exporting stats:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Export planning to Excel
+  app.post("/api/admin/planning/export", async (req, res) => {
+    try {
+      const { orders } = req.body;
+      
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      
+      const planningSheet = workbook.addWorksheet("Planning");
+      planningSheet.columns = [
+        { header: "Code Commande", key: "orderCode", width: 20 },
+        { header: "Commercial", key: "salesRepName", width: 25 },
+        { header: "Client", key: "clientName", width: 30 },
+        { header: "Fournisseur", key: "fournisseur", width: 20 },
+        { header: "Date Commande", key: "orderDate", width: 15 },
+        { header: "Date Livraison", key: "dateLivraison", width: 15 },
+        { header: "Inventaire Prévu", key: "dateInventairePrevu", width: 15 },
+        { header: "Inventaire", key: "dateInventaire", width: 15 },
+        { header: "Retour", key: "dateRetour", width: 15 },
+        { header: "Enseigne Livraison", key: "livraisonEnseigne", width: 25 },
+        { header: "Adresse Livraison", key: "livraisonAdresse", width: 35 },
+        { header: "CP Ville", key: "livraisonCpVille", width: 20 },
+      ];
+      
+      // Sort orders by delivery date
+      const sortedOrders = (orders || []).sort((a: any, b: any) => {
+        const dateA = a.dateLivraison || a.orderDate || '';
+        const dateB = b.dateLivraison || b.orderDate || '';
+        return dateA.localeCompare(dateB);
+      });
+      
+      sortedOrders.forEach((order: any) => {
+        planningSheet.addRow({
+          orderCode: order.orderCode,
+          salesRepName: order.salesRepName,
+          clientName: order.clientName,
+          fournisseur: order.fournisseur || '-',
+          orderDate: order.orderDate || '-',
+          dateLivraison: order.dateLivraison || '-',
+          dateInventairePrevu: order.dateInventairePrevu || '-',
+          dateInventaire: order.dateInventaire || '-',
+          dateRetour: order.dateRetour || '-',
+          livraisonEnseigne: order.livraisonEnseigne || '-',
+          livraisonAdresse: order.livraisonAdresse || '-',
+          livraisonCpVille: order.livraisonCpVille || '-',
+        });
+      });
+      
+      // Style header row
+      planningSheet.getRow(1).font = { bold: true };
+      planningSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      planningSheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      // Add borders
+      planningSheet.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="planning_${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error: any) {
+      console.error("Error exporting planning:", error);
       res.status(500).json({ message: error.message });
     }
   });

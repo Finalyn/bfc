@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { OrderDb } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -121,24 +122,6 @@ interface Fournisseur {
   nomCourt: string;
 }
 
-interface OrderDb {
-  id: number;
-  orderCode: string;
-  orderDate: string;
-  salesRepName: string;
-  clientName: string;
-  clientEmail: string;
-  clientTel: string;
-  themeSelections: string;
-  livraisonEnseigne: string;
-  livraisonAdresse: string;
-  livraisonCpVille: string;
-  facturationRaisonSociale: string;
-  facturationMode: string;
-  status: string;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
 
 const ORDER_STATUSES = [
   { value: "EN_ATTENTE", label: "En attente", color: "bg-yellow-100 text-yellow-800" },
@@ -161,7 +144,7 @@ interface PaginatedResponse<T> {
   };
 }
 
-type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "newsletter";
+type EntityType = "clients" | "themes" | "commerciaux" | "fournisseurs" | "orders" | "newsletter" | "planning";
 
 
 export default function AdminDashboard() {
@@ -395,6 +378,39 @@ export default function AdminDashboard() {
     queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
   });
+
+  // Query pour le planning - récupère toutes les commandes avec leurs dates de livraison
+  const { data: planningData, isLoading: planningLoading } = useQuery<PaginatedResponse<OrderDb>>({
+    queryKey: ["/api/admin/orders", "planning"],
+    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=10000`).then(r => r.json()),
+    enabled: !isCheckingAuth && activeTab === "planning",
+  });
+
+  const [exportingPlanning, setExportingPlanning] = useState(false);
+
+  const handleExportPlanning = async () => {
+    if (!planningData?.data) return;
+    setExportingPlanning(true);
+    try {
+      const response = await fetch('/api/admin/planning/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders: planningData.data }),
+      });
+      if (!response.ok) throw new Error('Erreur export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `planning_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Export réussi", description: "Le planning a été exporté en Excel" });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible d'exporter le planning", variant: "destructive" });
+    }
+    setExportingPlanning(false);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -910,6 +926,10 @@ export default function AdminDashboard() {
                 <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Commandes</span><span className="sm:hidden">Cmd.</span> ({ordersTotals?.pagination.total || 0})
               </TabsTrigger>
+              <TabsTrigger value="planning" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-planning">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Planning</span><span className="sm:hidden">Plan.</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1344,6 +1364,76 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="planning">
+            <Card>
+              <CardContent className="p-0">
+                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Planning des livraisons</span>
+                    <Badge variant="secondary">{planningData?.data?.length || 0} commandes</Badge>
+                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleExportPlanning}
+                    disabled={exportingPlanning || !planningData?.data?.length}
+                    data-testid="button-export-planning"
+                  >
+                    {exportingPlanning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                    Exporter Excel
+                  </Button>
+                </div>
+                {planningLoading ? (
+                  <div className="p-8 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Commercial</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Fournisseur</TableHead>
+                          <TableHead>Date Commande</TableHead>
+                          <TableHead>Date Livraison</TableHead>
+                          <TableHead>Inventaire Prévu</TableHead>
+                          <TableHead>Inventaire</TableHead>
+                          <TableHead>Retour</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {planningData?.data?.sort((a, b) => {
+                          const dateA = a.dateLivraison || a.orderDate || '';
+                          const dateB = b.dateLivraison || b.orderDate || '';
+                          return dateA.localeCompare(dateB);
+                        }).map((order) => (
+                          <TableRow key={order.id} data-testid={`row-planning-${order.id}`}>
+                            <TableCell className="font-mono text-sm">{order.orderCode}</TableCell>
+                            <TableCell>{order.salesRepName}</TableCell>
+                            <TableCell>{order.clientName}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{order.fournisseur || '-'}</Badge>
+                            </TableCell>
+                            <TableCell>{order.orderDate || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{order.dateLivraison || '-'}</Badge>
+                            </TableCell>
+                            <TableCell>{order.dateInventairePrevu || '-'}</TableCell>
+                            <TableCell>{order.dateInventaire || '-'}</TableCell>
+                            <TableCell>{order.dateRetour || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -1411,8 +1501,8 @@ export default function AdminDashboard() {
                   <p className="font-medium">{selectedOrder.orderDate}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Statut</Label>
-                  <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                  <Label className="text-muted-foreground">Fournisseur</Label>
+                  <p className="font-medium">{selectedOrder.fournisseur || "-"}</p>
                 </div>
               </div>
 
