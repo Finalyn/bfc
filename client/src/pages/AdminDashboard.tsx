@@ -1245,30 +1245,19 @@ export default function AdminDashboard() {
           <TabsContent value="orders">
             <Card>
               <CardContent className="p-0">
-                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Fournisseur :</span>
-                    <Select value={orderFournisseurFilter} onValueChange={setOrderFournisseurFilter}>
-                      <SelectTrigger className="w-40" data-testid="select-order-fournisseur-filter">
-                        <SelectValue placeholder="Tous" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">Tous</SelectItem>
-                        {allFournisseurs?.data?.map(f => (
-                          <SelectItem key={f.id} value={f.nomCourt || f.nom}>{f.nom}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport("orders")}
-                    data-testid="button-export-orders"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Exporter Excel
-                  </Button>
+                <div className="p-3 border-b flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Fournisseur :</span>
+                  <Select value={orderFournisseurFilter} onValueChange={setOrderFournisseurFilter}>
+                    <SelectTrigger className="w-40" data-testid="select-order-fournisseur-filter">
+                      <SelectValue placeholder="Tous" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Tous</SelectItem>
+                      {allFournisseurs?.data?.map(f => (
+                        <SelectItem key={f.id} value={f.nomCourt || f.nom}>{f.nom}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {ordersLoading ? (
                   <div className="p-8 text-center">
