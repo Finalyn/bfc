@@ -269,6 +269,22 @@
     @apply hidden;
   }
 
+  /* Date input right alignment */
+  input[type="date"].text-right,
+  input[type="date"][style*="text-align: right"] {
+    text-align: right !important;
+    direction: rtl;
+  }
+  input[type="date"].text-right::-webkit-datetime-edit,
+  input[type="date"][style*="text-align: right"]::-webkit-datetime-edit {
+    direction: ltr;
+    text-align: right;
+  }
+  input[type="date"].text-right::-webkit-datetime-edit-fields-wrapper,
+  input[type="date"][style*="text-align: right"]::-webkit-datetime-edit-fields-wrapper {
+    direction: ltr;
+  }
+
   /* Placeholder styling for contentEditable div */
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);
