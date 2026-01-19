@@ -842,7 +842,7 @@ export default function MyDashboard() {
                     <SelectContent>
                       <SelectItem value="all">Tous les commerciaux</SelectItem>
                       <SelectItem value="mine">Mes commandes ({userName})</SelectItem>
-                      {commerciaux.filter(c => c.displayName && c.displayName !== userName).map(commercial => (
+                      {commerciaux.filter(c => c.displayName).map(commercial => (
                         <SelectItem key={commercial.id} value={commercial.displayName}>
                           {commercial.displayName}
                         </SelectItem>
