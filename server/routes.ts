@@ -1005,6 +1005,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       };
       
+      // Get all orders first to check newsletter status
+      const allOrders = await db.select().from(orders).orderBy(orders.createdAt);
+      
+      // Build newsletter subscribers map by email
+      const newsletterEmails = new Set<string>();
+      allOrders
+        .filter(o => o.newsletterAccepted === true)
+        .forEach(order => {
+          const email = (order.clientEmail || "").toLowerCase().trim();
+          if (email) newsletterEmails.add(email);
+        });
+      
       // ===== CLIENTS =====
       const clientSheet = workbook.addWorksheet("Clients");
       clientSheet.columns = [
@@ -1017,12 +1029,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { header: "Téléphone", key: "tel", width: 18 },
         { header: "Portable", key: "portable", width: 18 },
         { header: "Email", key: "mail", width: 35 },
+        { header: "Newsletter", key: "newsletter", width: 12 },
       ];
       
       const dbClients = await db.select().from(clients);
       const dbClientCodes = new Set(dbClients.map(c => c.code));
       
       dbClients.forEach(client => {
+        const email = (client.mail || "").toLowerCase().trim();
         clientSheet.addRow({
           code: client.code,
           nom: client.nom,
@@ -1033,11 +1047,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tel: client.tel,
           portable: client.portable,
           mail: client.mail,
+          newsletter: newsletterEmails.has(email) ? "Oui" : "Non",
         });
       });
       
       data.clients.forEach(client => {
         if (!dbClientCodes.has(client.code)) {
+          const email = (client.mail || "").toLowerCase().trim();
           clientSheet.addRow({
             code: client.code,
             nom: client.nom,
@@ -1048,6 +1064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tel: client.tel,
             portable: client.portable,
             mail: client.mail,
+            newsletter: newsletterEmails.has(email) ? "Oui" : "Non",
           });
         }
       });
@@ -1076,8 +1093,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { header: "Date Retour", key: "dateRetour", width: 15 },
         { header: "Créée le", key: "createdAt", width: 18 },
       ];
-      
-      const allOrders = await db.select().from(orders).orderBy(orders.createdAt);
       
       allOrders.forEach(order => {
         let themesList = "";
@@ -1224,40 +1239,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       styleHeader(fournisseurSheet);
-      
-      // ===== NEWSLETTER (abonnés) =====
-      const newsletterSheet = workbook.addWorksheet("Newsletter");
-      newsletterSheet.columns = [
-        { header: "Client", key: "clientName", width: 35 },
-        { header: "Email", key: "clientEmail", width: 35 },
-        { header: "Téléphone", key: "clientTel", width: 18 },
-        { header: "Commercial", key: "salesRepName", width: 25 },
-        { header: "Date inscription", key: "orderDate", width: 15 },
-        { header: "N° Commande", key: "orderCode", width: 18 },
-      ];
-      
-      // Get unique newsletter subscribers from orders
-      const newsletterSubscribers = new Map<string, any>();
-      allOrders
-        .filter(o => o.newsletterAccepted === true)
-        .forEach(order => {
-          const email = (order.clientEmail || "").toLowerCase().trim();
-          if (email && !newsletterSubscribers.has(email)) {
-            newsletterSubscribers.set(email, {
-              clientName: order.clientName,
-              clientEmail: order.clientEmail,
-              clientTel: order.clientTel || "",
-              salesRepName: order.salesRepName,
-              orderDate: order.orderDate,
-              orderCode: order.orderCode,
-            });
-          }
-        });
-      
-      Array.from(newsletterSubscribers.values()).forEach(sub => {
-        newsletterSheet.addRow(sub);
-      });
-      styleHeader(newsletterSheet);
       
       const buffer = await workbook.xlsx.writeBuffer();
       
@@ -1451,6 +1432,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const now = new Date();
         const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         
+        // For NEWSLETTER filter, get newsletter subscribers from orders
+        let newsletterEmails = new Set<string>();
+        if (badgeFilter === "NEWSLETTER") {
+          const allOrders = await db.select().from(orders);
+          allOrders
+            .filter(o => o.newsletterAccepted === true)
+            .forEach(order => {
+              const email = (order.clientEmail || "").toLowerCase().trim();
+              if (email) newsletterEmails.add(email);
+            });
+        }
+        
         allClients = allClients.filter(c => {
           const createdAt = c.createdAt ? new Date(c.createdAt) : null;
           const isNew = createdAt && createdAt > oneMonthAgo && !c.isFromExcel;
@@ -1462,6 +1455,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return hasPendingModification;
           } else if (badgeFilter === "LAMBDA") {
             return !isNew && !hasPendingModification;
+          } else if (badgeFilter === "NEWSLETTER") {
+            const clientEmail = (c.mail || "").toLowerCase().trim();
+            return clientEmail && newsletterEmails.has(clientEmail);
           }
           return true;
         });

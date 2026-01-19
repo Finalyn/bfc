@@ -175,7 +175,7 @@ export default function AdminDashboard() {
   const [sortField, setSortField] = useState<string>("nom");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [clientBadgeFilter, setClientBadgeFilter] = useState<"ALL" | "NEW" | "MODIFIED" | "LAMBDA">("ALL");
+  const [clientBadgeFilter, setClientBadgeFilter] = useState<"ALL" | "NEW" | "MODIFIED" | "LAMBDA" | "NEWSLETTER">("ALL");
   const [orderFournisseurFilter, setOrderFournisseurFilter] = useState<string>("ALL");
   const pageSize = 50;
   const { toast } = useToast();
@@ -929,6 +929,7 @@ export default function AdminDashboard() {
                       <SelectItem value="NEW">Nouveaux</SelectItem>
                       <SelectItem value="MODIFIED">Modifiés</SelectItem>
                       <SelectItem value="LAMBDA">Lambda</SelectItem>
+                      <SelectItem value="NEWSLETTER">Newsletter</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
