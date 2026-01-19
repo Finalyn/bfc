@@ -213,10 +213,10 @@ export default function MyDashboard() {
     };
   }, [toast]);
   
-  const userName = sessionStorage.getItem("userName") || "";
-  const userRole = sessionStorage.getItem("userRole") || "commercial";
+  const userName = localStorage.getItem("userName") || "";
+  const userRole = localStorage.getItem("userRole") || "commercial";
   const isAdmin = userRole === "admin";
-  const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+  const isAuthenticated = localStorage.getItem("authenticated") === "true";
 
   if (!isAuthenticated) {
     setLocation("/login");

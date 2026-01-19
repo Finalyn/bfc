@@ -278,7 +278,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   const today = formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd");
   
   // Récupérer le nom du commercial connecté
-  const connectedUserName = sessionStorage.getItem("userName") || "";
+  const connectedUserName = localStorage.getItem("userName") || "";
 
   const {
     register,

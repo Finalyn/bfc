@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -30,22 +29,6 @@ function Router() {
 }
 
 function App() {
-  useEffect(() => {
-    const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    if (navigationType?.type === 'reload') {
-      sessionStorage.removeItem("authenticated");
-      sessionStorage.removeItem("adminAuthenticated");
-    }
-    
-    const handleBeforeUnload = () => {
-      sessionStorage.removeItem("authenticated");
-      sessionStorage.removeItem("adminAuthenticated");
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

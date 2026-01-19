@@ -36,10 +36,10 @@ export default function LoginPage() {
       });
       
       if (data.success) {
-        sessionStorage.setItem("authenticated", "true");
-        sessionStorage.setItem("user", JSON.stringify(data.user));
-        sessionStorage.setItem("userRole", data.user.role);
-        sessionStorage.setItem("userName", data.user.fullName);
+        localStorage.setItem("authenticated", "true");
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("userRole", data.user.role);
+        localStorage.setItem("userName", data.user.fullName);
         setLocation("/hub");
       } else {
         throw new Error(data.error || "Erreur de connexion");

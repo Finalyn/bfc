@@ -326,13 +326,13 @@ export default function OrderPage() {
     
     // Si c'est un rechargement, effacer l'authentification et rediriger
     if (isPageReload) {
-      sessionStorage.removeItem("authenticated");
+      localStorage.removeItem("authenticated");
       window.location.href = "/login";
       return;
     }
     
     // Vérifier l'authentification
-    const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+    const isAuthenticated = localStorage.getItem("authenticated") === "true";
     
     if (!isAuthenticated) {
       window.location.href = "/login";

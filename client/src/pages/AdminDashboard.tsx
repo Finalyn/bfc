@@ -276,8 +276,8 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
-    const isAdminAuthenticated = sessionStorage.getItem("adminAuthenticated") === "true";
+    const isAuthenticated = localStorage.getItem("authenticated") === "true";
+    const isAdminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
     
     if (!isAuthenticated) {
       window.location.href = "/login";

@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     if (password === "slf25") {
-      sessionStorage.setItem("adminAuthenticated", "true");
+      localStorage.setItem("adminAuthenticated", "true");
       setLocation("/admin");
     } else {
       toast({

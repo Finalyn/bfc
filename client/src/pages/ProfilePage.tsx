@@ -20,9 +20,9 @@ export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  const userName = sessionStorage.getItem("userName") || "";
-  const userRole = sessionStorage.getItem("userRole") || "commercial";
-  const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+  const userName = localStorage.getItem("userName") || "";
+  const userRole = localStorage.getItem("userRole") || "commercial";
+  const isAuthenticated = localStorage.getItem("authenticated") === "true";
   
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
 
@@ -62,12 +62,12 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("authenticated");
-    sessionStorage.removeItem("adminAuthenticated");
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("userRole");
-    sessionStorage.removeItem("userName");
-    sessionStorage.removeItem("userId");
+    localStorage.removeItem("authenticated");
+    localStorage.removeItem("adminAuthenticated");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userId");
     setLocation("/login");
   };
 

@@ -7,9 +7,9 @@ import { APP_VERSION } from "@/lib/version";
 export default function HubPage() {
   const [, setLocation] = useLocation();
 
-  const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
-  const userRole = sessionStorage.getItem("userRole") || "commercial";
-  const userName = sessionStorage.getItem("userName") || "";
+  const isAuthenticated = localStorage.getItem("authenticated") === "true";
+  const userRole = localStorage.getItem("userRole") || "commercial";
+  const userName = localStorage.getItem("userName") || "";
   const isAdmin = userRole === "admin";
   
   if (!isAuthenticated) {
@@ -18,11 +18,11 @@ export default function HubPage() {
   }
 
   const handleLogout = () => {
-    sessionStorage.removeItem("authenticated");
-    sessionStorage.removeItem("adminAuthenticated");
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("userRole");
-    sessionStorage.removeItem("userName");
+    localStorage.removeItem("authenticated");
+    localStorage.removeItem("adminAuthenticated");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
     setLocation("/login");
   };
 
@@ -111,7 +111,7 @@ export default function HubPage() {
             <Card 
               className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-gray-500"
               onClick={() => {
-                sessionStorage.setItem("adminAuthenticated", "true");
+                localStorage.setItem("adminAuthenticated", "true");
                 setLocation("/admin");
               }}
               data-testid="card-database"

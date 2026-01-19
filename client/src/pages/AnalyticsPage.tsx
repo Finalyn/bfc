@@ -67,7 +67,7 @@ const MONTH_NAMES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août'
 export default function AnalyticsPage() {
   const [, setLocation] = useLocation();
   const [selectedClient, setSelectedClient] = useState<string>("all");
-  const isAuthenticated = sessionStorage.getItem("authenticated") === "true";
+  const isAuthenticated = localStorage.getItem("authenticated") === "true";
 
   if (!isAuthenticated) {
     setLocation("/login");
