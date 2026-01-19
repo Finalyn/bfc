@@ -86,7 +86,7 @@ export default function LegalPage() {
                     <section>
                       <h3 className="font-semibold text-lg mb-2">Client et bénéficiaire</h3>
                       <p className="text-muted-foreground leading-relaxed">
-                        Cette application est mise à disposition des équipes commerciales de <strong>BFC</strong> (Bazar France Commerce) 
+                        Cette application est mise à disposition des équipes commerciales de <strong>BFC</strong> 
                         dans le cadre d'un contrat de prestation de services entre Finalyn et BFC.<br /><br />
                         L'application "BFC APP" est un outil interne destiné exclusivement aux collaborateurs 
                         autorisés de BFC pour la gestion de leurs activités commerciales.
