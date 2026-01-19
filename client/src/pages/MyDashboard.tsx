@@ -466,9 +466,65 @@ export default function MyDashboard() {
     const nextDate = findNextEvent();
     if (nextDate) {
       setCurrentDate(nextDate);
-      toast({ title: "Prochain événement", description: format(nextDate, "EEEE d MMMM yyyy", { locale: fr }) });
+      toast({ title: "Événement suivant", description: format(nextDate, "EEEE d MMMM yyyy", { locale: fr }) });
     } else {
       toast({ title: "Aucun événement", description: "Aucun événement futur trouvé", variant: "destructive" });
+    }
+  };
+
+  // Fonction pour trouver l'événement précédent (respecte les filtres actifs)
+  const findPreviousEvent = (): Date | null => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    let prevEventDate: Date | null = null;
+    const searchLower = calendarSearch.toLowerCase();
+    
+    filteredOrders.forEach(order => {
+      // Appliquer le filtre de recherche
+      if (calendarSearch && !order.orderCode.toLowerCase().includes(searchLower) && 
+          !order.clientName.toLowerCase().includes(searchLower) &&
+          !(order.livraisonEnseigne || "").toLowerCase().includes(searchLower)) {
+        return;
+      }
+
+      const checkDate = (dateStr: string | null | undefined, eventType: DateEventType) => {
+        if (!dateStr) return;
+        if (!calendarEventFilters.has(eventType)) return;
+        
+        const d = parseFlexibleDate(dateStr);
+        if (d && d < today) {
+          if (!prevEventDate || d > prevEventDate) {
+            prevEventDate = d;
+          }
+        }
+      };
+
+      // Date de prise de commande
+      checkDate(order.orderDate, "commande");
+
+      const themes = parseThemeSelections(order.themeSelections);
+      themes.forEach(theme => {
+        if (theme.deliveryDate && (theme.quantity || theme.deliveryDate)) {
+          checkDate(theme.deliveryDate, "livraison");
+        }
+      });
+
+      checkDate(order.dateInventairePrevu, "inventairePrevu");
+      checkDate(order.dateInventaire, "inventaire");
+      checkDate(order.dateRetour, "retour");
+    });
+
+    return prevEventDate;
+  };
+
+  const goToPreviousEvent = () => {
+    const prevDate = findPreviousEvent();
+    if (prevDate) {
+      setCurrentDate(prevDate);
+      toast({ title: "Événement précédent", description: format(prevDate, "EEEE d MMMM yyyy", { locale: fr }) });
+    } else {
+      toast({ title: "Aucun événement", description: "Aucun événement passé trouvé", variant: "destructive" });
     }
   };
 
@@ -1066,11 +1122,20 @@ export default function MyDashboard() {
                     <Button 
                       variant="secondary" 
                       size="sm"
+                      onClick={goToPreviousEvent}
+                      data-testid="button-prev-event"
+                      title="Aller à l'événement précédent"
+                    >
+                      ◀ Préc.
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
                       onClick={goToNextEvent}
                       data-testid="button-next-event"
-                      title="Aller au prochain événement"
+                      title="Aller à l'événement suivant"
                     >
-                      Prochain
+                      Suiv. ▶
                     </Button>
                   </div>
                 </div>
