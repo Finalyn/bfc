@@ -147,8 +147,7 @@ export default function LegalPage() {
                       </h3>
                       <p className="text-muted-foreground leading-relaxed">
                         Pour toute question concernant cette application :<br /><br />
-                        <strong>Support technique :</strong> <a href="mailto:support@finalyn.com" className="text-primary hover:underline">support@finalyn.com</a><br />
-                        <strong>Questions juridiques :</strong> <a href="mailto:legal@finalyn.com" className="text-primary hover:underline">legal@finalyn.com</a><br />
+                        <strong>Contact :</strong> <a href="mailto:contact@finalyn.com" className="text-primary hover:underline">contact@finalyn.com</a><br />
                         <strong>Site web :</strong> <a href="https://finalyn.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.finalyn.com</a>
                       </p>
                     </section>
@@ -308,7 +307,7 @@ export default function LegalPage() {
                         la perte, la destruction ou l'altération.<br /><br />
                         <strong>8.2 Signalement</strong><br />
                         L'Utilisateur s'engage à signaler immédiatement toute vulnérabilité, faille 
-                        de sécurité ou utilisation suspecte à l'adresse : security@finalyn.com
+                        de sécurité ou utilisation suspecte à l'adresse : contact@finalyn.com
                       </p>
                     </section>
 
@@ -357,7 +356,7 @@ export default function LegalPage() {
                       <p className="text-muted-foreground leading-relaxed">
                         Pour toute question relative aux présentes CGU :<br /><br />
                         <strong>Finalyn</strong><br />
-                        Email : <a href="mailto:legal@finalyn.com" className="text-primary hover:underline">legal@finalyn.com</a><br />
+                        Email : <a href="mailto:contact@finalyn.com" className="text-primary hover:underline">contact@finalyn.com</a><br />
                         Site web : <a href="https://finalyn.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.finalyn.com</a>
                       </p>
                     </section>
@@ -484,7 +483,7 @@ export default function LegalPage() {
                         • <strong>Droit à la limitation</strong> : demander la limitation du traitement<br />
                         • <strong>Droit à la portabilité</strong> : recevoir vos données dans un format structuré<br />
                         • <strong>Droit d'opposition</strong> : vous opposer au traitement pour motifs légitimes<br /><br />
-                        Pour exercer ces droits, contactez : <a href="mailto:privacy@finalyn.com" className="text-primary hover:underline">privacy@finalyn.com</a>
+                        Pour exercer ces droits, contactez : <a href="mailto:contact@finalyn.com" className="text-primary hover:underline">contact@finalyn.com</a>
                       </p>
                     </section>
 
@@ -524,9 +523,8 @@ export default function LegalPage() {
                       </h3>
                       <p className="text-muted-foreground leading-relaxed">
                         Pour toute question relative à la protection de vos données :<br /><br />
-                        <strong>Délégué à la Protection des Données</strong><br />
-                        Email : <a href="mailto:privacy@finalyn.com" className="text-primary hover:underline">privacy@finalyn.com</a><br /><br />
                         <strong>Finalyn</strong><br />
+                        Email : <a href="mailto:contact@finalyn.com" className="text-primary hover:underline">contact@finalyn.com</a><br />
                         Site web : <a href="https://finalyn.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.finalyn.com</a>
                       </p>
                     </section>
