@@ -1225,6 +1225,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       styleHeader(fournisseurSheet);
       
+      // ===== NEWSLETTER (abonnés) =====
+      const newsletterSheet = workbook.addWorksheet("Newsletter");
+      newsletterSheet.columns = [
+        { header: "Client", key: "clientName", width: 35 },
+        { header: "Email", key: "clientEmail", width: 35 },
+        { header: "Téléphone", key: "clientTel", width: 18 },
+        { header: "Commercial", key: "salesRepName", width: 25 },
+        { header: "Date inscription", key: "orderDate", width: 15 },
+        { header: "N° Commande", key: "orderCode", width: 18 },
+      ];
+      
+      // Get unique newsletter subscribers from orders
+      const newsletterSubscribers = new Map<string, any>();
+      allOrders
+        .filter(o => o.newsletterAccepted === true)
+        .forEach(order => {
+          const email = (order.clientEmail || "").toLowerCase().trim();
+          if (email && !newsletterSubscribers.has(email)) {
+            newsletterSubscribers.set(email, {
+              clientName: order.clientName,
+              clientEmail: order.clientEmail,
+              clientTel: order.clientTel || "",
+              salesRepName: order.salesRepName,
+              orderDate: order.orderDate,
+              orderCode: order.orderCode,
+            });
+          }
+        });
+      
+      Array.from(newsletterSubscribers.values()).forEach(sub => {
+        newsletterSheet.addRow(sub);
+      });
+      styleHeader(newsletterSheet);
+      
       const buffer = await workbook.xlsx.writeBuffer();
       
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
