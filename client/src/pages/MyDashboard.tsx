@@ -1444,6 +1444,21 @@ export default function MyDashboard() {
           <TabsContent value="analytics" className="mt-4 space-y-4">
             <Card className="p-3">
               <div className="flex flex-col gap-3">
+                {isAdmin && (
+                  <Select value={selectedCommercial} onValueChange={setSelectedCommercial}>
+                    <SelectTrigger className="w-full" data-testid="select-stats-commercial">
+                      <SelectValue placeholder="Sélectionner un commercial" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les commerciaux</SelectItem>
+                      {commerciaux.map((c) => (
+                        <SelectItem key={c.id} value={c.displayName}>
+                          {c.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant={statsViewMode === "year" ? "default" : "outline"}
