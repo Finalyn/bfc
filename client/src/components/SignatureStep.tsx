@@ -127,7 +127,8 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
                     type="date"
                     data-testid="input-signature-date"
                     {...register("signatureDate", { required: "La date est requise" })}
-                    className="h-12 text-sm sm:text-base text-right [&::-webkit-calendar-picker-indicator]:opacity-100"
+                    style={{ textAlign: 'right' }}
+                    className="h-12 text-sm sm:text-base [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-right [&::-webkit-datetime-edit-fields-wrapper]:text-right"
                   />
                   {errors.signatureDate && (
                     <p className="text-xs text-destructive">{errors.signatureDate.message}</p>
