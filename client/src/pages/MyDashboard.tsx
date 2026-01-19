@@ -117,7 +117,7 @@ interface DateUpdateData {
   dateRetour?: string;
 }
 
-type DateEventType = "livraison" | "inventairePrevu" | "inventaire" | "retour";
+type DateEventType = "commande" | "livraison" | "inventairePrevu" | "inventaire" | "retour";
 
 interface OrderEvent {
   order: OrderDb;
@@ -127,6 +127,7 @@ interface OrderEvent {
 }
 
 const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string; dotColor: string }> = {
+  commande: { label: "Prise de commande", color: "text-rose-600", bgColor: "bg-rose-100 dark:bg-rose-900", dotColor: "bg-rose-500" },
   livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900", dotColor: "bg-blue-500" },
   inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900", dotColor: "bg-amber-500" },
   inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900", dotColor: "bg-green-500" },
@@ -153,7 +154,7 @@ export default function MyDashboard() {
   const [online, setOnline] = useState(isOnline());
   const [syncing, setSyncing] = useState(false);
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
-  const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["livraison", "inventairePrevu", "inventaire", "retour"]));
+  const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["commande", "livraison", "inventairePrevu", "inventaire", "retour"]));
   const [calendarSearch, setCalendarSearch] = useState("");
   const { toast } = useToast();
 
@@ -395,6 +396,9 @@ export default function MyDashboard() {
         }
       };
 
+      // Date de prise de commande
+      checkDate(order.orderDate, "commande");
+
       // Parcourir chaque thème pour les dates de livraison individuelles
       const themes = parseThemeSelections(order.themeSelections);
       themes.forEach(theme => {
@@ -439,6 +443,9 @@ export default function MyDashboard() {
           }
         }
       };
+
+      // Date de prise de commande
+      checkDate(order.orderDate, "commande");
 
       const themes = parseThemeSelections(order.themeSelections);
       themes.forEach(theme => {
