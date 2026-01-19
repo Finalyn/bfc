@@ -1754,6 +1754,195 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export stats to PDF
+  app.post("/api/stats/export-pdf", async (req, res) => {
+    try {
+      const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity } = req.body;
+      
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      
+      const blue = "#003366";
+      let yPos = 20;
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setTextColor(blue);
+      doc.text("Rapport Statistiques", 105, yPos, { align: "center" });
+      yPos += 15;
+      
+      // Date
+      doc.setFontSize(10);
+      doc.setTextColor("#666666");
+      doc.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, 105, yPos, { align: "center" });
+      yPos += 15;
+      
+      // Summary
+      doc.setFontSize(14);
+      doc.setTextColor(blue);
+      doc.text("Résumé", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(11);
+      doc.setTextColor("#000000");
+      doc.text(`Quantité totale: ${totalQuantity || 0}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Nombre de thèmes: ${allThemes?.length || 0}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Nombre de clients: ${clientAnalytics?.length || 0}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Nombre de fournisseurs: ${fournisseurData?.length || 0}`, 14, yPos);
+      yPos += 12;
+      
+      // By Supplier
+      doc.setFontSize(14);
+      doc.setTextColor(blue);
+      doc.text("Par Fournisseur", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(10);
+      doc.setTextColor("#000000");
+      (fournisseurData || []).forEach((f: any) => {
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+        doc.text(`${f.name}: ${f.value} commandes, ${f.quantity} unités`, 14, yPos);
+        yPos += 6;
+      });
+      yPos += 6;
+      
+      // Top 10 Themes
+      if (yPos > 230) { doc.addPage(); yPos = 20; }
+      doc.setFontSize(14);
+      doc.setTextColor(blue);
+      doc.text("Top 10 Thèmes", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(9);
+      doc.setTextColor("#000000");
+      (allThemes || []).slice(0, 10).forEach((t: any, i: number) => {
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+        const themeName = t.name.length > 40 ? t.name.substring(0, 40) + "..." : t.name;
+        doc.text(`${i + 1}. ${themeName} - ${t.quantity} unités (${t.orders} cmd)`, 14, yPos);
+        yPos += 5;
+      });
+      yPos += 6;
+      
+      // Top 10 Clients
+      if (yPos > 230) { doc.addPage(); yPos = 20; }
+      doc.setFontSize(14);
+      doc.setTextColor(blue);
+      doc.text("Top 10 Clients", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(9);
+      doc.setTextColor("#000000");
+      (clientAnalytics || []).slice(0, 10).forEach((c: any, i: number) => {
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+        const clientName = (c.enseigne || c.name || "").substring(0, 35);
+        doc.text(`${i + 1}. ${clientName} - ${c.totalOrders} cmd, ${c.totalQuantity || 0} unités`, 14, yPos);
+        yPos += 5;
+      });
+      
+      const pdfBuffer = doc.output("arraybuffer");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="statistiques.pdf"`);
+      res.send(Buffer.from(pdfBuffer));
+    } catch (error: any) {
+      console.error("Error exporting stats PDF:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Export stats to Excel
+  app.post("/api/stats/export-excel", async (req, res) => {
+    try {
+      const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity } = req.body;
+      
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      
+      // Résumé
+      const summarySheet = workbook.addWorksheet("Résumé");
+      summarySheet.columns = [
+        { header: "Indicateur", key: "indicateur", width: 30 },
+        { header: "Valeur", key: "valeur", width: 20 },
+      ];
+      summarySheet.addRow({ indicateur: "Quantité totale", valeur: totalQuantity || 0 });
+      summarySheet.addRow({ indicateur: "Nombre de thèmes", valeur: allThemes?.length || 0 });
+      summarySheet.addRow({ indicateur: "Nombre de clients", valeur: clientAnalytics?.length || 0 });
+      summarySheet.addRow({ indicateur: "Nombre de fournisseurs", valeur: fournisseurData?.length || 0 });
+      
+      // Style header
+      summarySheet.getRow(1).font = { bold: true };
+      summarySheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      summarySheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      // Par fournisseur
+      const fournisseurSheet = workbook.addWorksheet("Par fournisseur");
+      fournisseurSheet.columns = [
+        { header: "Fournisseur", key: "fournisseur", width: 25 },
+        { header: "Commandes", key: "commandes", width: 15 },
+        { header: "Quantité", key: "quantite", width: 15 },
+      ];
+      (fournisseurData || []).forEach((f: any) => {
+        fournisseurSheet.addRow({ fournisseur: f.name, commandes: f.value, quantite: f.quantity });
+      });
+      fournisseurSheet.getRow(1).font = { bold: true };
+      fournisseurSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      fournisseurSheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      // Thèmes
+      const themesSheet = workbook.addWorksheet("Thèmes");
+      themesSheet.columns = [
+        { header: "Thème", key: "theme", width: 40 },
+        { header: "Fournisseur", key: "fournisseur", width: 20 },
+        { header: "Commandes", key: "commandes", width: 12 },
+        { header: "Quantité", key: "quantite", width: 12 },
+      ];
+      (allThemes || []).forEach((t: any) => {
+        themesSheet.addRow({ theme: t.name, fournisseur: t.fournisseur, commandes: t.orders, quantite: t.quantity });
+      });
+      themesSheet.getRow(1).font = { bold: true };
+      themesSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      themesSheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      // Clients
+      const clientsSheet = workbook.addWorksheet("Clients");
+      clientsSheet.columns = [
+        { header: "Client", key: "client", width: 35 },
+        { header: "Enseigne", key: "enseigne", width: 25 },
+        { header: "Commandes", key: "commandes", width: 12 },
+        { header: "Quantité", key: "quantite", width: 12 },
+      ];
+      (clientAnalytics || []).forEach((c: any) => {
+        clientsSheet.addRow({ client: c.name, enseigne: c.enseigne, commandes: c.totalOrders, quantite: c.totalQuantity });
+      });
+      clientsSheet.getRow(1).font = { bold: true };
+      clientsSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      clientsSheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      // Mensuel
+      const monthlySheet = workbook.addWorksheet("Par mois");
+      monthlySheet.columns = [
+        { header: "Mois", key: "mois", width: 15 },
+        { header: "Commandes", key: "commandes", width: 15 },
+      ];
+      (monthlyData || []).forEach((m: any) => {
+        monthlySheet.addRow({ mois: m.name, commandes: m.commandes });
+      });
+      monthlySheet.getRow(1).font = { bold: true };
+      monthlySheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      monthlySheet.getRow(1).font = { color: { argb: "FFFFFFFF" }, bold: true };
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="statistiques.xlsx"`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error: any) {
+      console.error("Error exporting stats:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

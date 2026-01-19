@@ -665,19 +665,38 @@ export default function MyDashboard() {
   }, [filteredOrders]);
 
   const globalStats = useMemo(() => {
-    const themeCount: { [key: string]: number } = {};
+    const themeCount: { [key: string]: { orders: number; quantity: number; fournisseur: string; category: string } } = {};
     const monthCount: { [key: number]: number } = {};
-    const fournisseurCount: { [key: string]: number } = {};
+    const fournisseurStats: { [key: string]: { orders: number; quantity: number; themes: { [key: string]: { orders: number; quantity: number } } } } = {};
+    let totalQuantity = 0;
 
     filteredOrders.forEach(order => {
       const fournisseur = order.fournisseur || "BDIS";
-      fournisseurCount[fournisseur] = (fournisseurCount[fournisseur] || 0) + 1;
+      
+      if (!fournisseurStats[fournisseur]) {
+        fournisseurStats[fournisseur] = { orders: 0, quantity: 0, themes: {} };
+      }
+      fournisseurStats[fournisseur].orders += 1;
       
       try {
         const selections: ThemeSelection[] = JSON.parse(order.themeSelections || "[]");
         selections.forEach(sel => {
           if (sel.theme) {
-            themeCount[sel.theme] = (themeCount[sel.theme] || 0) + 1;
+            const qty = parseInt(sel.quantity || "0") || 0;
+            totalQuantity += qty;
+            
+            if (!themeCount[sel.theme]) {
+              themeCount[sel.theme] = { orders: 0, quantity: 0, fournisseur, category: sel.category || "" };
+            }
+            themeCount[sel.theme].orders += 1;
+            themeCount[sel.theme].quantity += qty;
+            
+            fournisseurStats[fournisseur].quantity += qty;
+            if (!fournisseurStats[fournisseur].themes[sel.theme]) {
+              fournisseurStats[fournisseur].themes[sel.theme] = { orders: 0, quantity: 0 };
+            }
+            fournisseurStats[fournisseur].themes[sel.theme].orders += 1;
+            fournisseurStats[fournisseur].themes[sel.theme].quantity += qty;
           }
         });
       } catch (e) {}
@@ -693,23 +712,50 @@ export default function MyDashboard() {
     });
 
     const topThemes = Object.entries(themeCount)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => b[1].quantity - a[1].quantity)
       .slice(0, 10)
-      .map(([name, value]) => ({ name: name.length > 20 ? name.substring(0, 20) + '...' : name, value, fullName: name }));
+      .map(([name, data]) => ({ 
+        name: name.length > 20 ? name.substring(0, 20) + '...' : name, 
+        value: data.quantity, 
+        orders: data.orders,
+        fullName: name,
+        fournisseur: data.fournisseur,
+        category: data.category
+      }));
+
+    const allThemes = Object.entries(themeCount)
+      .sort((a, b) => b[1].quantity - a[1].quantity)
+      .map(([name, data]) => ({ 
+        name, 
+        quantity: data.quantity, 
+        orders: data.orders,
+        fournisseur: data.fournisseur,
+        category: data.category
+      }));
 
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
       name: MONTH_NAMES[i],
       commandes: monthCount[i] || 0,
     }));
 
-    const fournisseurData = Object.entries(fournisseurCount)
-      .map(([id, count]) => {
+    const fournisseurData = Object.entries(fournisseurStats)
+      .map(([id, stats]) => {
         const config = FOURNISSEURS_CONFIG.find(f => f.id === id);
-        return { name: config?.nom || id, value: count, id };
+        const topThemesForFournisseur = Object.entries(stats.themes)
+          .sort((a, b) => b[1].quantity - a[1].quantity)
+          .slice(0, 5)
+          .map(([name, data]) => ({ name, ...data }));
+        return { 
+          name: config?.nom || id, 
+          value: stats.orders, 
+          quantity: stats.quantity,
+          id,
+          topThemes: topThemesForFournisseur
+        };
       })
-      .sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.quantity - a.quantity);
 
-    return { topThemes, monthlyData, fournisseurData };
+    return { topThemes, allThemes, monthlyData, fournisseurData, totalQuantity };
   }, [filteredOrders]);
 
   const selectedClientData = useMemo(() => {
@@ -1363,7 +1409,92 @@ export default function MyDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Statistiques
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/stats/export-pdf', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            fournisseurData: globalStats.fournisseurData,
+                            allThemes: globalStats.allThemes,
+                            clientAnalytics: clientAnalytics.slice(0, 50),
+                            monthlyData: globalStats.monthlyData,
+                            totalQuantity: globalStats.totalQuantity
+                          })
+                        });
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                          toast({ title: "Export réussi", description: "Fichier PDF téléchargé" });
+                        } else {
+                          throw new Error('Export failed');
+                        }
+                      } catch (e) {
+                        toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
+                      }
+                    }}
+                    data-testid="button-export-pdf"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    PDF
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/stats/export-excel', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            fournisseurData: globalStats.fournisseurData,
+                            allThemes: globalStats.allThemes,
+                            clientAnalytics: clientAnalytics.slice(0, 50),
+                            monthlyData: globalStats.monthlyData,
+                            totalQuantity: globalStats.totalQuantity
+                          })
+                        });
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                          toast({ title: "Export réussi", description: "Fichier Excel téléchargé" });
+                        } else {
+                          throw new Error('Export failed');
+                        }
+                      } catch (e) {
+                        toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
+                      }
+                    }}
+                    data-testid="button-export-excel"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Excel
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -1397,8 +1528,21 @@ export default function MyDashboard() {
                       <Package className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{globalStats.topThemes.length}</p>
-                      <p className="text-xs text-muted-foreground">Thèmes actifs</p>
+                      <p className="text-2xl font-bold">{globalStats.allThemes.length}</p>
+                      <p className="text-xs text-muted-foreground">Thèmes</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{globalStats.totalQuantity}</p>
+                      <p className="text-xs text-muted-foreground">Quantité totale</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1407,37 +1551,109 @@ export default function MyDashboard() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-orange-600" />
+                      <Truck className="w-5 h-5 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">
-                        {clientAnalytics.length > 0 
-                          ? Math.round(filteredOrders.length / clientAnalytics.length * 10) / 10 
-                          : 0}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Moy. cmd/client</p>
+                      <p className="text-2xl font-bold">{globalStats.fournisseurData.length}</p>
+                      <p className="text-xs text-muted-foreground">Fournisseurs</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Statistiques par fournisseur
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {globalStats.fournisseurData.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row items-start gap-4">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <RechartsPie>
+                          <Pie
+                            data={globalStats.fournisseurData}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            dataKey="quantity"
+                            nameKey="name"
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          >
+                            {globalStats.fournisseurData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => [`${value} unités`, 'Quantité']} />
+                        </RechartsPie>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {globalStats.fournisseurData.map((item, index) => (
+                        <div key={item.id} className="p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            />
+                            <p className="font-semibold">{item.name}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                            <div>
+                              <p className="text-muted-foreground text-xs">Commandes</p>
+                              <p className="font-bold">{item.value}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs">Quantité</p>
+                              <p className="font-bold text-primary">{item.quantity}</p>
+                            </div>
+                          </div>
+                          {item.topThemes.length > 0 && (
+                            <div className="border-t pt-2">
+                              <p className="text-xs text-muted-foreground mb-1">Top thèmes:</p>
+                              <div className="space-y-1">
+                                {item.topThemes.slice(0, 3).map((theme, i) => (
+                                  <div key={theme.name} className="flex justify-between text-xs">
+                                    <span className="truncate flex-1">{i + 1}. {theme.name}</span>
+                                    <span className="font-medium ml-2">{theme.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">Aucune donnée</p>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    Thèmes les plus commandés
+                    Top 10 Thèmes (par quantité)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {globalStats.topThemes.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={250}>
+                    <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={globalStats.topThemes} layout="vertical">
                         <XAxis type="number" />
-                        <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
                         <Tooltip 
-                          formatter={(value, name, props) => [value, props.payload.fullName]}
+                          formatter={(value: number, name: string, props: any) => [
+                            `${value} unités (${props.payload.orders} cmd)`, 
+                            props.payload.fullName
+                          ]}
                         />
                         <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} />
                       </BarChart>
@@ -1456,7 +1672,7 @@ export default function MyDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={globalStats.monthlyData}>
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis />
@@ -1471,49 +1687,40 @@ export default function MyDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
-                  Répartition par fournisseur
+                  <Package className="w-4 h-4" />
+                  Tous les thèmes commandés
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {globalStats.fournisseurData.length > 0 ? (
-                  <div className="flex flex-col md:flex-row items-center gap-4">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <RechartsPie>
-                        <Pie
-                          data={globalStats.fournisseurData}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          dataKey="value"
-                          nameKey="name"
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        >
-                          {globalStats.fournisseurData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </RechartsPie>
-                    </ResponsiveContainer>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {globalStats.fournisseurData.map((item, index) => (
-                        <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                          />
-                          <div>
-                            <p className="text-sm font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.value} cmd</p>
-                          </div>
-                        </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Thème</th>
+                        <th className="text-left p-2">Fournisseur</th>
+                        <th className="text-right p-2">Commandes</th>
+                        <th className="text-right p-2">Quantité</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {globalStats.allThemes.slice(0, 30).map((theme, index) => (
+                        <tr key={theme.name} className={index % 2 === 0 ? 'bg-muted/30' : ''}>
+                          <td className="p-2 truncate max-w-[200px]" title={theme.name}>{theme.name}</td>
+                          <td className="p-2">
+                            <Badge variant="outline" className="text-xs">{theme.fournisseur}</Badge>
+                          </td>
+                          <td className="p-2 text-right">{theme.orders}</td>
+                          <td className="p-2 text-right font-bold text-primary">{theme.quantity}</td>
+                        </tr>
                       ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-8">Aucune donnée</p>
-                )}
+                    </tbody>
+                  </table>
+                  {globalStats.allThemes.length > 30 && (
+                    <p className="text-xs text-muted-foreground text-center mt-2">
+                      ... et {globalStats.allThemes.length - 30} autres thèmes
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -1542,11 +1749,7 @@ export default function MyDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-primary">{client.totalOrders} cmd</p>
-                        {client.avgDaysBetweenOrders > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            ~{client.avgDaysBetweenOrders}j entre cmd
-                          </p>
-                        )}
+                        <p className="text-xs text-muted-foreground">{client.totalQuantity} unités</p>
                       </div>
                     </div>
                   ))}
