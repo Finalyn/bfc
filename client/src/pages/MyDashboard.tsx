@@ -1459,6 +1459,127 @@ export default function MyDashboard() {
               </Card>
             </div>
 
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={exportingStats}
+                onClick={async () => {
+                  try {
+                    setExportingStats(true);
+                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
+                    
+                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
+                    
+                    if (monthlyChartRef.current) {
+                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.monthly = canvas.toDataURL('image/png');
+                    }
+                    if (fournisseurChartRef.current) {
+                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.fournisseur = canvas.toDataURL('image/png');
+                    }
+                    if (themesChartRef.current) {
+                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.themes = canvas.toDataURL('image/png');
+                    }
+                    
+                    const response = await fetch('/api/stats/export-pdf', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        fournisseurData: globalStats.fournisseurData,
+                        allThemes: globalStats.allThemes,
+                        clientAnalytics: clientAnalytics.slice(0, 50),
+                        monthlyData: globalStats.monthlyData,
+                        totalQuantity: globalStats.totalQuantity,
+                        chartImages
+                      })
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast({ title: "Export réussi", description: "PDF avec graphiques téléchargé" });
+                    } else {
+                      throw new Error('Export failed');
+                    }
+                  } catch (e) {
+                    toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
+                  } finally {
+                    setExportingStats(false);
+                  }
+                }}
+                data-testid="button-export-pdf"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                {exportingStats ? "Export..." : "Exporter PDF"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={exportingStats}
+                onClick={async () => {
+                  try {
+                    setExportingStats(true);
+                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
+                    
+                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
+                    
+                    if (monthlyChartRef.current) {
+                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.monthly = canvas.toDataURL('image/png');
+                    }
+                    if (fournisseurChartRef.current) {
+                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.fournisseur = canvas.toDataURL('image/png');
+                    }
+                    if (themesChartRef.current) {
+                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
+                      chartImages.themes = canvas.toDataURL('image/png');
+                    }
+                    
+                    const response = await fetch('/api/stats/export-excel', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        fournisseurData: globalStats.fournisseurData,
+                        allThemes: globalStats.allThemes,
+                        clientAnalytics: clientAnalytics.slice(0, 50),
+                        monthlyData: globalStats.monthlyData,
+                        totalQuantity: globalStats.totalQuantity,
+                        chartImages
+                      })
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast({ title: "Export réussi", description: "Excel avec graphiques téléchargé" });
+                    } else {
+                      throw new Error('Export failed');
+                    }
+                  } catch (e) {
+                    toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
+                  } finally {
+                    setExportingStats(false);
+                  }
+                }}
+                data-testid="button-export-excel"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                {exportingStats ? "Export..." : "Exporter Excel"}
+              </Button>
+            </div>
+
             <div className="grid md:grid-cols-3 gap-3">
               <Card className="border-l-4 border-l-green-500">
                 <CardContent className="p-3">
@@ -1727,127 +1848,6 @@ export default function MyDashboard() {
                 )}
               </CardContent>
             </Card>
-
-            <div className="flex justify-center gap-2 pt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={exportingStats}
-                onClick={async () => {
-                  try {
-                    setExportingStats(true);
-                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
-                    
-                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
-                    
-                    if (monthlyChartRef.current) {
-                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.monthly = canvas.toDataURL('image/png');
-                    }
-                    if (fournisseurChartRef.current) {
-                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.fournisseur = canvas.toDataURL('image/png');
-                    }
-                    if (themesChartRef.current) {
-                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.themes = canvas.toDataURL('image/png');
-                    }
-                    
-                    const response = await fetch('/api/stats/export-pdf', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        fournisseurData: globalStats.fournisseurData,
-                        allThemes: globalStats.allThemes,
-                        clientAnalytics: clientAnalytics.slice(0, 50),
-                        monthlyData: globalStats.monthlyData,
-                        totalQuantity: globalStats.totalQuantity,
-                        chartImages
-                      })
-                    });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast({ title: "Export réussi", description: "PDF avec graphiques téléchargé" });
-                    } else {
-                      throw new Error('Export failed');
-                    }
-                  } catch (e) {
-                    toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
-                  } finally {
-                    setExportingStats(false);
-                  }
-                }}
-                data-testid="button-export-pdf"
-              >
-                <Download className="w-4 h-4 mr-1" />
-                {exportingStats ? "Export..." : "Exporter PDF"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={exportingStats}
-                onClick={async () => {
-                  try {
-                    setExportingStats(true);
-                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
-                    
-                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
-                    
-                    if (monthlyChartRef.current) {
-                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.monthly = canvas.toDataURL('image/png');
-                    }
-                    if (fournisseurChartRef.current) {
-                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.fournisseur = canvas.toDataURL('image/png');
-                    }
-                    if (themesChartRef.current) {
-                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.themes = canvas.toDataURL('image/png');
-                    }
-                    
-                    const response = await fetch('/api/stats/export-excel', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        fournisseurData: globalStats.fournisseurData,
-                        allThemes: globalStats.allThemes,
-                        clientAnalytics: clientAnalytics.slice(0, 50),
-                        monthlyData: globalStats.monthlyData,
-                        totalQuantity: globalStats.totalQuantity,
-                        chartImages
-                      })
-                    });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast({ title: "Export réussi", description: "Excel avec graphiques téléchargé" });
-                    } else {
-                      throw new Error('Export failed');
-                    }
-                  } catch (e) {
-                    toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
-                  } finally {
-                    setExportingStats(false);
-                  }
-                }}
-                data-testid="button-export-excel"
-              >
-                <Download className="w-4 h-4 mr-1" />
-                {exportingStats ? "Export..." : "Exporter Excel"}
-              </Button>
-            </div>
           </TabsContent>
         </Tabs>
       </main>
