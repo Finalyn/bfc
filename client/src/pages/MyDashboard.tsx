@@ -126,11 +126,11 @@ interface OrderEvent {
   themeName?: string;
 }
 
-const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string }> = {
-  livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900" },
-  inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
-  inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
-  retour: { label: "Retour", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900" },
+const DATE_EVENT_CONFIG: Record<DateEventType, { label: string; color: string; bgColor: string; dotColor: string }> = {
+  livraison: { label: "Livraison", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900", dotColor: "bg-blue-500" },
+  inventairePrevu: { label: "Inventaire prévu", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900", dotColor: "bg-amber-500" },
+  inventaire: { label: "Inventaire", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900", dotColor: "bg-green-500" },
+  retour: { label: "Retour", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900", dotColor: "bg-purple-500" },
 };
 
 export default function MyDashboard() {
@@ -153,6 +153,8 @@ export default function MyDashboard() {
   const [online, setOnline] = useState(isOnline());
   const [syncing, setSyncing] = useState(false);
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
+  const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["livraison", "inventairePrevu", "inventaire", "retour"]));
+  const [calendarSearch, setCalendarSearch] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -370,12 +372,23 @@ export default function MyDashboard() {
     });
   };
 
-  const getOrderEventsForDate = (date: Date): OrderEvent[] => {
+  const getOrderEventsForDate = (date: Date, applyFilters: boolean = true): OrderEvent[] => {
     const events: OrderEvent[] = [];
+    const searchLower = calendarSearch.toLowerCase();
     
     filteredOrders.forEach(order => {
+      // Filtre par recherche
+      if (applyFilters && calendarSearch && !order.orderCode.toLowerCase().includes(searchLower) && 
+          !order.clientName.toLowerCase().includes(searchLower) &&
+          !(order.livraisonEnseigne || "").toLowerCase().includes(searchLower)) {
+        return;
+      }
+
       const checkDate = (dateStr: string | null | undefined, eventType: DateEventType, themeName?: string) => {
         if (!dateStr) return;
+        // Filtre par type d'événement
+        if (applyFilters && !calendarEventFilters.has(eventType)) return;
+        
         const d = parseFlexibleDate(dateStr);
         if (d && isSameDay(d, date)) {
           events.push({ order, eventType, dateLabel: format(d, "dd/MM/yy", { locale: fr }), themeName });
@@ -397,6 +410,69 @@ export default function MyDashboard() {
     });
 
     return events;
+  };
+
+  // Fonction pour trouver le prochain événement (respecte les filtres actifs)
+  const findNextEvent = (): Date | null => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let nextEventDate: Date | null = null;
+    const searchLower = calendarSearch.toLowerCase();
+    
+    filteredOrders.forEach(order => {
+      // Appliquer le filtre de recherche
+      if (calendarSearch && !order.orderCode.toLowerCase().includes(searchLower) && 
+          !order.clientName.toLowerCase().includes(searchLower) &&
+          !(order.livraisonEnseigne || "").toLowerCase().includes(searchLower)) {
+        return;
+      }
+
+      const checkDate = (dateStr: string | null | undefined, eventType: DateEventType) => {
+        if (!dateStr) return;
+        if (!calendarEventFilters.has(eventType)) return;
+        
+        const d = parseFlexibleDate(dateStr);
+        if (d && d > today) {
+          if (!nextEventDate || d < nextEventDate) {
+            nextEventDate = d;
+          }
+        }
+      };
+
+      const themes = parseThemeSelections(order.themeSelections);
+      themes.forEach(theme => {
+        if (theme.deliveryDate && (theme.quantity || theme.deliveryDate)) {
+          checkDate(theme.deliveryDate, "livraison");
+        }
+      });
+
+      checkDate(order.dateInventairePrevu, "inventairePrevu");
+      checkDate(order.dateInventaire, "inventaire");
+      checkDate(order.dateRetour, "retour");
+    });
+
+    return nextEventDate;
+  };
+
+  const goToNextEvent = () => {
+    const nextDate = findNextEvent();
+    if (nextDate) {
+      setCurrentDate(nextDate);
+      toast({ title: "Prochain événement", description: format(nextDate, "EEEE d MMMM yyyy", { locale: fr }) });
+    } else {
+      toast({ title: "Aucun événement", description: "Aucun événement futur trouvé", variant: "destructive" });
+    }
+  };
+
+  const toggleEventFilter = (eventType: DateEventType) => {
+    const newFilters = new Set(calendarEventFilters);
+    if (newFilters.has(eventType)) {
+      newFilters.delete(eventType);
+    } else {
+      newFilters.add(eventType);
+    }
+    setCalendarEventFilters(newFilters);
   };
 
   const openDayDetailDialog = (date: Date) => {
@@ -941,14 +1017,14 @@ export default function MyDashboard() {
           <TabsContent value="calendar" className="mt-4">
             <Card>
               <CardHeader className="flex flex-col gap-3">
-                <div className="flex flex-row items-center justify-between gap-2">
+                <div className="flex flex-row items-center justify-between gap-2 flex-wrap">
                   <CardTitle className="text-base">
                     {calendarView === "day" && format(currentDate, "EEEE d MMMM yyyy", { locale: fr })}
                     {calendarView === "week" && `Semaine du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: fr })} au ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM yyyy", { locale: fr })}`}
                     {calendarView === "month" && format(currentDate, "MMMM yyyy", { locale: fr })}
                     {calendarView === "year" && format(currentDate, "yyyy", { locale: fr })}
                   </CardTitle>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -980,9 +1056,18 @@ export default function MyDashboard() {
                     >
                       →
                     </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={goToNextEvent}
+                      data-testid="button-next-event"
+                      title="Aller au prochain événement"
+                    >
+                      Prochain
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap">
                   {(["day", "week", "month", "year"] as CalendarView[]).map(view => (
                     <Button
                       key={view}
@@ -994,6 +1079,32 @@ export default function MyDashboard() {
                       {view === "day" ? "Jour" : view === "week" ? "Semaine" : view === "month" ? "Mois" : "Année"}
                     </Button>
                   ))}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Input
+                    placeholder="Rechercher une commande..."
+                    value={calendarSearch}
+                    onChange={(e) => setCalendarSearch(e.target.value)}
+                    className="h-8 text-sm"
+                    data-testid="input-calendar-search"
+                  />
+                  <div className="flex gap-1 flex-wrap">
+                    {(Object.keys(DATE_EVENT_CONFIG) as DateEventType[]).map(eventType => {
+                      const config = DATE_EVENT_CONFIG[eventType];
+                      const isActive = calendarEventFilters.has(eventType);
+                      return (
+                        <Badge
+                          key={eventType}
+                          variant={isActive ? "default" : "outline"}
+                          className={`cursor-pointer text-xs ${isActive ? config.bgColor + ' ' + config.color : ''}`}
+                          onClick={() => toggleEventFilter(eventType)}
+                          data-testid={`filter-${eventType}`}
+                        >
+                          {config.label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1051,17 +1162,30 @@ export default function MyDashboard() {
                       }).map(day => {
                         const dayEvents = getOrderEventsForDate(day);
                         const isToday = isSameDay(day, new Date());
+                        const eventTypes = Array.from(new Set(dayEvents.map(e => e.eventType)));
                         return (
                           <div 
                             key={day.toISOString()}
                             className={`min-h-[80px] rounded-lg p-2 text-sm cursor-pointer hover-elevate ${
-                              isToday ? "bg-primary/10 border-2 border-primary" : 
-                              dayEvents.length > 0 ? "bg-blue-50 dark:bg-blue-900/30" : "bg-muted/30"
+                              isToday ? "bg-primary/10 border-2 border-primary" : "bg-muted/30"
                             }`}
                             onClick={() => openDayDetailDialog(day)}
                             data-testid={`calendar-week-day-${format(day, "yyyy-MM-dd")}`}
                           >
-                            <span className={`font-medium ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</span>
+                            <div className="flex items-center gap-1">
+                              <span className={`font-medium ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</span>
+                              {eventTypes.length > 0 && (
+                                <div className="flex gap-0.5">
+                                  {eventTypes.map(eventType => (
+                                    <div 
+                                      key={eventType}
+                                      className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[eventType].dotColor}`}
+                                      data-testid={`dot-${eventType}`}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             {dayEvents.slice(0, 3).map((event, idx) => (
                               <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate`}>
                                 <span className={`${DATE_EVENT_CONFIG[event.eventType].color} font-medium`}>{DATE_EVENT_CONFIG[event.eventType].label.substring(0, 3)}</span> {event.themeName ? `${event.themeName} - ` : ""}{event.order.clientName}
@@ -1091,19 +1215,28 @@ export default function MyDashboard() {
                       {daysInMonth.map(day => {
                         const dayEvents = getOrderEventsForDate(day);
                         const isToday = isSameDay(day, new Date());
+                        const eventTypes = Array.from(new Set(dayEvents.map(e => e.eventType)));
                         return (
                           <div 
                             key={day.toISOString()}
-                            className={`h-12 rounded-lg flex flex-col items-center justify-center text-sm cursor-pointer hover-elevate ${
-                              isToday ? "bg-primary text-primary-foreground" : 
-                              dayEvents.length > 0 ? "bg-blue-100 dark:bg-blue-900" : ""
+                            className={`h-14 rounded-lg flex flex-col items-center justify-center text-sm cursor-pointer hover-elevate ${
+                              isToday ? "bg-primary text-primary-foreground" : "bg-muted/30"
                             }`}
                             onClick={() => openDayDetailDialog(day)}
                             data-testid={`calendar-month-day-${format(day, "yyyy-MM-dd")}`}
                           >
                             <span>{format(day, "d")}</span>
-                            {dayEvents.length > 0 && (
-                              <span className="text-xs">{dayEvents.length}</span>
+                            {eventTypes.length > 0 && (
+                              <div className="flex gap-0.5 mt-0.5">
+                                {eventTypes.map(eventType => (
+                                  <div 
+                                    key={eventType}
+                                    className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[eventType].dotColor}`}
+                                      data-testid={`dot-${eventType}`}
+                                    title={`${DATE_EVENT_CONFIG[eventType].label}: ${dayEvents.filter(e => e.eventType === eventType).length}`}
+                                  />
+                                ))}
+                              </div>
                             )}
                           </div>
                         );
