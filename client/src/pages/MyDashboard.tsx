@@ -159,6 +159,7 @@ export default function MyDashboard() {
   const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["commande", "livraison", "inventairePrevu", "inventaire", "retour"]));
   const [calendarSearch, setCalendarSearch] = useState("");
   const [exportingStats, setExportingStats] = useState(false);
+  const [statsPeriod, setStatsPeriod] = useState<"all" | "year" | "month" | "season">("all");
   const { toast } = useToast();
 
   const monthlyChartRef = useRef<HTMLDivElement>(null);
@@ -361,6 +362,46 @@ export default function MyDashboard() {
     return orders;
   }, [allOrders, isAdmin, selectedCommercial, selectedFournisseur, userName]);
 
+  const statsFilteredOrders = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    return filteredOrders.filter(order => {
+      if (statsPeriod === "all") return true;
+      
+      try {
+        const rawDate = order.orderDate || order.createdAt;
+        if (!rawDate) return false;
+        const dateStr = typeof rawDate === 'string' ? rawDate : rawDate.toISOString();
+        const orderDate = parseISO(dateStr);
+        const orderYear = orderDate.getFullYear();
+        const orderMonth = orderDate.getMonth();
+        
+        if (statsPeriod === "year") {
+          return orderYear === currentYear;
+        }
+        
+        if (statsPeriod === "month") {
+          return orderYear === currentYear && orderMonth === currentMonth;
+        }
+        
+        if (statsPeriod === "season") {
+          const getSeason = (month: number) => {
+            if (month >= 2 && month <= 4) return 0;
+            if (month >= 5 && month <= 7) return 1;
+            if (month >= 8 && month <= 10) return 2;
+            return 3;
+          };
+          return orderYear === currentYear && getSeason(orderMonth) === getSeason(currentMonth);
+        }
+        
+        return true;
+      } catch {
+        return true;
+      }
+    });
+  }, [filteredOrders, statsPeriod]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -598,7 +639,7 @@ export default function MyDashboard() {
   const clientAnalytics = useMemo(() => {
     const clientMap = new Map<string, ClientAnalysis>();
 
-    filteredOrders.forEach(order => {
+    statsFilteredOrders.forEach(order => {
       const key = order.clientName || order.livraisonEnseigne;
       if (!key) return;
 
@@ -669,7 +710,7 @@ export default function MyDashboard() {
     });
 
     return Array.from(clientMap.values()).sort((a, b) => b.totalOrders - a.totalOrders);
-  }, [filteredOrders]);
+  }, [statsFilteredOrders]);
 
   const globalStats = useMemo(() => {
     const themeCount: { [key: string]: { orders: number; quantity: number; fournisseur: string; category: string } } = {};
@@ -677,7 +718,7 @@ export default function MyDashboard() {
     const fournisseurStats: { [key: string]: { orders: number; quantity: number; themes: { [key: string]: { orders: number; quantity: number } } } } = {};
     let totalQuantity = 0;
 
-    filteredOrders.forEach(order => {
+    statsFilteredOrders.forEach(order => {
       const fournisseur = order.fournisseur || "BDIS";
       
       if (!fournisseurStats[fournisseur]) {
@@ -763,7 +804,7 @@ export default function MyDashboard() {
       .sort((a, b) => b.quantity - a.quantity);
 
     return { topThemes, allThemes, monthlyData, fournisseurData, totalQuantity };
-  }, [filteredOrders]);
+  }, [statsFilteredOrders]);
 
   const selectedClientData = useMemo(() => {
     if (selectedAnalyticsClient === "all") return null;
@@ -1416,6 +1457,27 @@ export default function MyDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Période:</span>
+                <Select value={statsPeriod} onValueChange={(v) => setStatsPeriod(v as "all" | "year" | "month" | "season")}>
+                  <SelectTrigger className="w-[140px] h-8" data-testid="select-stats-period">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="year">Année en cours</SelectItem>
+                    <SelectItem value="month">Mois en cours</SelectItem>
+                    <SelectItem value="season">Saison en cours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {statsFilteredOrders.length} commande{statsFilteredOrders.length > 1 ? 's' : ''}
+              </Badge>
+            </div>
+
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
                 <CardContent className="p-3 text-center">
@@ -1425,7 +1487,7 @@ export default function MyDashboard() {
               </Card>
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="p-3 text-center">
-                  <p className="text-2xl font-bold text-green-600">{filteredOrders.length}</p>
+                  <p className="text-2xl font-bold text-green-600">{statsFilteredOrders.length}</p>
                   <p className="text-xs text-green-600/70">Commandes</p>
                 </CardContent>
               </Card>
@@ -1444,7 +1506,7 @@ export default function MyDashboard() {
               <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/50 dark:to-cyan-900/30 border-cyan-200 dark:border-cyan-800">
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-cyan-600">
-                    {filteredOrders.length > 0 ? Math.round(globalStats.totalQuantity / filteredOrders.length) : 0}
+                    {statsFilteredOrders.length > 0 ? Math.round(globalStats.totalQuantity / statsFilteredOrders.length) : 0}
                   </p>
                   <p className="text-xs text-cyan-600/70">Moy/commande</p>
                 </CardContent>
@@ -1452,7 +1514,7 @@ export default function MyDashboard() {
               <Card className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/30 border-pink-200 dark:border-pink-800">
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-pink-600">
-                    {clientAnalytics.length > 0 ? Math.round(filteredOrders.length / clientAnalytics.length * 10) / 10 : 0}
+                    {clientAnalytics.length > 0 ? Math.round(statsFilteredOrders.length / clientAnalytics.length * 10) / 10 : 0}
                   </p>
                   <p className="text-xs text-pink-600/70">Cmd/client</p>
                 </CardContent>
