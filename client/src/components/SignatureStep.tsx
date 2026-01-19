@@ -127,7 +127,7 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
                     type="date"
                     data-testid="input-signature-date"
                     {...register("signatureDate", { required: "La date est requise" })}
-                    className="h-12 text-base"
+                    className="h-12 text-sm sm:text-base [&::-webkit-calendar-picker-indicator]:opacity-100"
                   />
                   {errors.signatureDate && (
                     <p className="text-xs text-destructive">{errors.signatureDate.message}</p>
@@ -299,25 +299,25 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
           </Card>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-2xl">
-            <div className="max-w-lg mx-auto flex gap-3">
+            <div className="max-w-lg mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"
                 onClick={onBack}
                 data-testid="button-back-to-form"
                 variant="outline"
-                className="h-14 px-6"
+                className="h-12 sm:h-14 px-4 sm:px-6 order-2 sm:order-1"
               >
-                <ArrowLeft className="w-5 h-5 mr-2" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Retour
               </Button>
               <Button
                 type="submit"
                 data-testid="button-next-review"
-                className="flex-1 h-14 text-base font-medium"
+                className="flex-1 h-12 sm:h-14 text-sm sm:text-base font-medium order-1 sm:order-2"
                 size="lg"
               >
                 Valider la signature
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
               </Button>
             </div>
           </div>

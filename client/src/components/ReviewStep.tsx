@@ -307,44 +307,44 @@ export function ReviewStep({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-2xl">
-        <div className="max-w-2xl mx-auto flex gap-3">
+        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Button
             onClick={onBack}
             data-testid="button-back"
             variant="outline"
-            className="h-14 px-6"
+            className="h-12 sm:h-14 px-4 sm:px-6 order-2 sm:order-1"
             disabled={isGenerating}
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Retour
           </Button>
           {isPreview ? (
             <Button
               onClick={onNext}
               data-testid="button-continue-to-signature"
-              className="flex-1 h-14 text-base font-medium"
+              className="flex-1 h-12 sm:h-14 text-sm sm:text-base font-medium order-1 sm:order-2"
               size="lg"
             >
               Continuer vers la signature
-              <ArrowRight className="w-5 h-5 ml-2" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
             </Button>
           ) : (
             <Button
               onClick={onGenerate}
               data-testid="button-generate-order"
-              className="flex-1 h-14 text-base font-medium"
+              className="flex-1 h-12 sm:h-14 text-sm sm:text-base font-medium order-1 sm:order-2"
               size="lg"
               disabled={isGenerating}
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Génération en cours...
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                  Génération...
                 </>
               ) : (
                 <>
                   Générer la commande
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                 </>
               )}
             </Button>

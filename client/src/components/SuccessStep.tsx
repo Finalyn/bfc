@@ -95,10 +95,10 @@ export function SuccessStep({
             <Button
               onClick={onNewOrder}
               data-testid="button-new-order-offline"
-              className="w-full h-14 text-base font-medium"
+              className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium"
               size="lg"
             >
-              <RotateCcw className="w-5 h-5 mr-2" />
+              <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Nouvelle commande
             </Button>
           </div>
@@ -240,23 +240,23 @@ export function SuccessStep({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-2xl">
-        <div className="max-w-lg mx-auto space-y-3">
+        <div className="max-w-lg mx-auto space-y-2 sm:space-y-3">
           {emailError && emailError.length > 0 && !emailsSent && (
             <Button
               onClick={onSendEmails}
               data-testid="button-resend-emails"
-              className="w-full h-14 text-base font-medium"
+              className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium"
               size="lg"
               disabled={isSending}
             >
               {isSending ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                   Renvoi en cours...
                 </>
               ) : (
                 <>
-                  <Send className="w-5 h-5 mr-2" />
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Renvoyer les emails
                 </>
               )}
@@ -267,10 +267,10 @@ export function SuccessStep({
             onClick={onNewOrder}
             data-testid="button-new-order"
             variant={emailsSent ? "default" : "outline"}
-            className="w-full h-14 text-base font-medium"
+            className="w-full h-12 sm:h-14 text-sm sm:text-base font-medium"
             size="lg"
           >
-            <RotateCcw className="w-5 h-5 mr-2" />
+            <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Nouvelle commande
           </Button>
         </div>
