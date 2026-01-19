@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import html2canvas from "html2canvas";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ import {
   Eye,
   FileText,
   FileSpreadsheet,
-  Download,
   CloudOff,
   Cloud,
   RefreshCw,
@@ -39,7 +37,9 @@ import {
   WifiOff,
   Mail,
   AlertCircle,
-  Search
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { getOfflineOrders, deleteOfflineOrder, type OfflineOrder, isOnline, onOnlineStatusChange, onOfflineOrdersChange } from "@/lib/offlineStorage";
 import { syncPendingOrders, initAutoSync, addSyncListener } from "@/lib/offlineSync";
@@ -158,13 +158,9 @@ export default function MyDashboard() {
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
   const [calendarEventFilters, setCalendarEventFilters] = useState<Set<DateEventType>>(new Set<DateEventType>(["commande", "livraison", "inventairePrevu", "inventaire", "retour"]));
   const [calendarSearch, setCalendarSearch] = useState("");
-  const [exportingStats, setExportingStats] = useState(false);
-  const [statsPeriod, setStatsPeriod] = useState<"all" | "year" | "month" | "season">("all");
+  const [statsYear, setStatsYear] = useState<number>(new Date().getFullYear());
+  const [statsSeason, setStatsSeason] = useState<"all" | "printemps" | "ete" | "automne" | "hiver">("all");
   const { toast } = useToast();
-
-  const monthlyChartRef = useRef<HTMLDivElement>(null);
-  const fournisseurChartRef = useRef<HTMLDivElement>(null);
-  const themesChartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadOfflineOrders = async () => {
@@ -363,13 +359,14 @@ export default function MyDashboard() {
   }, [allOrders, isAdmin, selectedCommercial, selectedFournisseur, userName]);
 
   const statsFilteredOrders = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const getSeasonFromMonth = (month: number): "printemps" | "ete" | "automne" | "hiver" => {
+      if (month >= 2 && month <= 4) return "printemps";
+      if (month >= 5 && month <= 7) return "ete";
+      if (month >= 8 && month <= 10) return "automne";
+      return "hiver";
+    };
     
     return filteredOrders.filter(order => {
-      if (statsPeriod === "all") return true;
-      
       try {
         const rawDate = order.orderDate || order.createdAt;
         if (!rawDate) return false;
@@ -378,30 +375,19 @@ export default function MyDashboard() {
         const orderYear = orderDate.getFullYear();
         const orderMonth = orderDate.getMonth();
         
-        if (statsPeriod === "year") {
-          return orderYear === currentYear;
-        }
+        if (orderYear !== statsYear) return false;
         
-        if (statsPeriod === "month") {
-          return orderYear === currentYear && orderMonth === currentMonth;
-        }
-        
-        if (statsPeriod === "season") {
-          const getSeason = (month: number) => {
-            if (month >= 2 && month <= 4) return 0;
-            if (month >= 5 && month <= 7) return 1;
-            if (month >= 8 && month <= 10) return 2;
-            return 3;
-          };
-          return orderYear === currentYear && getSeason(orderMonth) === getSeason(currentMonth);
+        if (statsSeason !== "all") {
+          const orderSeason = getSeasonFromMonth(orderMonth);
+          if (orderSeason !== statsSeason) return false;
         }
         
         return true;
       } catch {
-        return true;
+        return false;
       }
     });
-  }, [filteredOrders, statsPeriod]);
+  }, [filteredOrders, statsYear, statsSeason]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -1457,26 +1443,83 @@ export default function MyDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Période:</span>
-                <Select value={statsPeriod} onValueChange={(v) => setStatsPeriod(v as "all" | "year" | "month" | "season")}>
-                  <SelectTrigger className="w-[140px] h-8" data-testid="select-stats-period">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes</SelectItem>
-                    <SelectItem value="year">Année en cours</SelectItem>
-                    <SelectItem value="month">Mois en cours</SelectItem>
-                    <SelectItem value="season">Saison en cours</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Card className="p-3">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setStatsYear(y => y - 1)}
+                    data-testid="button-stats-prev-year"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <span className="text-lg font-bold">{statsYear}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setStatsYear(y => y + 1)}
+                    disabled={statsYear >= new Date().getFullYear()}
+                    data-testid="button-stats-next-year"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  <Button
+                    variant={statsSeason === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatsSeason("all")}
+                    className="text-xs"
+                    data-testid="button-stats-all"
+                  >
+                    Année
+                  </Button>
+                  <Button
+                    variant={statsSeason === "printemps" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatsSeason("printemps")}
+                    className="text-xs"
+                    data-testid="button-stats-printemps"
+                  >
+                    Printemps
+                  </Button>
+                  <Button
+                    variant={statsSeason === "ete" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatsSeason("ete")}
+                    className="text-xs"
+                    data-testid="button-stats-ete"
+                  >
+                    Été
+                  </Button>
+                  <Button
+                    variant={statsSeason === "automne" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatsSeason("automne")}
+                    className="text-xs"
+                    data-testid="button-stats-automne"
+                  >
+                    Automne
+                  </Button>
+                  <Button
+                    variant={statsSeason === "hiver" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatsSeason("hiver")}
+                    className="text-xs"
+                    data-testid="button-stats-hiver"
+                  >
+                    Hiver
+                  </Button>
+                </div>
+                <div className="flex justify-center">
+                  <Badge variant="secondary">
+                    {statsFilteredOrders.length} commande{statsFilteredOrders.length > 1 ? 's' : ''} 
+                    {statsSeason === "all" ? ` en ${statsYear}` : ` - ${statsSeason} ${statsYear}`}
+                  </Badge>
+                </div>
               </div>
-              <Badge variant="secondary" className="text-xs">
-                {statsFilteredOrders.length} commande{statsFilteredOrders.length > 1 ? 's' : ''}
-              </Badge>
-            </div>
+            </Card>
 
             <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
@@ -1519,127 +1562,6 @@ export default function MyDashboard() {
                   <p className="text-xs text-pink-600/70">Cmd/client</p>
                 </CardContent>
               </Card>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={exportingStats}
-                onClick={async () => {
-                  try {
-                    setExportingStats(true);
-                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
-                    
-                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
-                    
-                    if (monthlyChartRef.current) {
-                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.monthly = canvas.toDataURL('image/png');
-                    }
-                    if (fournisseurChartRef.current) {
-                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.fournisseur = canvas.toDataURL('image/png');
-                    }
-                    if (themesChartRef.current) {
-                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.themes = canvas.toDataURL('image/png');
-                    }
-                    
-                    const response = await fetch('/api/stats/export-pdf', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        fournisseurData: globalStats.fournisseurData,
-                        allThemes: globalStats.allThemes,
-                        clientAnalytics: clientAnalytics.slice(0, 50),
-                        monthlyData: globalStats.monthlyData,
-                        totalQuantity: globalStats.totalQuantity,
-                        chartImages
-                      })
-                    });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast({ title: "Export réussi", description: "PDF avec graphiques téléchargé" });
-                    } else {
-                      throw new Error('Export failed');
-                    }
-                  } catch (e) {
-                    toast({ title: "Erreur", description: "Impossible d'exporter en PDF", variant: "destructive" });
-                  } finally {
-                    setExportingStats(false);
-                  }
-                }}
-                data-testid="button-export-pdf"
-              >
-                <Download className="w-4 h-4 mr-1" />
-                {exportingStats ? "Export..." : "Exporter PDF"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={exportingStats}
-                onClick={async () => {
-                  try {
-                    setExportingStats(true);
-                    toast({ title: "Export en cours", description: "Capture des graphiques..." });
-                    
-                    const chartImages: { monthly?: string; fournisseur?: string; themes?: string } = {};
-                    
-                    if (monthlyChartRef.current) {
-                      const canvas = await html2canvas(monthlyChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.monthly = canvas.toDataURL('image/png');
-                    }
-                    if (fournisseurChartRef.current) {
-                      const canvas = await html2canvas(fournisseurChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.fournisseur = canvas.toDataURL('image/png');
-                    }
-                    if (themesChartRef.current) {
-                      const canvas = await html2canvas(themesChartRef.current, { backgroundColor: '#ffffff', scale: 2 });
-                      chartImages.themes = canvas.toDataURL('image/png');
-                    }
-                    
-                    const response = await fetch('/api/stats/export-excel', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        fournisseurData: globalStats.fournisseurData,
-                        allThemes: globalStats.allThemes,
-                        clientAnalytics: clientAnalytics.slice(0, 50),
-                        monthlyData: globalStats.monthlyData,
-                        totalQuantity: globalStats.totalQuantity,
-                        chartImages
-                      })
-                    });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `statistiques_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast({ title: "Export réussi", description: "Excel avec graphiques téléchargé" });
-                    } else {
-                      throw new Error('Export failed');
-                    }
-                  } catch (e) {
-                    toast({ title: "Erreur", description: "Impossible d'exporter en Excel", variant: "destructive" });
-                  } finally {
-                    setExportingStats(false);
-                  }
-                }}
-                data-testid="button-export-excel"
-              >
-                <Download className="w-4 h-4 mr-1" />
-                {exportingStats ? "Export..." : "Exporter Excel"}
-              </Button>
             </div>
 
             <div className="grid md:grid-cols-3 gap-3">
@@ -1687,7 +1609,7 @@ export default function MyDashboard() {
             </div>
 
             <Card>
-              <div ref={monthlyChartRef} className="bg-background">
+              <div className="bg-background">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-semibold">Évolution mensuelle des commandes</CardTitle>
                 </CardHeader>
@@ -1709,7 +1631,7 @@ export default function MyDashboard() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <Card>
-                <div ref={fournisseurChartRef} className="bg-background">
+                <div className="bg-background">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold">Répartition par fournisseur</CardTitle>
                   </CardHeader>
@@ -1748,7 +1670,7 @@ export default function MyDashboard() {
               </Card>
 
               <Card>
-                <div ref={themesChartRef} className="bg-background">
+                <div className="bg-background">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold">Top 10 Thèmes les plus vendus</CardTitle>
                   </CardHeader>
