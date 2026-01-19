@@ -1129,7 +1129,6 @@ export default function MyDashboard() {
                         <TableHead>Code</TableHead>
                         {isAdmin && selectedCommercial === "all" && <TableHead>Commercial</TableHead>}
                         <TableHead>Client</TableHead>
-                        <TableHead>Enseigne</TableHead>
                         <TableHead>Fournisseur</TableHead>
                         <TableHead>Date Cmd</TableHead>
                         <TableHead>Livraison</TableHead>
@@ -1142,7 +1141,7 @@ export default function MyDashboard() {
                     <TableBody>
                       {filteredOrders.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={isAdmin && selectedCommercial === "all" ? 11 : 10} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={isAdmin && selectedCommercial === "all" ? 10 : 9} className="text-center py-8 text-muted-foreground">
                             Aucune commande
                           </TableCell>
                         </TableRow>
@@ -1159,8 +1158,7 @@ export default function MyDashboard() {
                               {isAdmin && selectedCommercial === "all" && (
                                 <TableCell>{order.salesRepName}</TableCell>
                               )}
-                              <TableCell>{order.clientName}</TableCell>
-                              <TableCell className="text-sm">{order.livraisonEnseigne || '-'}</TableCell>
+                              <TableCell>{order.livraisonEnseigne || '-'}</TableCell>
                               <TableCell>
                                 <Badge variant="outline">{order.fournisseur || '-'}</Badge>
                               </TableCell>

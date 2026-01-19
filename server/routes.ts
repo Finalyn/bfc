@@ -2449,14 +2449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       planningSheet.columns = [
         { header: "Code Commande", key: "orderCode", width: 20 },
         { header: "Commercial", key: "salesRepName", width: 25 },
-        { header: "Client", key: "clientName", width: 30 },
+        { header: "Client", key: "livraisonEnseigne", width: 30 },
         { header: "Fournisseur", key: "fournisseur", width: 20 },
         { header: "Date Commande", key: "orderDate", width: 15 },
         { header: "Date Livraison", key: "dateLivraison", width: 15 },
         { header: "Inventaire Prévu", key: "dateInventairePrevu", width: 15 },
         { header: "Inventaire", key: "dateInventaire", width: 15 },
         { header: "Retour", key: "dateRetour", width: 15 },
-        { header: "Enseigne Livraison", key: "livraisonEnseigne", width: 25 },
         { header: "Adresse Livraison", key: "livraisonAdresse", width: 35 },
         { header: "CP Ville", key: "livraisonCpVille", width: 20 },
       ];
@@ -2472,14 +2471,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         planningSheet.addRow({
           orderCode: order.orderCode,
           salesRepName: order.salesRepName,
-          clientName: order.clientName,
+          livraisonEnseigne: order.livraisonEnseigne || '-',
           fournisseur: order.fournisseur || '-',
           orderDate: order.orderDate || '-',
           dateLivraison: order.dateLivraison || '-',
           dateInventairePrevu: order.dateInventairePrevu || '-',
           dateInventaire: order.dateInventaire || '-',
           dateRetour: order.dateRetour || '-',
-          livraisonEnseigne: order.livraisonEnseigne || '-',
           livraisonAdresse: order.livraisonAdresse || '-',
           livraisonCpVille: order.livraisonCpVille || '-',
         });
