@@ -99,10 +99,13 @@ export async function getPendingEmailOrders(): Promise<OfflineOrder[]> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(ORDERS_STORE, "readonly");
     const store = tx.objectStore(ORDERS_STORE);
-    const index = store.index("emailSent");
-    const request = index.getAll(IDBKeyRange.only(false));
+    const request = store.getAll();
     
-    request.onsuccess = () => resolve(request.result || []);
+    request.onsuccess = () => {
+      const orders = request.result || [];
+      // Filter manually since IDBKeyRange.only(false) is not valid
+      resolve(orders.filter((order: OfflineOrder) => order.emailSent === false));
+    };
     request.onerror = () => reject(request.error);
     
     tx.oncomplete = () => db.close();
