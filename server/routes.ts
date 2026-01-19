@@ -988,6 +988,255 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export ALL database tables
+  app.get("/api/admin/export-all", async (req, res) => {
+    try {
+      const ExcelJS = await import("exceljs");
+      const Workbook = ExcelJS.default?.Workbook || ExcelJS.Workbook;
+      const workbook = new Workbook();
+      
+      // Style helper
+      const styleHeader = (sheet: any) => {
+        sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+        sheet.getRow(1).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF003366" },
+        };
+      };
+      
+      // ===== CLIENTS =====
+      const clientSheet = workbook.addWorksheet("Clients");
+      clientSheet.columns = [
+        { header: "Code", key: "code", width: 15 },
+        { header: "Nom", key: "nom", width: 40 },
+        { header: "Adresse", key: "adresse1", width: 40 },
+        { header: "Code Postal", key: "codePostal", width: 12 },
+        { header: "Ville", key: "ville", width: 25 },
+        { header: "Interlocuteur", key: "interloc", width: 25 },
+        { header: "Téléphone", key: "tel", width: 18 },
+        { header: "Portable", key: "portable", width: 18 },
+        { header: "Email", key: "mail", width: 35 },
+      ];
+      
+      const dbClients = await db.select().from(clients);
+      const dbClientCodes = new Set(dbClients.map(c => c.code));
+      
+      dbClients.forEach(client => {
+        clientSheet.addRow({
+          code: client.code,
+          nom: client.nom,
+          adresse1: client.adresse1,
+          codePostal: client.codePostal,
+          ville: client.ville,
+          interloc: client.interloc,
+          tel: client.tel,
+          portable: client.portable,
+          mail: client.mail,
+        });
+      });
+      
+      data.clients.forEach(client => {
+        if (!dbClientCodes.has(client.code)) {
+          clientSheet.addRow({
+            code: client.code,
+            nom: client.nom,
+            adresse1: client.adresse1,
+            codePostal: client.codePostal,
+            ville: client.ville,
+            interloc: client.interloc,
+            tel: client.tel,
+            portable: client.portable,
+            mail: client.mail,
+          });
+        }
+      });
+      styleHeader(clientSheet);
+      
+      // ===== COMMANDES =====
+      const orderSheet = workbook.addWorksheet("Commandes");
+      orderSheet.columns = [
+        { header: "N° Commande", key: "orderCode", width: 18 },
+        { header: "Date", key: "orderDate", width: 12 },
+        { header: "Commercial", key: "salesRepName", width: 25 },
+        { header: "Fournisseur", key: "fournisseur", width: 20 },
+        { header: "Client", key: "clientName", width: 35 },
+        { header: "Tél Client", key: "clientTel", width: 15 },
+        { header: "Email Client", key: "clientEmail", width: 30 },
+        { header: "Thèmes", key: "themes", width: 60 },
+        { header: "Livraison Enseigne", key: "livraisonEnseigne", width: 30 },
+        { header: "Livraison Adresse", key: "livraisonAdresse", width: 35 },
+        { header: "Livraison CP/Ville", key: "livraisonCpVille", width: 25 },
+        { header: "Facturation Raison Sociale", key: "facturationRaisonSociale", width: 35 },
+        { header: "Facturation CP/Ville", key: "facturationCpVille", width: 25 },
+        { header: "Mode Paiement", key: "facturationMode", width: 15 },
+        { header: "Date Livraison", key: "dateLivraison", width: 15 },
+        { header: "Date Inventaire Prévu", key: "dateInventairePrevu", width: 18 },
+        { header: "Date Inventaire", key: "dateInventaire", width: 15 },
+        { header: "Date Retour", key: "dateRetour", width: 15 },
+        { header: "Créée le", key: "createdAt", width: 18 },
+      ];
+      
+      const allOrders = await db.select().from(orders).orderBy(orders.createdAt);
+      
+      allOrders.forEach(order => {
+        let themesList = "";
+        try {
+          const parsed = typeof order.themeSelections === "string" ? JSON.parse(order.themeSelections) : order.themeSelections;
+          if (Array.isArray(parsed)) {
+            themesList = parsed.map((t: any) => `${t.theme}${t.quantity ? ` x${t.quantity}` : ""}${t.deliveryDate ? ` (${t.deliveryDate})` : ""}`).join("; ");
+          }
+        } catch (e) {}
+        
+        orderSheet.addRow({
+          orderCode: order.orderCode,
+          orderDate: order.orderDate,
+          salesRepName: order.salesRepName,
+          fournisseur: order.fournisseur || "",
+          clientName: order.clientName,
+          clientTel: order.clientTel || "",
+          clientEmail: order.clientEmail,
+          themes: themesList,
+          livraisonEnseigne: order.livraisonEnseigne,
+          livraisonAdresse: order.livraisonAdresse,
+          livraisonCpVille: order.livraisonCpVille,
+          facturationRaisonSociale: order.facturationRaisonSociale,
+          facturationCpVille: order.facturationCpVille,
+          facturationMode: order.facturationMode,
+          dateLivraison: order.dateLivraison || "",
+          dateInventairePrevu: order.dateInventairePrevu || "",
+          dateInventaire: order.dateInventaire || "",
+          dateRetour: order.dateRetour || "",
+          createdAt: order.createdAt ? new Date(order.createdAt).toLocaleDateString("fr-FR") : "",
+        });
+      });
+      styleHeader(orderSheet);
+      
+      // ===== THEMES =====
+      const themeSheet = workbook.addWorksheet("Thèmes");
+      themeSheet.columns = [
+        { header: "Thème", key: "theme", width: 50 },
+        { header: "Fournisseur", key: "fournisseur", width: 25 },
+        { header: "Source", key: "source", width: 15 },
+      ];
+      
+      // Collect themes from database
+      const dbThemes = await db.select().from(themes);
+      dbThemes.forEach(theme => {
+        themeSheet.addRow({
+          theme: theme.theme,
+          fournisseur: theme.fournisseur || "",
+          source: "Base de données",
+        });
+      });
+      
+      // Add themes from orders (not already in database) - use composite key theme+fournisseur
+      const existingThemeKeys = new Set(
+        dbThemes.map(t => `${t.theme.toLowerCase()}|${(t.fournisseur || "").toLowerCase()}`)
+      );
+      const orderThemes = new Map<string, { theme: string; fournisseur: string }>();
+      
+      allOrders.forEach(order => {
+        try {
+          const orderFournisseur = order.fournisseur || "";
+          const parsed = typeof order.themeSelections === "string" ? JSON.parse(order.themeSelections) : order.themeSelections;
+          if (Array.isArray(parsed)) {
+            parsed.forEach((t: any) => {
+              if (t.theme) {
+                const compositeKey = `${t.theme.toLowerCase()}|${orderFournisseur.toLowerCase()}`;
+                if (!existingThemeKeys.has(compositeKey) && !orderThemes.has(compositeKey)) {
+                  orderThemes.set(compositeKey, {
+                    theme: t.theme,
+                    fournisseur: orderFournisseur,
+                  });
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      });
+      
+      Array.from(orderThemes.values()).forEach(t => {
+        themeSheet.addRow({
+          theme: t.theme,
+          fournisseur: t.fournisseur,
+          source: "Bons de commande",
+        });
+      });
+      styleHeader(themeSheet);
+      
+      // ===== COMMERCIAUX =====
+      const commercialSheet = workbook.addWorksheet("Commerciaux");
+      commercialSheet.columns = [
+        { header: "ID", key: "id", width: 10 },
+        { header: "Prénom", key: "prenom", width: 20 },
+        { header: "Nom", key: "nom", width: 25 },
+        { header: "Rôle", key: "role", width: 15 },
+        { header: "Actif", key: "actif", width: 10 },
+      ];
+      
+      const dbCommerciaux = await db.select().from(commerciaux);
+      dbCommerciaux.forEach(c => {
+        commercialSheet.addRow({
+          id: c.id,
+          prenom: c.prenom || "",
+          nom: c.nom,
+          role: c.role || "commercial",
+          actif: c.actif ? "Oui" : "Non",
+        });
+      });
+      
+      if (dbCommerciaux.length === 0) {
+        data.commerciaux.forEach((c, i) => {
+          commercialSheet.addRow({
+            id: i + 1,
+            prenom: "",
+            nom: c.displayName || c.nom,
+            role: "commercial",
+            actif: "Oui",
+          });
+        });
+      }
+      styleHeader(commercialSheet);
+      
+      // ===== FOURNISSEURS =====
+      const fournisseurSheet = workbook.addWorksheet("Fournisseurs");
+      fournisseurSheet.columns = [
+        { header: "Code", key: "nomCourt", width: 15 },
+        { header: "Nom", key: "nom", width: 40 },
+      ];
+      
+      const dbFournisseurs = await db.select().from(fournisseurs);
+      
+      if (dbFournisseurs.length > 0) {
+        dbFournisseurs.forEach(f => {
+          fournisseurSheet.addRow({
+            nomCourt: f.nomCourt,
+            nom: f.nom,
+          });
+        });
+      } else {
+        data.fournisseurs.forEach(f => {
+          fournisseurSheet.addRow({
+            nomCourt: f.nomCourt,
+            nom: f.nom,
+          });
+        });
+      }
+      styleHeader(fournisseurSheet);
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="export_base_complete_${new Date().toISOString().split("T")[0]}.xlsx"`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+      
+    } catch (error: any) {
+      console.error("Erreur lors de l'export complet:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ======= ADMIN CRUD ROUTES WITH PAGINATION =======
 
   // Helper function for pagination
@@ -1547,6 +1796,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.delete(themes).where(eq(themes.id, id));
       res.json({ success: true });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Sync themes from orders to database
+  app.post("/api/admin/themes/sync-from-orders", async (req, res) => {
+    try {
+      // Get all orders
+      const allOrders = await db.select().from(orders);
+      
+      // Get existing themes - create composite key (theme+fournisseur)
+      const existingThemes = await db.select().from(themes);
+      const existingThemeSet = new Set(
+        existingThemes.map(t => `${t.theme.toLowerCase()}|${(t.fournisseur || "").toLowerCase()}`)
+      );
+      
+      // Extract unique themes from orders (keyed by theme+fournisseur)
+      const themesFromOrders = new Map<string, { theme: string; fournisseur: string }>();
+      
+      allOrders.forEach(order => {
+        try {
+          const orderFournisseur = order.fournisseur || "";
+          const parsed = typeof order.themeSelections === "string" ? JSON.parse(order.themeSelections) : order.themeSelections;
+          if (Array.isArray(parsed)) {
+            parsed.forEach((t: any) => {
+              if (t.theme) {
+                const compositeKey = `${t.theme.toLowerCase()}|${orderFournisseur.toLowerCase()}`;
+                if (!existingThemeSet.has(compositeKey) && !themesFromOrders.has(compositeKey)) {
+                  themesFromOrders.set(compositeKey, {
+                    theme: t.theme,
+                    fournisseur: orderFournisseur,
+                  });
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      });
+      
+      // Insert new themes into database
+      let added = 0;
+      const themesToAdd = Array.from(themesFromOrders.values());
+      for (const themeData of themesToAdd) {
+        await db.insert(themes).values({
+          theme: themeData.theme,
+          fournisseur: themeData.fournisseur,
+        });
+        added++;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `${added} nouveaux thèmes synchronisés depuis les bons de commande`,
+        added,
+        total: existingThemes.length + added,
+      });
+    } catch (error: any) {
+      console.error("Erreur sync themes:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get themes grouped by fournisseur (for order form)
+  app.get("/api/data/themes-by-fournisseur", async (req, res) => {
+    try {
+      const { fournisseur } = req.query;
+      
+      // Get themes from database
+      const dbThemes = await db.select().from(themes);
+      
+      // Also extract themes from orders to include themes that might be missing
+      // Use composite key (theme+fournisseur) for uniqueness
+      const allOrders = await db.select().from(orders);
+      const orderThemes = new Map<string, { theme: string; fournisseur: string }>();
+      
+      allOrders.forEach(order => {
+        try {
+          const orderFournisseur = order.fournisseur || "";
+          const parsed = typeof order.themeSelections === "string" ? JSON.parse(order.themeSelections) : order.themeSelections;
+          if (Array.isArray(parsed)) {
+            parsed.forEach((t: any) => {
+              if (t.theme) {
+                const compositeKey = `${t.theme.toLowerCase()}|${orderFournisseur.toLowerCase()}`;
+                if (!orderThemes.has(compositeKey)) {
+                  orderThemes.set(compositeKey, {
+                    theme: t.theme,
+                    fournisseur: orderFournisseur,
+                  });
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      });
+      
+      // Merge database themes with order themes using composite key
+      const mergedThemes = new Map<string, { theme: string; fournisseur: string; source: string }>();
+      
+      dbThemes.forEach(t => {
+        const compositeKey = `${t.theme.toLowerCase()}|${(t.fournisseur || "").toLowerCase()}`;
+        mergedThemes.set(compositeKey, {
+          theme: t.theme,
+          fournisseur: t.fournisseur,
+          source: "database",
+        });
+      });
+      
+      orderThemes.forEach((t, key) => {
+        if (!mergedThemes.has(key)) {
+          mergedThemes.set(key, {
+            theme: t.theme,
+            fournisseur: t.fournisseur,
+            source: "orders",
+          });
+        }
+      });
+      
+      // Group by fournisseur
+      const grouped: { [fournisseur: string]: string[] } = {};
+      
+      mergedThemes.forEach(t => {
+        if (!fournisseur || t.fournisseur === fournisseur) {
+          if (!grouped[t.fournisseur]) {
+            grouped[t.fournisseur] = [];
+          }
+          grouped[t.fournisseur].push(t.theme);
+        }
+      });
+      
+      // Sort themes within each fournisseur
+      Object.keys(grouped).forEach(key => {
+        grouped[key].sort((a, b) => a.localeCompare(b, "fr"));
+      });
+      
+      res.json(grouped);
+    } catch (error: any) {
+      console.error("Erreur themes by fournisseur:", error);
       res.status(500).json({ message: error.message });
     }
   });

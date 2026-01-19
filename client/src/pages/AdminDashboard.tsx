@@ -51,6 +51,7 @@ import {
   ShoppingCart,
   Eye,
   FileText,
+  FileDown,
   Calendar,
   Truck,
   ClipboardList,
@@ -61,7 +62,8 @@ import {
   Check,
   AlertCircle,
   Mail,
-  Copy
+  Copy,
+  FileSpreadsheet
 } from "lucide-react";
 import {
   Select,
@@ -185,6 +187,90 @@ export default function AdminDashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderDb | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
+
+  interface ThemeSelection {
+    theme: string;
+    quantity?: number;
+    deliveryDate?: string;
+    category?: string;
+  }
+
+  const parseThemeSelections = (themeSelections: string | null): ThemeSelection[] => {
+    try {
+      return JSON.parse(themeSelections || "[]");
+    } catch {
+      return [];
+    }
+  };
+
+  const downloadPdf = async (order: OrderDb) => {
+    setDownloadingPdf(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}/pdf`);
+      if (!response.ok) throw new Error("Erreur lors du téléchargement");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${order.orderCode || "commande"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: "PDF téléchargé", description: "Le fichier PDF a été téléchargé avec succès." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de télécharger le PDF", variant: "destructive" });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const downloadExcel = async (order: OrderDb) => {
+    setDownloadingExcel(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}/excel`);
+      if (!response.ok) throw new Error("Erreur lors du téléchargement");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${order.orderCode || "commande"}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: "Excel téléchargé", description: "Le fichier Excel a été téléchargé avec succès." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de télécharger le fichier Excel", variant: "destructive" });
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
+
+  const exportAllDatabase = async () => {
+    setExportingAll(true);
+    try {
+      const response = await fetch("/api/admin/export-all");
+      if (!response.ok) throw new Error("Erreur lors de l'export");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `export_base_donnees_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: "Export terminé", description: "La base de données a été exportée avec succès." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible d'exporter la base de données", variant: "destructive" });
+    } finally {
+      setExportingAll(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -370,6 +456,22 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
       toast({ title: "Succès", description: "Modification approuvée" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const syncThemesMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/admin/themes/sync-from-orders");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/themes'] });
+      toast({ 
+        title: "Synchronisation réussie", 
+        description: data.message || `${data.added} thèmes ajoutés depuis les bons de commande` 
+      });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -740,6 +842,18 @@ export default function AdminDashboard() {
                     Exporter en Excel
                   </DropdownMenuItem>
                   <DropdownMenuItem 
+                    onClick={exportAllDatabase}
+                    disabled={exportingAll}
+                    data-testid="menu-export-all"
+                  >
+                    {exportingAll ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    )}
+                    {exportingAll ? "Export en cours..." : "Exporter toute la base"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
                     onClick={handleImportExcel}
                     disabled={isImporting}
                     data-testid="menu-import-excel"
@@ -973,6 +1087,25 @@ export default function AdminDashboard() {
           <TabsContent value="themes">
             <Card>
               <CardContent className="p-0">
+                <div className="p-3 border-b flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Thèmes liés aux fournisseurs et bons de commande
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => syncThemesMutation.mutate()}
+                    disabled={syncThemesMutation.isPending}
+                    data-testid="button-sync-themes"
+                  >
+                    {syncThemesMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Package className="w-4 h-4 mr-2" />
+                    )}
+                    Synchroniser depuis commandes
+                  </Button>
+                </div>
                 {themesLoading ? (
                   <div className="p-8 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto" />
@@ -1430,10 +1563,32 @@ export default function AdminDashboard() {
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Thèmes commandés</h4>
-                <div className="bg-muted p-3 rounded-md text-sm">
-                  <pre className="whitespace-pre-wrap">{selectedOrder.themeSelections}</pre>
-                </div>
+                <h4 className="font-semibold mb-3">Thèmes / Produits commandés</h4>
+                {parseThemeSelections(selectedOrder.themeSelections).length > 0 ? (
+                  <div className="space-y-2">
+                    {parseThemeSelections(selectedOrder.themeSelections).map((theme, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{theme.theme}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-muted-foreground">
+                          {theme.quantity && <span>Qté: {theme.quantity}</span>}
+                          {theme.deliveryDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {theme.deliveryDate}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-muted p-3 rounded-md text-sm">
+                    <pre className="whitespace-pre-wrap">{selectedOrder.themeSelections || "Aucun thème"}</pre>
+                  </div>
+                )}
               </div>
 
               {selectedOrder.createdAt && (
@@ -1446,7 +1601,29 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => selectedOrder && downloadPdf(selectedOrder)}
+                disabled={downloadingPdf}
+                data-testid="button-download-order-pdf"
+              >
+                {downloadingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileDown className="w-4 h-4 mr-2" />}
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => selectedOrder && downloadExcel(selectedOrder)}
+                disabled={downloadingExcel}
+                data-testid="button-download-order-excel"
+              >
+                {downloadingExcel ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
+                Excel
+              </Button>
+            </div>
             <Button variant="outline" onClick={() => setOrderDetailOpen(false)}>
               Fermer
             </Button>
