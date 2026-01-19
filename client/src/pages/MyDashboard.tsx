@@ -1445,24 +1445,6 @@ export default function MyDashboard() {
           <TabsContent value="analytics" className="mt-4 space-y-4">
             <Card className="p-3">
               <div className="flex flex-col gap-3">
-                {isAdmin && (
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <Select value={selectedCommercial} onValueChange={setSelectedCommercial}>
-                      <SelectTrigger className="flex-1 h-9" data-testid="select-stats-commercial">
-                        <SelectValue placeholder="Sélectionner un commercial" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous les commerciaux</SelectItem>
-                        {commerciaux.map((c) => (
-                          <SelectItem key={c.id} value={c.displayName}>
-                            {c.displayName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
                 <div className="flex items-center justify-between">
                   <Button
                     variant="ghost"
@@ -1534,7 +1516,6 @@ export default function MyDashboard() {
                   <Badge variant="secondary">
                     {statsFilteredOrders.length} commande{statsFilteredOrders.length > 1 ? 's' : ''} 
                     {statsSeason === "all" ? ` en ${statsYear}` : ` - ${statsSeason} ${statsYear}`}
-                    {isAdmin && selectedCommercial !== "all" && ` - ${selectedCommercial}`}
                   </Badge>
                 </div>
               </div>
