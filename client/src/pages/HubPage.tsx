@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Database, LogOut, User, LayoutDashboard, FileText, ChevronRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ClipboardList, Database, LogOut, User, LayoutDashboard, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { APP_VERSION } from "@/lib/version";
 
@@ -27,122 +28,121 @@ export default function HubPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F4F6] dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 border-b border-[#E8F1F8] dark:border-gray-700 px-4 py-3">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#003366] flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="text-sm font-medium text-[#2C3E50] dark:text-gray-200 block">
-                {userName}
-              </span>
-              <span className="text-xs text-[#6B7280]">Commercial</span>
-            </div>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+      {/* Header avec profil et déconnexion */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="w-4 h-4 text-primary" />
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleLogout}
-            className="text-[#6B7280] hover:text-[#2C3E50]"
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Déconnexion
-          </Button>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {userName}
+          </span>
         </div>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleLogout}
+          className="text-gray-600 dark:text-gray-400"
+          data-testid="button-logout"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Déconnexion
+        </Button>
       </header>
 
+      {/* Contenu principal */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-[#003366] dark:text-white mb-1">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               BFC APP
             </h1>
-            <p className="text-sm text-[#6B7280]">
-              Sélectionnez votre espace de travail
+            <p className="text-gray-600 dark:text-gray-400">
+              Choisissez votre espace de travail
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div 
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-[#003366] cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setLocation("/order")}
-              data-testid="card-order"
-            >
-              <div className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#E8F1F8] flex items-center justify-center">
-                  <ClipboardList className="w-6 h-6 text-[#003366]" />
+        <div className="grid gap-4">
+          <Card 
+            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-primary"
+            onClick={() => setLocation("/order")}
+            data-testid="card-order"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <ClipboardList className="w-8 h-8 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg font-medium text-[#2C3E50] dark:text-white">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Bon de commande
                   </h2>
-                  <p className="text-sm text-[#6B7280]">
-                    Créer et envoyer des commandes
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Créer et envoyer des commandes clients
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-[#6B7280]" />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div 
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-[#003366] cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setLocation("/dashboard")}
-              data-testid="card-dashboard"
-            >
-              <div className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#E8F1F8] flex items-center justify-center">
-                  <LayoutDashboard className="w-6 h-6 text-[#003366]" />
+          <Card 
+            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-green-500"
+            onClick={() => setLocation("/dashboard")}
+            data-testid="card-dashboard"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center border border-green-200">
+                  <LayoutDashboard className="w-8 h-8 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg font-medium text-[#2C3E50] dark:text-white">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Tableau de Bord
                   </h2>
-                  <p className="text-sm text-[#6B7280]">
-                    Stats, commandes et calendrier
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Stats, commandes, calendrier et analyse clients
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-[#6B7280]" />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {isAdmin && (
-              <div 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-[#003366] cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => {
-                  localStorage.setItem("adminAuthenticated", "true");
-                  setLocation("/admin");
-                }}
-                data-testid="card-database"
-              >
-                <div className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-[#E8F1F8] flex items-center justify-center">
-                    <Database className="w-6 h-6 text-[#003366]" />
+          {isAdmin && (
+            <Card 
+              className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-gray-500"
+              onClick={() => {
+                localStorage.setItem("adminAuthenticated", "true");
+                setLocation("/admin");
+              }}
+              data-testid="card-database"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-200">
+                    <Database className="w-8 h-8 text-gray-500 dark:text-gray-300" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-lg font-medium text-[#2C3E50] dark:text-white">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                       Base de données
                     </h2>
-                    <p className="text-sm text-[#6B7280]">
-                      Gérer clients et fournisseurs
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Gérer clients, thèmes, fournisseurs
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-[#6B7280]" />
                 </div>
-              </div>
-            )}
-          </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
         </div>
       </div>
-
-      <footer className="py-4 text-center space-y-2 bg-white dark:bg-gray-800 border-t border-[#E8F1F8]">
-        <Link href="/legal" className="text-xs text-[#6B7280] hover:text-[#003366] inline-flex items-center gap-1" data-testid="link-legal">
+      <footer className="py-4 text-center space-y-2">
+        <Link href="/legal" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 inline-flex items-center gap-1" data-testid="link-legal">
           <FileText className="w-3 h-3" />
-          Mentions légales
+          Mentions légales et CGU
         </Link>
-        <p className="text-xs text-[#9CA3AF]" data-testid="text-app-version">
+        <p className="text-xs text-gray-400" data-testid="text-app-version">
           Version {APP_VERSION}
         </p>
       </footer>

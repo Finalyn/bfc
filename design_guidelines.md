@@ -1,196 +1,232 @@
-# Design Guidelines: BFC APP - Professional Sales Order Application
+# Design Guidelines: Mobile Sales Order Application
 
 ## Design Approach
 
-**Selected Approach**: Material Design System (Mobile-Optimized)
+**Selected Approach**: Design System-Based (Material Design for Mobile)
 
-**Justification**: Enterprise mobile application requiring efficiency, clarity, and professional credibility. The blue-accented card system provides visual hierarchy while maintaining corporate sophistication.
+**Justification**: This is a utility-focused, mobile-first business application where efficiency, clarity, and reliability are paramount. The sales representatives need a tool that works flawlessly in the field with minimal learning curve. Material Design's mobile-optimized patterns, strong visual feedback, and touch-friendly components align perfectly with these requirements.
 
 **Key Design Principles**:
-- Corporate professionalism with blue accent system
-- Signature left-border treatment on all content cards
-- Mobile-first PWA with offline capability considerations
-- Minimal visual noise, maximum clarity
-- Trust-building through consistent, professional aesthetic
-
-## Color System
-
-**Primary Palette**:
-- Corporate Blue: #003366 (primary brand, accents, CTAs)
-- Light Blue: #0055AA (hover states, active elements)
-- Pale Blue: #E8F1F8 (subtle backgrounds, disabled states)
-
-**Neutrals**:
-- Charcoal: #2C3E50 (primary text, headers)
-- Medium Gray: #6B7280 (secondary text, labels)
-- Light Gray: #F3F4F6 (backgrounds, dividers)
-- White: #FFFFFF (cards, inputs)
-
-**Semantic**:
-- Success: #059669 (confirmations, completed states)
-- Error: #DC2626 (validation errors, alerts)
-- Warning: #D97706 (cautions, pending states)
+- Mobile-first with touch optimization throughout
+- Single-purpose screens with clear progression
+- Maximum legibility and touch targets
+- Professional business aesthetic
+- Zero friction workflow
 
 ## Typography
 
-**Font Family**: Roboto (Google Fonts) - 400 (Regular), 500 (Medium), 600 (Semi-Bold)
+**Font Family**: 
+- Primary: Roboto (via Google Fonts CDN) - weights: 400 (Regular), 500 (Medium), 700 (Bold)
 
-**Hierarchy**:
-- App Title: text-xl font-semibold (20px) in Corporate Blue
-- Section Headers: text-lg font-medium (18px) in Charcoal
-- Form Labels: text-sm font-medium (14px) in Medium Gray
-- Input Text: text-base (16px) in Charcoal
-- Helper Text: text-xs (12px) in Medium Gray
+**Type Scale**:
+- Page Title: text-2xl font-bold (24px)
+- Section Headers: text-lg font-medium (18px)
+- Form Labels: text-sm font-medium (14px)
+- Input Text: text-base (16px) - critical for mobile to prevent zoom
+- Body Text: text-base (16px)
 - Button Text: text-base font-medium (16px)
+- Helper Text: text-xs (12px)
 
 ## Layout System
 
-**Spacing**: Tailwind units 3, 4, 6, 8
-- Page padding: p-6
-- Card padding: p-6
-- Form gaps: gap-4
+**Spacing Primitives**: Use Tailwind units of 3, 4, 6, and 8
+- Component padding: p-4 or p-6
 - Section spacing: space-y-6
-- Border accent: border-l-4 (4px blue left border)
+- Form field gaps: gap-4
+- Button padding: px-6 py-4
+- Page padding: p-6 or px-4 py-6
 
-**Container**: max-w-lg mx-auto with px-4 on mobile
+**Grid System**:
+- Single column layout throughout (mobile-first)
+- Container: max-w-lg mx-auto (optimized for mobile screens)
+- Full viewport width on mobile, centered on larger screens
 
-## Visual Identity: Blue Accent System
+## Core Layout Structure
 
-**Signature Left Border Treatment**:
-All major containers use 4px blue left border:
-- Content cards: border-l-4 border-[#003366]
-- Form sections: border-l-4 border-[#003366]
-- Summary cards: border-l-4 border-[#003366]
-- Modal dialogs: border-l-4 border-[#003366]
-- Input groups: border-l-4 border-[#E8F1F8] (subtle), active state to Corporate Blue
+**Application Shell**:
+- Fixed header with app title and current step indicator
+- Scrollable content area with generous padding
+- Fixed bottom action bar for primary CTAs
+- Safe area padding for mobile notches
 
-**Card Styling**:
-- White background with subtle shadow (shadow-sm)
-- Rounded corners: rounded-lg
-- Blue left accent: border-l-4
-- Internal padding: p-6
-- Dividers: border-[#F3F4F6]
+**Form Layout**:
+- Stacked form fields with consistent spacing (gap-4)
+- Full-width inputs with minimum height h-12
+- Labels positioned above inputs with mb-2
+- Helper text below inputs with mt-1
 
-## Component Specifications
-
-### Application Shell
-- Header: white background, border-b border-[#F3F4F6], h-16, corporate blue title
-- Step indicator: horizontal dots with blue active state
-- Content area: light gray background (#F3F4F6)
-- Bottom action bar: white with shadow-2xl, blue primary button
+## Component Library
 
 ### Form Components
 
-**Inputs**:
-- Height: h-12 (48px)
-- White background, border border-[#E8F1F8]
-- Focus: border-[#003366] with ring-2 ring-[#003366]/20
-- Error: border-[#DC2626]
-- Rounded: rounded-lg
-- Label: text-sm font-medium text-[#6B7280] mb-2
+**Text Inputs**:
+- Height: h-12 (48px minimum for touch)
+- Padding: px-4
+- Border radius: rounded-lg
+- Border width: border-2
+- Focus state: ring-2 offset-2
 
-**Buttons**:
-- Primary: Full width h-14, bg-[#003366], white text, rounded-xl, shadow-md
-- Secondary: Same size, white bg, border-2 border-[#003366], blue text
-- Disabled: bg-[#E8F1F8], text-[#6B7280]
-- Touch feedback: active:scale-[0.98]
+**Text Areas**:
+- Minimum height: min-h-32
+- Padding: p-4
+- Same styling as text inputs
 
-### Signature Canvas
-- Container: white card with blue left border
-- Canvas: min-h-64, border-2 dashed border-[#E8F1F8] (empty) or solid border-[#003366] (signed)
-- Clear button: text-[#003366] with DocumentIcon, top-right
-- Rounded: rounded-lg
+**Date Picker**:
+- Native HTML5 date input styled to match other inputs
+- Height: h-12
+- Full width
+
+**Buttons - Primary**:
+- Size: w-full h-14 (56px for easy tapping)
+- Padding: px-6 py-4
+- Border radius: rounded-xl
+- Font: text-base font-medium
+- Shadow: shadow-lg
+
+**Buttons - Secondary**:
+- Same dimensions as primary
+- Border: border-2
+- No shadow
+
+**Buttons - Icon**:
+- Square: w-12 h-12
+- Centered icon with p-3
+
+### Signature Component
+
+**Signature Canvas**:
+- Aspect ratio: 16:9 or 3:2 for landscape orientation
+- Minimum height: min-h-64
+- Border: border-2 dashed when empty, border-2 solid when signed
+- Border radius: rounded-xl
+- Background hint: "Sign here" centered text when empty
+- Clear button: positioned top-right corner
+
+**Signature Actions**:
+- Clear button: text-sm with icon
+- Instruction text: text-sm above canvas
 
 ### Order Summary Card
-- White background with border-l-4 border-[#003366]
+
+**Card Container**:
 - Padding: p-6
-- Rounded: rounded-xl
-- Row layout: flex justify-between
-- Labels: text-sm font-medium text-[#6B7280]
-- Values: text-base text-[#2C3E50]
-- Total row: border-t-2 border-[#003366], pt-4, larger text (text-lg font-semibold)
-- Dividers between rows: border-t border-[#F3F4F6]
+- Border radius: rounded-2xl
+- Border: border-2
+- Background: distinct from page background
+- Spacing: space-y-4
 
-### Status & Progress
+**Summary Row**:
+- Flex layout: flex justify-between items-start
+- Label: text-sm font-medium
+- Value: text-base
+- Dividers: border-t between rows with py-3
 
-**Step Indicator**:
-- 4 horizontal steps with connector lines
-- Active: w-10 h-10 circle, bg-[#003366], white text
-- Completed: checkmark in blue circle
-- Future: w-8 h-8 circle, border-[#E8F1F8], gray text
-- Connectors: border-t-2 border-[#E8F1F8] (inactive) or border-[#003366] (completed)
+### Status Indicators
 
-**File Preview Cards**:
-- Horizontal layout with blue left border
-- Icon (DocumentIcon/TableCellsIcon): w-10 h-10 text-[#003366]
-- White background, rounded-lg, p-4
-- Filename: text-sm font-medium, truncate
-- Download button: icon-only, text-[#003366]
+**Step Indicator** (Top of page):
+- Horizontal stepper with 4 steps
+- Current step highlighted and larger
+- Completed steps with checkmark icons
+- Future steps muted
+- Connector lines between steps
+
+**Progress States**:
+- Loading spinner: w-6 h-6 centered
+- Success checkmark: w-8 h-8 in circle
+- Error icon: w-8 h-8 in circle
+
+### File Preview Cards
+
+**PDF/Excel Preview**:
+- Horizontal card layout
+- Icon: w-12 h-12 (file type icon from Heroicons)
+- Filename: text-sm font-medium truncate
+- File size: text-xs
+- Download button: icon-only, w-10 h-10
+- Card padding: p-4
+- Border radius: rounded-xl
 
 ### Modal/Dialog
-- max-w-sm, white background, rounded-2xl
-- Blue left accent: border-l-4 border-[#003366]
-- Padding: p-6, shadow-2xl
-- Title: text-xl font-semibold text-[#2C3E50]
-- Actions: flex gap-3, full-width buttons
 
-## Navigation Flow
+**Confirmation Dialog**:
+- Max width: max-w-sm
+- Padding: p-6
+- Border radius: rounded-2xl
+- Shadow: shadow-2xl
+- Title: text-xl font-bold mb-4
+- Message: text-base mb-6
+- Actions: flex gap-3 at bottom
 
-**4-Step Process**:
-1. Order Form → 2. Signature → 3. Review & Generate → 4. Send & Download
+## Navigation & Workflow
+
+**Multi-Step Flow**:
+1. Order Form (all input fields)
+2. Signature Capture
+3. Review & Generate
+4. Send & Download
 
 **Bottom Action Bar**:
-- Fixed position, white bg, shadow-2xl
-- Safe area padding (pb-safe)
-- Primary action: full-width blue button
-- Back arrow (ChevronLeftIcon) in header for steps 2-4
+- Fixed positioning: fixed bottom-0 left-0 right-0
+- Safe area padding: pb-safe
+- Shadow: shadow-2xl
+- Background: distinct from page
+- Padding: p-4
+- Primary action button: full width
+
+**Back Navigation**:
+- Top-left icon button in header
+- Only visible after step 1
 
 ## Interactive States
 
 **Touch Feedback**:
-- Buttons: active:scale-[0.98], active:bg-[#0055AA] (primary)
-- Inputs: focus ring with blue glow
-- Cards: tap highlights (if interactive)
+- All interactive elements: active:scale-95 transition-transform
+- Buttons: active state with reduced opacity
+- Inputs: focus ring with ring-2
 
 **Loading States**:
-- Button loading: spinner icon, "Traitement..." text
-- Full-screen loading: centered spinner with "Chargement..." below
+- Inline spinner for button loading
+- Disabled state with reduced opacity
+- "Generating..." or "Sending..." text updates
 
-**Toast Notifications**:
-- Top slide-in, white card with blue left border
-- Success: CheckCircleIcon in green
-- Error: XCircleIcon in red
-- Auto-dismiss: 4 seconds
-- Padding: p-4, rounded-xl, shadow-lg
+**Success/Error Messages**:
+- Toast notifications from top
+- Padding: p-4
+- Border radius: rounded-xl
+- Auto-dismiss after 4 seconds
+- Icon + message layout
 
 ## Accessibility
 
-- All touch targets: minimum 44x44px
-- Labels for all inputs with for/id pairing
-- Icons: Heroicons (outline for UI, solid for emphasis)
-- Error messages: aria-live="polite"
-- Focus visible: ring-2 ring-[#003366] ring-offset-2
-- Color contrast: WCAG AA minimum (Corporate Blue on white: 8.59:1)
+**Touch Targets**:
+- Minimum 44x44px (48px used throughout)
+- Spacing between tappable elements: minimum 8px
+
+**Form Accessibility**:
+- All inputs have associated labels
+- Error messages with aria-live="polite"
+- Required field indicators with asterisk
+- Focus visible on all interactive elements
+
+**Icons**:
+- Use Heroicons (solid and outline variants) via CDN
+- All icons have aria-label or are decorative with aria-hidden
 
 ## Mobile Optimizations
 
-- Viewport: width=device-width, initial-scale=1, maximum-scale=1
+**Viewport**:
+- viewport meta tag with width=device-width, initial-scale=1
+- Prevent zoom on input focus with maximum-scale=1
+
+**Keyboard**:
 - Input types: email, number, date for native keyboards
+- Pattern attributes for formatting hints
+
+**Performance**:
+- Minimal animations (only essential state changes)
 - Smooth scrolling: scroll-smooth
-- Hardware acceleration: transform transitions only
-- PWA considerations: offline state messaging in blue banner
+- Hardware acceleration for transforms
 
-## Icons
+## Images
 
-Heroicons via CDN (outline primary, solid for emphasis):
-- Navigation: ChevronLeftIcon, ArrowRightIcon
-- Actions: DocumentIcon, TableCellsIcon, ArrowDownTrayIcon, XMarkIcon
-- Status: CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon
-
-## Key Visual Elements
-
-- No images required (utility application)
-- Blue left border is signature visual element throughout
-- Corporate blue used sparingly for maximum impact
-- Generous whitespace with light gray backgrounds
-- Subtle shadows for depth (shadow-sm on cards, shadow-md on buttons)
+No images required for this application. The interface is purely functional with icons for visual hierarchy.

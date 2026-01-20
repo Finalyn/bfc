@@ -55,36 +55,36 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#F3F4F6]">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-white">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-sm border-l-4 border-[#003366] p-8 space-y-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-[#003366] rounded-full flex items-center justify-center mb-4">
-              <Lock className="w-8 h-8 text-white" />
+            <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-200">
+              <Lock className="w-8 h-8 text-gray-500" />
             </div>
-            <h1 className="text-xl font-semibold text-[#003366]">
-              BFC APP
+            <h1 className="text-2xl font-bold text-gray-900">
+              Gestion de Commandes
             </h1>
-            <p className="text-sm text-[#6B7280]">
-              Connexion à votre espace commercial
+            <p className="text-sm text-gray-600">
+              Connectez-vous avec votre identifiant commercial
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-[#6B7280]">
+              <Label htmlFor="username" className="text-sm font-medium">
                 Identifiant
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   id="username"
                   type="text"
                   data-testid="input-username"
-                  placeholder="Votre identifiant"
+                  placeholder="Identifiant"
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                  className="h-12 text-base pl-10 border-[#E8F1F8] focus:border-[#003366] focus:ring-[#003366]/20"
+                  className="h-12 text-base pl-10"
                   disabled={isLoading}
                   autoComplete="username"
                 />
@@ -92,16 +92,16 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-[#6B7280]">
+              <Label htmlFor="password" className="text-sm font-medium">
                 Mot de passe
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   id="password"
                   type="password"
                   data-testid="input-password"
-                  placeholder="Votre mot de passe"
+                  placeholder="Entrez le mot de passe"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={(e) => {
@@ -110,7 +110,7 @@ export default function LoginPage() {
                       handleSubmit(e as any);
                     }
                   }}
-                  className="h-12 text-base pl-10 border-[#E8F1F8] focus:border-[#003366] focus:ring-[#003366]/20"
+                  className="h-12 text-base pl-10"
                   disabled={isLoading}
                   autoComplete="current-password"
                   enterKeyHint="go"
@@ -121,15 +121,19 @@ export default function LoginPage() {
             <Button
               type="submit"
               data-testid="button-login"
-              className="w-full h-14 text-base font-medium bg-[#003366] hover:bg-[#002244] text-white rounded-lg shadow-md"
+              className="w-full h-14 text-base font-medium"
               disabled={isLoading}
             >
               {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
           </form>
+
         </div>
 
-        <p className="text-center text-xs text-[#9CA3AF] mt-6" data-testid="text-app-version">
+        <p className="text-center text-sm text-gray-600 mt-6">
+          Application réservée aux commerciaux BFC
+        </p>
+        <p className="text-center text-xs text-gray-400 mt-4" data-testid="text-app-version">
           Version {APP_VERSION}
         </p>
       </div>
