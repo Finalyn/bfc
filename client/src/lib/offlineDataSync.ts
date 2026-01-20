@@ -98,7 +98,7 @@ export async function syncAllDataFromServer(): Promise<boolean> {
       fetchPaginatedAndCache("/api/admin/themes", cacheThemes),
       fetchAndCache("/api/data/commerciaux", cacheDataCommerciaux),
       fetchAndCache("/api/data/clients", cacheDataClients),
-      fetchAndCache("/api/data/suppliers", cacheDataSuppliers),
+      fetchAndCache("/api/data/fournisseurs", cacheDataSuppliers),
       fetchAndCache("/api/data/themes", cacheDataThemes),
     ]);
 

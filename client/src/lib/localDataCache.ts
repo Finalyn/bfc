@@ -111,7 +111,13 @@ export async function getCachedDataClients(): Promise<Array<{ code: string; nom:
   return cached?.data || null;
 }
 
-export async function cacheDataSuppliers(data: string[]): Promise<void> {
+interface FournisseurData {
+  id: number;
+  nom: string;
+  nomCourt: string;
+}
+
+export async function cacheDataSuppliers(data: FournisseurData[]): Promise<void> {
   await cacheData(CACHE_KEYS.DATA_SUPPLIERS, {
     data,
     cachedAt: new Date().toISOString(),
@@ -119,7 +125,7 @@ export async function cacheDataSuppliers(data: string[]): Promise<void> {
   });
 }
 
-export async function getCachedDataSuppliers(): Promise<string[] | null> {
+export async function getCachedDataSuppliers(): Promise<FournisseurData[] | null> {
   const cached = await getCachedData(CACHE_KEYS.DATA_SUPPLIERS);
   return cached?.data || null;
 }

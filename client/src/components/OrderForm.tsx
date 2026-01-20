@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { useOnlineStatus } from "@/hooks/use-online-status";
-import { useOfflineDataCommerciaux, useOfflineDataClients, useOfflineDataThemes } from "@/hooks/use-offline-data";
+import { useOfflineDataCommerciaux, useOfflineDataClients, useOfflineDataThemes, useOfflineDataSuppliers } from "@/hooks/use-offline-data";
 import { getCachedDataCommerciaux, getCachedDataClients, getCachedDataThemes } from "@/lib/localDataCache";
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
@@ -320,12 +320,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   
   const { data: commerciaux = [], isOffline: commerciauxOffline } = useOfflineDataCommerciaux();
   const { data: clients = [], isOffline: clientsOffline } = useOfflineDataClients();
-  
-  const { data: dbFournisseurs = [] } = useQuery<{ id: number; nom: string; nomCourt: string }[]>({
-    queryKey: ["/api/data/fournisseurs"],
-    enabled: isOnline,
-  });
-  
+  const { data: dbFournisseurs = [], isOffline: fournisseursOffline } = useOfflineDataSuppliers();
   const { data: dbThemesRaw = [], isOffline: themesOffline } = useOfflineDataThemes();
   const dbThemes = useMemo(() => 
     dbThemesRaw.map((t, i) => ({ id: i, theme: t.theme, fournisseur: t.fournisseur, categorie: t.categorie })),

@@ -144,17 +144,23 @@ export function useOfflineDataClients(options: UseOfflineDataOptions = {}) {
   };
 }
 
+interface FournisseurData {
+  id: number;
+  nom: string;
+  nomCourt: string;
+}
+
 export function useOfflineDataSuppliers(options: UseOfflineDataOptions = {}) {
   const online = useOnlineStatus();
-  const [cachedData, setCachedData] = useState<string[] | null>(null);
+  const [cachedData, setCachedData] = useState<FournisseurData[] | null>(null);
   const { enabled = true } = options;
 
   useEffect(() => {
     getCachedDataSuppliers().then(setCachedData);
   }, []);
 
-  const query = useQuery<string[]>({
-    queryKey: ["/api/data/suppliers"],
+  const query = useQuery<FournisseurData[]>({
+    queryKey: ["/api/data/fournisseurs"],
     enabled: enabled && online,
   });
 
