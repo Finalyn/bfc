@@ -133,6 +133,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { valid: true };
   };
 
+  // Récupérer toutes les commandes (avec pagination)
+  app.get("/api/orders", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = (page - 1) * limit;
+      
+      // Récupérer les commandes avec pagination
+      const ordersList = await db.select().from(orders).orderBy(desc(orders.createdAt)).limit(limit).offset(offset);
+      
+      // Compter le total
+      const totalResult = await db.select({ count: count() }).from(orders);
+      const total = totalResult[0]?.count || 0;
+      
+      res.json({
+        data: ordersList,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(Number(total) / limit)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ error: "Erreur lors de la récupération des commandes" });
+    }
+  });
+
   // Générer une commande avec PDF et Excel
   app.post("/api/orders/generate", async (req, res) => {
     try {
