@@ -1363,24 +1363,6 @@ export default function MyDashboard() {
                     >
                       →
                     </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={goToPreviousEvent}
-                      data-testid="button-prev-event"
-                      title="Aller à l'événement précédent"
-                    >
-                      ◀ Préc.
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={goToNextEvent}
-                      data-testid="button-next-event"
-                      title="Aller à l'événement suivant"
-                    >
-                      Suiv. ▶
-                    </Button>
                   </div>
                 </div>
                 <div className="flex gap-1 flex-wrap">
