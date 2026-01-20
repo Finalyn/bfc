@@ -184,120 +184,175 @@ export async function sendOrderEmails(
     ],
   };
 
-  // Email à l'agence - format détaillé pour suivi interne
+  // Email à l'agence - design élégant avec encoches comme le client
   const agencyMailOptions = {
     from: FROM_EMAIL,
     to: AGENCY_EMAIL,
     subject: `[${fournisseurNom}] Commande ${order.orderCode} – ${order.livraisonEnseigne} – ${totalProducts} unités – ${orderDate}`,
     html: `
-      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 700px; margin: 0 auto; background-color: #ffffff;">
-        <!-- Header -->
-        <div style="background-color: #003366; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 20px;">Nouvelle commande ${fournisseurNom}</h1>
-          <p style="color: #E67E22; margin: 5px 0 0 0; font-size: 16px; font-weight: 600;">${order.orderCode}</p>
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Header avec couleur de marque -->
+        <div style="background: linear-gradient(135deg, #003366 0%, #0052a3 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Nouvelle Commande ${fournisseurNom}</h1>
+          <p style="color: #E67E22; margin: 10px 0 0 0; font-size: 18px; font-weight: 700;">${order.orderCode}</p>
         </div>
         
-        <div style="padding: 20px;">
-          <!-- Résumé rapide -->
-          <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-            <div style="background-color: #003366; color: #fff; padding: 10px 15px; border-radius: 6px; text-align: center; min-width: 100px;">
-              <div style="font-size: 24px; font-weight: bold;">${productCount}</div>
-              <div style="font-size: 12px; opacity: 0.9;">Thème${productCount > 1 ? 's' : ''}</div>
-            </div>
-            <div style="background-color: #E67E22; color: #fff; padding: 10px 15px; border-radius: 6px; text-align: center; min-width: 100px;">
-              <div style="font-size: 24px; font-weight: bold;">${totalProducts}</div>
-              <div style="font-size: 12px; opacity: 0.9;">Unité${totalProducts > 1 ? 's' : ''}</div>
-            </div>
-            ${firstDeliveryDate ? `
-            <div style="background-color: #22c55e; color: #fff; padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 150px;">
-              <div style="font-size: 14px; font-weight: bold;">${firstDeliveryDate}</div>
-              <div style="font-size: 12px; opacity: 0.9;">1ère livraison</div>
-            </div>
-            ` : ''}
+        <div style="padding: 30px 20px;">
+          <!-- Récapitulatif commande -->
+          <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 20px; border-radius: 12px; margin: 0 0 25px 0; border-left: 4px solid #003366;">
+            <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 18px;">Informations générales</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Fournisseur</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #003366; font-size: 14px;">${fournisseurNomComplet}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Commercial</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #333; font-size: 14px;">${order.salesRepName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Date de commande</td>
+                <td style="padding: 8px 0; text-align: right; color: #333; font-size: 14px;">${orderDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Nombre de thèmes</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #333; font-size: 14px;">${productCount} thème${productCount > 1 ? 's' : ''}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Quantité totale</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #E67E22; font-size: 14px;">${totalProducts} unité${totalProducts > 1 ? 's' : ''}</td>
+              </tr>
+              ${firstDeliveryDate ? `
+              <tr>
+                <td style="padding: 8px 0; color: #666; font-size: 14px;">Première livraison</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #22c55e; font-size: 14px;">${firstDeliveryDate}</td>
+              </tr>
+              ` : ''}
+            </table>
           </div>
           
-          <!-- Informations générales -->
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <tr style="background-color: #f8fafc;">
-              <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: 600; width: 35%;">Fournisseur</td>
-              <td style="padding: 10px; border: 1px solid #e2e8f0;">${fournisseurNomComplet}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;">Commercial</td>
-              <td style="padding: 10px; border: 1px solid #e2e8f0;">${order.salesRepName}</td>
-            </tr>
-            <tr style="background-color: #f8fafc;">
-              <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;">Date commande</td>
-              <td style="padding: 10px; border: 1px solid #e2e8f0;">${orderDate}</td>
-            </tr>
-          </table>
-          
           <!-- Contact client -->
-          <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #0369a1;">
-            <h3 style="margin: 0 0 10px 0; color: #0369a1; font-size: 14px; text-transform: uppercase;">Contact client</h3>
-            <table style="width: 100%;">
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 12px; margin: 0 0 25px 0; border-left: 4px solid #0369a1;">
+            <h3 style="margin: 0 0 15px 0; color: #0369a1; font-size: 16px;">Contact client</h3>
+            <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="padding: 5px 0; color: #666;">Responsable</td>
-                <td style="padding: 5px 0; font-weight: 600;">${order.responsableName}</td>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Client</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #333; font-size: 14px;">${order.livraisonEnseigne}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0; color: #666;">Téléphone</td>
-                <td style="padding: 5px 0;"><a href="tel:${order.responsableTel}" style="color: #0369a1;">${order.responsableTel}</a></td>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Responsable</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #333; font-size: 14px;">${order.responsableName}</td>
               </tr>
               <tr>
-                <td style="padding: 5px 0; color: #666;">Email</td>
-                <td style="padding: 5px 0;"><a href="mailto:${order.responsableEmail}" style="color: #0369a1;">${order.responsableEmail}</a></td>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Téléphone</td>
+                <td style="padding: 6px 0; text-align: right; font-size: 14px;"><a href="tel:${order.responsableTel}" style="color: #0369a1; text-decoration: none;">${order.responsableTel}</a></td>
               </tr>
-              ${order.comptaTel || order.comptaEmail ? `
-              <tr><td colspan="2" style="padding: 10px 0 5px 0; border-top: 1px solid #bfdbfe; margin-top: 10px;"><strong style="color: #666;">Comptabilité</strong></td></tr>
-              ${order.comptaTel ? `<tr><td style="padding: 5px 0; color: #666;">Tél. compta</td><td style="padding: 5px 0;"><a href="tel:${order.comptaTel}" style="color: #0369a1;">${order.comptaTel}</a></td></tr>` : ''}
-              ${order.comptaEmail ? `<tr><td style="padding: 5px 0; color: #666;">Email compta</td><td style="padding: 5px 0;"><a href="mailto:${order.comptaEmail}" style="color: #0369a1;">${order.comptaEmail}</a></td></tr>` : ''}
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Email</td>
+                <td style="padding: 6px 0; text-align: right; font-size: 14px;"><a href="mailto:${order.responsableEmail}" style="color: #0369a1; text-decoration: none;">${order.responsableEmail}</a></td>
+              </tr>
+              ${order.comptaTel ? `
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Tél. comptabilité</td>
+                <td style="padding: 6px 0; text-align: right; font-size: 14px;"><a href="tel:${order.comptaTel}" style="color: #0369a1; text-decoration: none;">${order.comptaTel}</a></td>
+              </tr>
+              ` : ''}
+              ${order.comptaEmail ? `
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Email comptabilité</td>
+                <td style="padding: 6px 0; text-align: right; font-size: 14px;"><a href="mailto:${order.comptaEmail}" style="color: #0369a1; text-decoration: none;">${order.comptaEmail}</a></td>
+              </tr>
               ` : ''}
             </table>
           </div>
           
           ${themesHtml ? `
           <!-- Produits commandés -->
-          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
-            <h3 style="margin: 0 0 10px 0; color: #b45309; font-size: 14px; text-transform: uppercase;">Produits commandés</h3>
-            <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.8;">${themesHtml}</ul>
+          <div style="background-color: #fffbeb; padding: 20px; border-radius: 12px; margin: 0 0 25px 0; border-left: 4px solid #f59e0b;">
+            <h3 style="margin: 0 0 15px 0; color: #b45309; font-size: 16px;">Produits commandés</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #333; line-height: 1.8; font-size: 14px;">${themesHtml}</ul>
           </div>
           ` : ""}
           
-          <!-- Livraison et Facturation côte à côte -->
-          <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: 20px;">
-            <tr>
-              <td style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; vertical-align: top; width: 50%;">
-                <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 14px; text-transform: uppercase;">Livraison</h3>
-                <p style="margin: 0 0 5px 0; font-weight: 600;">${order.livraisonEnseigne}</p>
-                <p style="margin: 0; color: #555; line-height: 1.5;">${order.livraisonAdresse}<br/>${order.livraisonCpVille}</p>
-                ${order.livraisonHoraires ? `<p style="margin: 10px 0 0 0; color: #666; font-size: 13px;">Horaires: ${order.livraisonHoraires}</p>` : ""}
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">Hayon: <strong>${order.livraisonHayon ? "Oui" : "Non"}</strong></p>
-              </td>
-              <td style="background-color: #faf5ff; padding: 15px; border-radius: 8px; vertical-align: top; width: 50%;">
-                <h3 style="margin: 0 0 10px 0; color: #7c3aed; font-size: 14px; text-transform: uppercase;">Facturation</h3>
-                <p style="margin: 0 0 5px 0; font-weight: 600;">${order.facturationRaisonSociale}</p>
-                <p style="margin: 0; color: #555; line-height: 1.5;">${order.facturationAdresse}<br/>${order.facturationCpVille}</p>
-                <p style="margin: 10px 0 0 0; color: #666; font-size: 13px;">Mode: <strong>${order.facturationMode}</strong></p>
-                ${order.facturationRib ? `<p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">RIB: ${order.facturationRib}</p>` : ""}
-              </td>
-            </tr>
-          </table>
+          <!-- Livraison -->
+          <div style="background-color: #f0fdf4; padding: 20px; border-radius: 12px; margin: 0 0 25px 0; border-left: 4px solid #22c55e;">
+            <h3 style="margin: 0 0 15px 0; color: #166534; font-size: 16px;">Adresse de livraison</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Enseigne</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #333; font-size: 14px;">${order.livraisonEnseigne}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Adresse</td>
+                <td style="padding: 6px 0; text-align: right; color: #333; font-size: 14px;">${order.livraisonAdresse}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">CP / Ville</td>
+                <td style="padding: 6px 0; text-align: right; color: #333; font-size: 14px;">${order.livraisonCpVille}</td>
+              </tr>
+              ${order.livraisonHoraires ? `
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Horaires</td>
+                <td style="padding: 6px 0; text-align: right; color: #333; font-size: 14px;">${order.livraisonHoraires}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Hayon requis</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: 600; color: ${order.livraisonHayon ? '#22c55e' : '#666'}; font-size: 14px;">${order.livraisonHayon ? "Oui" : "Non"}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Facturation -->
+          <div style="background-color: #faf5ff; padding: 20px; border-radius: 12px; margin: 0 0 25px 0; border-left: 4px solid #7c3aed;">
+            <h3 style="margin: 0 0 15px 0; color: #7c3aed; font-size: 16px;">Facturation</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Raison sociale</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #333; font-size: 14px;">${order.facturationRaisonSociale}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Adresse</td>
+                <td style="padding: 6px 0; text-align: right; color: #333; font-size: 14px;">${order.facturationAdresse}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">CP / Ville</td>
+                <td style="padding: 6px 0; text-align: right; color: #333; font-size: 14px;">${order.facturationCpVille}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">Mode de paiement</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #7c3aed; font-size: 14px;">${order.facturationMode}</td>
+              </tr>
+              ${order.facturationRib ? `
+              <tr>
+                <td style="padding: 6px 0; color: #666; font-size: 14px;">RIB</td>
+                <td style="padding: 6px 0; text-align: right; color: #333; font-size: 14px;">${order.facturationRib}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
           
           ${order.remarks ? `
           <!-- Remarques -->
-          <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
-            <h3 style="margin: 0 0 10px 0; color: #dc2626; font-size: 14px; text-transform: uppercase;">Remarques importantes</h3>
-            <p style="margin: 0; color: #333;">${order.remarks}</p>
+          <div style="background-color: #fef2f2; padding: 20px; border-radius: 12px; margin: 0 0 25px 0; border-left: 4px solid #ef4444;">
+            <h3 style="margin: 0 0 10px 0; color: #dc2626; font-size: 16px;">Remarques importantes</h3>
+            <p style="margin: 0; color: #333; font-size: 14px; line-height: 1.6;">${order.remarks}</p>
           </div>
           ` : ""}
           
-          <p style="color: #666; font-size: 14px; margin-top: 20px;">Les documents (PDF et Excel) sont en pièce jointe.</p>
+          <p style="font-size: 14px; color: #555; line-height: 1.6;">
+            Les documents (PDF et Excel) sont en pièce jointe de ce message.
+          </p>
         </div>
         
         <!-- Footer -->
-        <div style="background-color: #f1f5f9; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-          <p style="margin: 0; color: #64748b; font-size: 12px;">BFC APP - Gestion de commandes</p>
+        <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
+          <p style="margin: 0; color: #64748b; font-size: 13px;">
+            BFC APP - Gestion de commandes
+          </p>
+          <p style="margin: 10px 0 0 0; color: #94a3b8; font-size: 11px;">
+            Développé par Finalyn
+          </p>
         </div>
       </div>
     `,
