@@ -102,7 +102,7 @@ export default function HubPage() {
                       Tableau de Bord
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Stats, commandes, calendrier et analyse clients
+                      Suivi des commandes et calendrier
                     </p>
                   </div>
                 </div>
