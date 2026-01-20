@@ -103,13 +103,20 @@ export default function LegalPage() {
                     <section>
                       <h3 className="font-semibold text-lg mb-2">Hébergement</h3>
                       <p className="text-muted-foreground leading-relaxed">
-                        L'application est hébergée par :<br /><br />
+                        <strong>Phase de test actuelle :</strong><br />
+                        L'application est actuellement hébergée par :<br /><br />
                         <strong>Replit, Inc.</strong><br />
                         355 Bryant Street, Suite 200<br />
                         San Francisco, CA 94107, États-Unis<br />
                         Site web : <a href="https://replit.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.replit.com</a><br /><br />
-                        Les données sont hébergées sur des serveurs sécurisés avec des mesures de protection 
-                        conformes aux standards de l'industrie.
+                        <strong>Hébergement de production (prévu) :</strong><br />
+                        L'application sera transférée en production sur les serveurs de :<br /><br />
+                        <strong>Infomaniak Network SA</strong><br />
+                        Rue Eugène-Marziano 25<br />
+                        1227 Genève, Suisse<br />
+                        Site web : <a href="https://www.infomaniak.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.infomaniak.com</a><br /><br />
+                        Les données seront alors hébergées exclusivement en Suisse, bénéficiant d'une protection 
+                        renforcée conforme aux standards européens et suisses en matière de protection des données.
                       </p>
                     </section>
 
@@ -501,9 +508,16 @@ export default function LegalPage() {
                     <section>
                       <h3 className="font-semibold text-lg mb-2">Transferts de données</h3>
                       <p className="text-muted-foreground leading-relaxed">
-                        L'Application étant hébergée aux États-Unis (Replit, Inc.), des transferts de données 
-                        hors de l'Union Européenne peuvent avoir lieu. Ces transferts sont encadrés par des 
-                        garanties appropriées (clauses contractuelles types, certifications).
+                        <strong>Phase de test actuelle :</strong><br />
+                        L'Application est actuellement hébergée aux États-Unis (Replit, Inc.) pour la phase de 
+                        développement et de test. Durant cette période, des transferts de données hors de l'Union 
+                        Européenne peuvent avoir lieu. Ces transferts sont encadrés par des garanties appropriées 
+                        (clauses contractuelles types, certifications).<br /><br />
+                        <strong>Production (prévu) :</strong><br />
+                        En production, l'Application sera hébergée en Suisse (Infomaniak Network SA). 
+                        Les données seront alors exclusivement stockées en Suisse, pays reconnu par la Commission 
+                        Européenne comme offrant un niveau de protection adéquat des données personnelles. 
+                        Aucun transfert de données hors de l'Espace Économique Européen ou de la Suisse n'aura lieu.
                       </p>
                     </section>
 

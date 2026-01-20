@@ -64,3 +64,9 @@ The application uses a client-server architecture.
     -   `SMTP_USER`: SMTP authentication username.
     -   `SMTP_PASSWORD`: SMTP authentication password.
 - **data.xlsx**: An Excel file located in the server directory, used as a database for autocomplete features (commercials, clients, suppliers, themes).
+
+## Hosting Strategy
+
+- **Current (Testing Phase)**: Hosted on Replit, Inc. (San Francisco, CA, USA) for development and testing purposes.
+- **Production (Planned)**: Will be migrated to Infomaniak Network SA (Geneva, Switzerland) for production deployment. Data will be stored exclusively in Switzerland, benefiting from strong European and Swiss data protection standards.
+- **Legal Notice**: Mentions légales, CGU, and privacy policy have been updated to reflect both current US hosting (test phase) and future Swiss hosting (production).
