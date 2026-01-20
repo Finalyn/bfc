@@ -10,7 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { showLocalNotification } from "@/lib/pwa";
-import { saveOfflineOrder } from "@/lib/offlineStorage";
+import { saveOfflineOrder, registerBackgroundSync, getOfflineOrderPDF } from "@/lib/offlineStorage";
 import { generateOrderPDFClient } from "@/lib/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Check, WifiOff, ArrowLeft } from "lucide-react";
@@ -144,6 +144,9 @@ export default function OrderPage() {
           await saveOfflineOrder(fullOrder);
         }
         
+        // Enregistrer le Background Sync pour synchronisation automatique
+        await registerBackgroundSync();
+        
         return {
           orderCode,
           pdfUrl: "",
@@ -244,6 +247,9 @@ export default function OrderPage() {
             console.error("Erreur génération PDF offline:", pdfError);
             await saveOfflineOrder(fullOrder);
           }
+          
+          // Enregistrer le Background Sync pour synchronisation automatique
+          await registerBackgroundSync();
           
           setSavedOffline(true);
           setGeneratedOrder({

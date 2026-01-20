@@ -1,6 +1,7 @@
-const CACHE_NAME = 'bfc-app-v2';
-const STATIC_CACHE = 'bfc-static-v2';
-const DATA_CACHE = 'bfc-data-v2';
+const CACHE_NAME = 'bfc-app-v3';
+const STATIC_CACHE = 'bfc-static-v3';
+const DATA_CACHE = 'bfc-data-v3';
+const PDF_CACHE = 'bfc-pdf-v1';
 
 const STATIC_ASSETS = [
   '/',
@@ -31,13 +32,114 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => !name.startsWith('bfc-'))
+          .filter((name) => name.startsWith('bfc-') && !name.includes('-v3') && !name.includes('-v1'))
           .map((name) => caches.delete(name))
       );
     })
   );
   self.clients.claim();
 });
+
+// Background Sync - synchronisation automatique quand le réseau revient
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-orders') {
+    event.waitUntil(syncPendingOrdersInBackground());
+  }
+});
+
+async function syncPendingOrdersInBackground() {
+  try {
+    // Récupérer les commandes en attente depuis IndexedDB
+    const db = await openOfflineDB();
+    const tx = db.transaction('offline_orders', 'readonly');
+    const store = tx.objectStore('offline_orders');
+    const allOrders = await promisifyRequest(store.getAll());
+    
+    const pendingOrders = allOrders.filter(order => !order.syncedToServer || !order.emailSent);
+    
+    let successCount = 0;
+    let failedCount = 0;
+    
+    for (const offlineOrder of pendingOrders) {
+      try {
+        // Synchroniser avec le serveur
+        const response = await fetch('/api/orders/sync-offline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: offlineOrder.order })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Mettre à jour le statut dans IndexedDB
+          const updateTx = db.transaction('offline_orders', 'readwrite');
+          const updateStore = updateTx.objectStore('offline_orders');
+          offlineOrder.syncedToServer = true;
+          offlineOrder.emailSent = result.emailsSent;
+          if (result.emailError) offlineOrder.emailError = result.emailError;
+          await promisifyRequest(updateStore.put(offlineOrder));
+          
+          if (result.emailsSent) successCount++;
+          else failedCount++;
+        }
+      } catch (error) {
+        console.error('Erreur sync ordre:', error);
+        failedCount++;
+      }
+    }
+    
+    // Envoyer notification si des commandes ont été synchronisées
+    if (successCount > 0) {
+      await self.registration.showNotification('BFC APP - Synchronisation', {
+        body: `${successCount} commande(s) synchronisée(s) et email(s) envoyé(s)`,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-72x72.png',
+        vibrate: [100, 50, 100],
+        tag: 'sync-complete',
+        renotify: true
+      });
+    }
+    
+    // Notifier les clients de la mise à jour
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'SYNC_COMPLETE',
+        success: successCount,
+        failed: failedCount
+      });
+    });
+    
+  } catch (error) {
+    console.error('Background sync error:', error);
+  }
+}
+
+function openOfflineDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('bfc_offline_db', 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      // Utiliser le même nom de store que l'application: "offline_orders"
+      if (!db.objectStoreNames.contains('offline_orders')) {
+        const store = db.createObjectStore('offline_orders', { keyPath: 'id' });
+        store.createIndex('emailSent', 'emailSent', { unique: false });
+        store.createIndex('syncedToServer', 'syncedToServer', { unique: false });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+    };
+  });
+}
+
+function promisifyRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
 
 self.addEventListener('push', (event) => {
   const options = {

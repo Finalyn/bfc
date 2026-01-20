@@ -219,3 +219,39 @@ export function onOfflineOrdersChange(callback: OfflineOrdersChangeListener): ()
     offlineOrdersListeners.delete(callback);
   };
 }
+
+// Enregistrer le Background Sync pour synchroniser les commandes quand le réseau revient
+export async function registerBackgroundSync(): Promise<boolean> {
+  try {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      const registration = await navigator.serviceWorker.ready;
+      await (registration as any).sync.register('sync-orders');
+      console.log('Background sync enregistré');
+      return true;
+    }
+  } catch (error) {
+    console.error('Erreur enregistrement background sync:', error);
+  }
+  return false;
+}
+
+// Récupérer le PDF d'une commande stockée localement
+export async function getOfflineOrderPDF(orderCode: string): Promise<Blob | null> {
+  const order = await getOfflineOrder(orderCode);
+  return order?.pdfBlob || null;
+}
+
+// Écouter les messages du service worker
+export function listenToServiceWorkerMessages(callback: (data: any) => void): () => void {
+  const handler = (event: MessageEvent) => {
+    if (event.data) {
+      callback(event.data);
+    }
+  };
+  
+  navigator.serviceWorker?.addEventListener('message', handler);
+  
+  return () => {
+    navigator.serviceWorker?.removeEventListener('message', handler);
+  };
+}

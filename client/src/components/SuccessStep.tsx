@@ -14,9 +14,12 @@ import {
   Loader2,
   AlertCircle,
   WifiOff,
-  CloudOff
+  CloudOff,
+  Clock
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getOfflineOrderPDF } from "@/lib/offlineStorage";
+import { useToast } from "@/hooks/use-toast";
 
 interface SuccessStepProps {
   orderCode: string;
@@ -41,49 +44,135 @@ export function SuccessStep({
   emailError,
   isOffline = false
 }: SuccessStepProps) {
+  const { toast } = useToast();
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+
+  const handleDownloadOfflinePDF = async () => {
+    setDownloadingPDF(true);
+    try {
+      const pdfBlob = await getOfflineOrderPDF(orderCode);
+      if (pdfBlob) {
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${orderCode}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({
+          title: "PDF téléchargé",
+          description: "Le bon de commande a été téléchargé avec succès",
+        });
+      } else {
+        toast({
+          title: "PDF non disponible",
+          description: "Le PDF n'a pas pu être généré hors ligne",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
+
   if (isOffline) {
     return (
       <div className="min-h-screen bg-background p-4 pb-24">
         <div className="max-w-lg mx-auto">
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                <CloudOff className="w-6 h-6 text-amber-500" />
+              <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Commande sauvegardée</h1>
-                <p className="text-sm text-muted-foreground">Mode hors-ligne</p>
+                <h1 className="text-2xl font-bold text-foreground">Commande enregistrée</h1>
+                <p className="text-sm text-muted-foreground">Synchronisation automatique</p>
               </div>
             </div>
           </div>
 
-          <Card className="border-2 border-amber-500/50 mb-4">
+          <Card className="border-2 mb-4">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <WifiOff className="w-5 h-5 text-amber-500" />
-                En attente de connexion
+                <FileText className="w-5 h-5 text-primary" />
+                Numéro de commande
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-2xl font-bold text-center text-foreground" data-testid="text-order-code-offline">
+                  {orderCode}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 mb-4">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Bon de commande</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                <div className="w-12 h-12 rounded-lg bg-destructive/10 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-destructive" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">PDF disponible</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {orderCode}.pdf
+                  </p>
+                </div>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={handleDownloadOfflinePDF}
+                  disabled={downloadingPDF}
+                  data-testid="button-download-pdf-offline"
+                  className="h-10 w-10"
+                >
+                  {downloadingPDF ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-blue-500/50 mb-4">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+                Synchronisation automatique
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  Votre commande a été sauvegardée localement sur votre appareil.
+              <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Dès que le réseau sera disponible, votre commande sera automatiquement synchronisée et les emails envoyés.
                 </p>
               </div>
               
               <div className="space-y-2 text-sm">
-                <p className="font-medium">Que va-t-il se passer ?</p>
+                <p className="font-medium">Vous recevrez une notification quand :</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Dès que la connexion reviendra, la commande sera envoyée automatiquement</li>
-                  <li>Le PDF et l'Excel seront générés</li>
+                  <li>La commande sera enregistrée sur le serveur</li>
                   <li>Les emails seront envoyés au client et à l'agence</li>
                 </ul>
               </div>
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Ne fermez pas l'application jusqu'au retour de la connexion pour garantir l'envoi.
+              <Alert className="bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800 dark:text-green-200">
+                  Vous pouvez fermer l'application. La synchronisation se fera automatiquement en arrière-plan.
                 </AlertDescription>
               </Alert>
             </CardContent>
