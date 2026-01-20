@@ -65,13 +65,13 @@ export default function HubPage() {
 
         <div className="grid gap-4">
           <Card 
-            className="cursor-pointer transition-all hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden group"
+            className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
             onClick={() => setLocation("/order")}
             data-testid="card-order"
           >
             <CardContent className="p-0">
               <div className="flex items-stretch">
-                <div className="w-1.5 bg-primary group-hover:w-2 transition-all" />
+                <div className="w-1 bg-primary" />
                 <div className="flex items-center gap-4 p-5 flex-1">
                   <ClipboardList className="w-6 h-6 text-primary" />
                   <div className="flex-1">
@@ -88,13 +88,13 @@ export default function HubPage() {
           </Card>
 
           <Card 
-            className="cursor-pointer transition-all hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden group"
+            className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
             onClick={() => setLocation("/dashboard")}
             data-testid="card-dashboard"
           >
             <CardContent className="p-0">
               <div className="flex items-stretch">
-                <div className="w-1.5 bg-green-500 group-hover:w-2 transition-all" />
+                <div className="w-1 bg-green-500" />
                 <div className="flex items-center gap-4 p-5 flex-1">
                   <LayoutDashboard className="w-6 h-6 text-green-600" />
                   <div className="flex-1">
@@ -112,7 +112,7 @@ export default function HubPage() {
 
           {isAdmin && (
             <Card 
-              className="cursor-pointer transition-all hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden group"
+              className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
               onClick={() => {
                 localStorage.setItem("adminAuthenticated", "true");
                 setLocation("/admin");
@@ -121,7 +121,7 @@ export default function HubPage() {
             >
               <CardContent className="p-0">
                 <div className="flex items-stretch">
-                  <div className="w-1.5 bg-gray-400 group-hover:w-2 transition-all" />
+                  <div className="w-1 bg-gray-400" />
                   <div className="flex items-center gap-4 p-5 flex-1">
                     <Database className="w-6 h-6 text-gray-500" />
                     <div className="flex-1">

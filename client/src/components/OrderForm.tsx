@@ -694,13 +694,16 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* En-tête : Date et Commercial */}
-            <Card className="border-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Informations générales
-                </CardTitle>
-              </CardHeader>
+            <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-primary" />
+                <div className="flex-1">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="w-5 h-5 text-primary" />
+                      Informations générales
+                    </CardTitle>
+                  </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -739,16 +742,21 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   </div>
                 </div>
               </CardContent>
+                </div>
+              </div>
             </Card>
 
             {/* Sélection du Fournisseur */}
-            <Card className="border-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  Choix du fournisseur
-                </CardTitle>
-              </CardHeader>
+            <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-orange-500" />
+                <div className="flex-1">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Package className="w-5 h-5 text-orange-500" />
+                      Choix du fournisseur
+                    </CardTitle>
+                  </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">
@@ -778,25 +786,30 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   )}
                 </div>
               </CardContent>
+                </div>
+              </div>
             </Card>
 
             {/* Sélection Client (pré-remplissage) */}
-            <Card className={`border-2 ${isOffline ? "border-amber-500/50 bg-amber-50 dark:bg-amber-950/20" : "border-primary/30 bg-primary/5"}`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Store className="w-5 h-5" />
-                  Sélection du client
-                  {isOffline && (
-                    <Badge variant="outline" className="ml-2 gap-1 text-amber-600 border-amber-500">
-                      <WifiOff className="w-3 h-3" />
-                      Hors ligne
-                    </Badge>
-                  )}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Sélectionnez un client existant ou créez-en un nouveau
-                </p>
-              </CardHeader>
+            <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-stretch">
+                <div className={`w-1 ${isOffline ? "bg-amber-500" : "bg-blue-500"}`} />
+                <div className="flex-1">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Store className={`w-5 h-5 ${isOffline ? "text-amber-500" : "text-blue-500"}`} />
+                      Sélection du client
+                      {isOffline && (
+                        <Badge variant="outline" className="ml-2 gap-1 text-amber-600 border-amber-500">
+                          <WifiOff className="w-3 h-3" />
+                          Hors ligne
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Sélectionnez un client existant ou créez-en un nouveau
+                    </p>
+                  </CardHeader>
               <CardContent className="space-y-3">
                 <Combobox
                   options={clientsOptions}
@@ -818,10 +831,15 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   Nouveau client
                 </Button>
               </CardContent>
+                </div>
+              </div>
             </Card>
 
             {/* Responsable et Service comptabilité */}
-            <Card className="border-2">
+            <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-green-500" />
+                <div className="flex-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Contacts</CardTitle>
               </CardHeader>
@@ -889,10 +907,15 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   </div>
                 </div>
               </CardContent>
+                </div>
+              </div>
             </Card>
 
             {/* Thèmes - Tableau dynamique selon fournisseur */}
-            <Card className="border-2">
+            <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-purple-500" />
+                <div className="flex-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Sélection des produits - {fournisseursList.find(f => f.id === selectedFournisseur)?.nom || selectedFournisseur || "BDIS"}</CardTitle>
                 <p className="text-sm text-muted-foreground">Indiquez la quantité et la date de livraison pour chaque produit souhaité</p>
@@ -995,18 +1018,23 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                   </div>
                 )}
               </CardContent>
+                </div>
+              </div>
             </Card>
 
             {/* Livraison et Facturation */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Livraison */}
-              <Card className="border-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Truck className="w-5 h-5" />
-                    LIVRAISON <span className="text-destructive">*</span>
-                  </CardTitle>
-                </CardHeader>
+              <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div className="flex items-stretch">
+                  <div className="w-1 bg-cyan-500" />
+                  <div className="flex-1">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Truck className="w-5 h-5 text-cyan-500" />
+                        LIVRAISON <span className="text-destructive">*</span>
+                      </CardTitle>
+                    </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">ENSEIGNE</Label>
@@ -1085,16 +1113,21 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     />
                   </div>
                 </CardContent>
+                  </div>
+                </div>
               </Card>
 
               {/* Facturation */}
-              <Card className="border-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    FACTURATION <span className="text-destructive">*</span>
-                  </CardTitle>
-                </CardHeader>
+              <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div className="flex items-stretch">
+                  <div className="w-1 bg-amber-500" />
+                  <div className="flex-1">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-amber-500" />
+                        FACTURATION <span className="text-destructive">*</span>
+                      </CardTitle>
+                    </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
                     <Label className="text-xs font-medium">RAISON SOCIALE</Label>
@@ -1202,22 +1235,29 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     />
                   </div>
                 </CardContent>
+                  </div>
+                </div>
               </Card>
             </div>
 
             {/* Remarques */}
-            <Card className="border-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">REMARQUES</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  {...register("remarks")}
-                  className="min-h-24 text-sm resize-none"
-                  placeholder="Remarques ou instructions particulières..."
-                  data-testid="input-remarks"
-                />
-              </CardContent>
+            <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-gray-400" />
+                <div className="flex-1">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">REMARQUES</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      {...register("remarks")}
+                      className="min-h-24 text-sm resize-none"
+                      placeholder="Remarques ou instructions particulières..."
+                      data-testid="input-remarks"
+                    />
+                  </CardContent>
+                </div>
+              </div>
             </Card>
           </form>
         </div>
