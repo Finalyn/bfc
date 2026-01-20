@@ -30,6 +30,9 @@ import { ClientModal } from "./ClientModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
+import { useOnlineStatus } from "@/hooks/use-online-status";
+import { useOfflineDataCommerciaux, useOfflineDataClients, useOfflineDataThemes } from "@/hooks/use-offline-data";
+import { getCachedDataCommerciaux, getCachedDataClients, getCachedDataThemes } from "@/lib/localDataCache";
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
 const MONTHS = [
@@ -313,18 +316,21 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     },
   });
 
-  const { data: commerciaux = [] } = useQuery<any[]>({ queryKey: ["/api/data/commerciaux"] });
-  const { data: clients = [] } = useQuery<Client[]>({ queryKey: ["/api/data/clients"] });
+  const isOnline = useOnlineStatus();
   
-  // Charger les fournisseurs depuis la base de données
+  const { data: commerciaux = [], isOffline: commerciauxOffline } = useOfflineDataCommerciaux();
+  const { data: clients = [], isOffline: clientsOffline } = useOfflineDataClients();
+  
   const { data: dbFournisseurs = [] } = useQuery<{ id: number; nom: string; nomCourt: string }[]>({
     queryKey: ["/api/data/fournisseurs"],
+    enabled: isOnline,
   });
   
-  // Charger les thèmes depuis la base de données
-  const { data: dbThemes = [] } = useQuery<{ id: number; theme: string; fournisseur: string; categorie?: string }[]>({
-    queryKey: ["/api/data/themes"],
-  });
+  const { data: dbThemesRaw = [], isOffline: themesOffline } = useOfflineDataThemes();
+  const dbThemes = useMemo(() => 
+    dbThemesRaw.map((t, i) => ({ id: i, theme: t.theme, fournisseur: t.fournisseur, categorie: t.categorie })),
+    [dbThemesRaw]
+  );
   
   // Fusionner les fournisseurs BDD avec la config statique (fallback)
   const fournisseursList = useMemo(() => {
@@ -391,45 +397,61 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
   const commerciauxOptions = useMemo<ComboboxOption[]>(() => 
     commerciaux.map(c => ({
-      value: c.displayName,
-      label: c.displayName,
+      value: typeof c === 'string' ? c : (c as any).displayName || c,
+      label: typeof c === 'string' ? c : (c as any).displayName || c,
     })), [commerciaux]);
 
   const clientsOptions = useMemo<ComboboxOption[]>(() => 
     clients.map(c => ({
-      value: c.id,
-      label: c.displayName,
+      value: String(c.id || c.code),
+      label: c.displayName || `${c.code} - ${c.nom}`,
     })), [clients]);
 
   const handleClientSelect = (clientId: string) => {
     setSelectedClientId(clientId);
-    const selectedClient = clients.find(c => c.id === clientId);
+    const selectedClient = clients.find(c => String(c.id || c.code) === clientId);
     if (selectedClient) {
-      // Sauvegarder les données originales pour détecter les modifications
-      setOriginalClientData(selectedClient);
-      setSelectedClientData(selectedClient);
+      const clientAsLocal: Client = {
+        id: String(selectedClient.id || selectedClient.code),
+        code: selectedClient.code,
+        nom: selectedClient.nom,
+        adresse1: selectedClient.adresse1 || "",
+        adresse2: selectedClient.adresse2,
+        codePostal: selectedClient.codePostal || "",
+        ville: selectedClient.ville || "",
+        pays: selectedClient.pays,
+        interloc: selectedClient.interloc || "",
+        tel: selectedClient.tel || "",
+        portable: selectedClient.portable || "",
+        fax: selectedClient.fax,
+        mail: selectedClient.mail || "",
+        displayName: selectedClient.displayName || `${selectedClient.code} - ${selectedClient.nom}`,
+        isFromDb: selectedClient.isFromDb,
+      };
+      setOriginalClientData(clientAsLocal);
+      setSelectedClientData(clientAsLocal);
       
-      const adresseComplete = selectedClient.adresse2 
-        ? `${selectedClient.adresse1}, ${selectedClient.adresse2}`
-        : selectedClient.adresse1;
-      const cpVille = `${selectedClient.codePostal} ${selectedClient.ville}`.trim();
+      const adresseComplete = clientAsLocal.adresse2 
+        ? `${clientAsLocal.adresse1}, ${clientAsLocal.adresse2}`
+        : clientAsLocal.adresse1;
+      const cpVille = `${clientAsLocal.codePostal} ${clientAsLocal.ville}`.trim();
       
-      setValue("livraisonEnseigne", selectedClient.nom);
+      setValue("livraisonEnseigne", clientAsLocal.nom);
       setValue("livraisonAdresse", adresseComplete);
       setValue("livraisonCpVille", cpVille);
       
-      setValue("facturationRaisonSociale", selectedClient.nom);
+      setValue("facturationRaisonSociale", clientAsLocal.nom);
       setValue("facturationAdresse", adresseComplete);
       setValue("facturationCpVille", cpVille);
       
-      if (selectedClient.interloc) {
-        setValue("responsableName", selectedClient.interloc);
+      if (clientAsLocal.interloc) {
+        setValue("responsableName", clientAsLocal.interloc);
       }
-      if (selectedClient.tel || selectedClient.portable) {
-        setValue("responsableTel", selectedClient.portable || selectedClient.tel);
+      if (clientAsLocal.tel || clientAsLocal.portable) {
+        setValue("responsableTel", clientAsLocal.portable || clientAsLocal.tel);
       }
-      if (selectedClient.mail) {
-        setValue("responsableEmail", selectedClient.mail);
+      if (clientAsLocal.mail) {
+        setValue("responsableEmail", clientAsLocal.mail);
       }
 
       // Vérifier si des informations importantes manquent
