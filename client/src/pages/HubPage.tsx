@@ -65,44 +65,46 @@ export default function HubPage() {
 
         <div className="grid gap-4">
           <Card 
-            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-primary"
+            className="cursor-pointer transition-all hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden group"
             onClick={() => setLocation("/order")}
             data-testid="card-order"
           >
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <ClipboardList className="w-8 h-8 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Bon de commande
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Créer et envoyer des commandes clients
-                  </p>
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1.5 bg-primary group-hover:w-2 transition-all" />
+                <div className="flex items-center gap-4 p-5 flex-1">
+                  <ClipboardList className="w-6 h-6 text-primary" />
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Bon de commande
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Créer et envoyer des commandes clients
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card 
-            className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-green-500"
+            className="cursor-pointer transition-all hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden group"
             onClick={() => setLocation("/dashboard")}
             data-testid="card-dashboard"
           >
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center border border-green-200">
-                  <LayoutDashboard className="w-8 h-8 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Tableau de Bord
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Stats, commandes, calendrier et analyse clients
-                  </p>
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1.5 bg-green-500 group-hover:w-2 transition-all" />
+                <div className="flex items-center gap-4 p-5 flex-1">
+                  <LayoutDashboard className="w-6 h-6 text-green-600" />
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Tableau de Bord
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Stats, commandes, calendrier et analyse clients
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -110,25 +112,26 @@ export default function HubPage() {
 
           {isAdmin && (
             <Card 
-              className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-gray-500"
+              className="cursor-pointer transition-all hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden group"
               onClick={() => {
                 localStorage.setItem("adminAuthenticated", "true");
                 setLocation("/admin");
               }}
               data-testid="card-database"
             >
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-200">
-                    <Database className="w-8 h-8 text-gray-500 dark:text-gray-300" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Base de données
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Gérer clients, thèmes, fournisseurs
-                    </p>
+              <CardContent className="p-0">
+                <div className="flex items-stretch">
+                  <div className="w-1.5 bg-gray-400 group-hover:w-2 transition-all" />
+                  <div className="flex items-center gap-4 p-5 flex-1">
+                    <Database className="w-6 h-6 text-gray-500" />
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Base de données
+                      </h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Gérer clients, thèmes, fournisseurs
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

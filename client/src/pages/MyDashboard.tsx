@@ -921,71 +921,76 @@ export default function MyDashboard() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-primary" />
+                <div className="p-3 flex items-center gap-2">
                   <Package className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
+                  <div>
+                    <p className="text-xl font-bold">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+          <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-blue-500" />
+                <div className="p-3 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold">{stats.thisMonth}</p>
-                  <p className="text-xs text-muted-foreground">Ce mois</p>
+                  <div>
+                    <p className="text-xl font-bold">{stats.thisMonth}</p>
+                    <p className="text-xs text-muted-foreground">Ce mois</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+          <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-green-500" />
+                <div className="p-3 flex items-center gap-2">
                   <Truck className="w-4 h-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold">{stats.upcomingDeliveries}</p>
-                  <p className="text-xs text-muted-foreground">À livrer</p>
+                  <div>
+                    <p className="text-xl font-bold">{stats.upcomingDeliveries}</p>
+                    <p className="text-xs text-muted-foreground">À livrer</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+          <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-orange-500" />
+                <div className="p-3 flex items-center gap-2">
                   <ClipboardList className="w-4 h-4 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold">{stats.pendingInventory}</p>
-                  <p className="text-xs text-muted-foreground">À inventorier</p>
+                  <div>
+                    <p className="text-xl font-bold">{stats.pendingInventory}</p>
+                    <p className="text-xs text-muted-foreground">À inventorier</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+          <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-purple-500" />
+                <div className="p-3 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold">{stats.pendingReturn}</p>
-                  <p className="text-xs text-muted-foreground">À retourner</p>
+                  <div>
+                    <p className="text-xl font-bold">{stats.pendingReturn}</p>
+                    <p className="text-xs text-muted-foreground">À retourner</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
