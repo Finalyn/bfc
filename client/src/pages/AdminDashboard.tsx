@@ -109,6 +109,7 @@ interface Theme {
   id: number;
   theme: string;
   fournisseur: string;
+  categorie?: string | null;
 }
 
 interface Commercial {
@@ -444,6 +445,28 @@ export default function AdminDashboard() {
   };
 
   const [isImporting, setIsImporting] = useState(false);
+  const [isMigratingCategories, setIsMigratingCategories] = useState(false);
+
+  const handleMigrateCategories = async () => {
+    setIsMigratingCategories(true);
+    try {
+      const response = await apiRequest("POST", "/api/admin/themes/migrate-categories");
+      const result = await response.json();
+      toast({ 
+        title: "Migration réussie", 
+        description: result.message 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/themes'] });
+    } catch (error: any) {
+      toast({ 
+        title: "Erreur de migration", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsMigratingCategories(false);
+    }
+  };
 
   const handleExport = async (entity: string) => {
     try {
@@ -1069,10 +1092,24 @@ export default function AdminDashboard() {
           <TabsContent value="themes">
             <Card>
               <CardContent className="p-0">
-                <div className="p-3 border-b">
+                <div className="p-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Thèmes liés aux fournisseurs - Les modifications sont automatiquement reflétées dans les bons de commande
                   </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMigrateCategories}
+                    disabled={isMigratingCategories}
+                    data-testid="button-migrate-categories"
+                  >
+                    {isMigratingCategories ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Package className="w-4 h-4 mr-2" />
+                    )}
+                    {isMigratingCategories ? "Migration..." : "Migrer catégories"}
+                  </Button>
                 </div>
                 {themesLoading ? (
                   <div className="p-8 text-center">
@@ -1090,6 +1127,9 @@ export default function AdminDashboard() {
                             <TableHead className="cursor-pointer" onClick={() => handleSort("fournisseur")}>
                               Fournisseur <SortIcon field="fournisseur" />
                             </TableHead>
+                            <TableHead className="cursor-pointer" onClick={() => handleSort("categorie")}>
+                              Catégorie <SortIcon field="categorie" />
+                            </TableHead>
                             <TableHead className="w-24">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1098,6 +1138,11 @@ export default function AdminDashboard() {
                             <TableRow key={theme.id} data-testid={`row-theme-${theme.id}`}>
                               <TableCell className="font-medium">{theme.theme}</TableCell>
                               <TableCell>{theme.fournisseur || "-"}</TableCell>
+                              <TableCell>
+                                <Badge variant={theme.categorie === "SAISONNIER" ? "secondary" : "outline"}>
+                                  {theme.categorie === "SAISONNIER" ? "Saisonnier" : "Toute l'année"}
+                                </Badge>
+                              </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
                                   <Button variant="ghost" size="icon" onClick={() => openEditModal(theme)} data-testid={`button-edit-theme-${theme.id}`}>

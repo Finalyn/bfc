@@ -1971,6 +1971,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Migration: Synchroniser les catégories depuis Excel vers la base de données
+  app.post("/api/admin/themes/migrate-categories", async (req, res) => {
+    try {
+      // Charger les données du fichier Excel
+      const excelData = data;
+      
+      // Récupérer tous les thèmes de la base de données
+      const dbThemes = await db.select().from(themes);
+      
+      let updated = 0;
+      let notFound = 0;
+      const details: string[] = [];
+      
+      // Pour chaque thème de la DB, chercher sa catégorie dans Excel
+      for (const dbTheme of dbThemes) {
+        // Chercher dans Excel avec correspondance flexible
+        const excelTheme = excelData.themes.find(et => 
+          et.theme.toLowerCase().trim() === dbTheme.theme.toLowerCase().trim() &&
+          et.fournisseur.toLowerCase().trim() === dbTheme.fournisseur.toLowerCase().trim()
+        );
+        
+        if (excelTheme && excelTheme.categorie) {
+          // Mettre à jour la catégorie si différente
+          if (dbTheme.categorie !== excelTheme.categorie) {
+            await db.update(themes)
+              .set({ categorie: excelTheme.categorie })
+              .where(eq(themes.id, dbTheme.id));
+            updated++;
+            details.push(`${dbTheme.theme} (${dbTheme.fournisseur}): ${dbTheme.categorie || 'null'} -> ${excelTheme.categorie}`);
+          }
+        } else {
+          notFound++;
+        }
+      }
+      
+      // Ajouter les thèmes Excel manquants dans la DB
+      let added = 0;
+      for (const excelTheme of excelData.themes) {
+        const exists = dbThemes.some(dt => 
+          dt.theme.toLowerCase().trim() === excelTheme.theme.toLowerCase().trim() &&
+          dt.fournisseur.toLowerCase().trim() === excelTheme.fournisseur.toLowerCase().trim()
+        );
+        
+        if (!exists) {
+          await db.insert(themes).values({
+            theme: excelTheme.theme,
+            fournisseur: excelTheme.fournisseur,
+            categorie: excelTheme.categorie || "TOUTE_ANNEE"
+          });
+          added++;
+          details.push(`AJOUTÉ: ${excelTheme.theme} (${excelTheme.fournisseur}) - ${excelTheme.categorie}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Migration terminée: ${updated} catégories mises à jour, ${added} thèmes ajoutés`,
+        updated,
+        added,
+        notFound,
+        details: details.slice(0, 50) // Limiter les détails
+      });
+    } catch (error: any) {
+      console.error("Erreur migration catégories:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get themes grouped by fournisseur (for order form)
   app.get("/api/data/themes-by-fournisseur", async (req, res) => {
     try {
