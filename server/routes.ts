@@ -15,7 +15,7 @@ import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { data, loadExcelData, type Client as ExcelClient } from "./dataLoader";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, or, sql, count, asc, desc } from "drizzle-orm";
 
 // Stockage en mémoire des fichiers générés
@@ -652,8 +652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-      const insertId = Number((idResult as any).id);
+      const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+      const insertId = Number((rows as any[])[0]?.id);
       const [newClient] = await db.select().from(clients).where(eq(clients.id, insertId));
       
       res.json({
@@ -752,8 +752,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         await db.insert(clients).values(newClientData);
-        const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-        const insertId = Number((idResult as any).id);
+        const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+        const insertId = Number((rows as any[])[0]?.id);
         const [newClient] = await db.select().from(clients).where(eq(clients.id, insertId));
         
         res.json({
@@ -1580,8 +1580,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-      const insertId = Number((idResult as any).id);
+      const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+      const insertId = Number((rows as any[])[0]?.id);
       const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
       res.json(created);
     } catch (error: any) {
@@ -1601,8 +1601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: new Date(),
           updatedAt: new Date(),
         });
-        const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-        const insertId = Number((idResult as any).id);
+        const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+        const insertId = Number((rows as any[])[0]?.id);
         const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
         return res.json(created);
       }
@@ -1742,8 +1742,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertCommercialSchema.parse(req.body);
       await db.insert(commerciaux).values(validated);
-      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-      const insertId = Number((idResult as any).id);
+      const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+      const insertId = Number((rows as any[])[0]?.id);
       const [created] = await db.select().from(commerciaux).where(eq(commerciaux.id, insertId));
       invalidateCommerciauxCache();
       res.json(created);
@@ -1825,8 +1825,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertFournisseurSchema.parse(req.body);
       await db.insert(fournisseurs).values(validated);
-      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-      const insertId = Number((idResult as any).id);
+      const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+      const insertId = Number((rows as any[])[0]?.id);
       const [created] = await db.select().from(fournisseurs).where(eq(fournisseurs.id, insertId));
       res.json(created);
     } catch (error: any) {
@@ -1907,8 +1907,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = insertThemeSchema.parse(req.body);
       await db.insert(themes).values(validated);
-      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
-      const insertId = Number((idResult as any).id);
+      const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+      const insertId = Number((rows as any[])[0]?.id);
       const [created] = await db.select().from(themes).where(eq(themes.id, insertId));
       res.json(created);
     } catch (error: any) {

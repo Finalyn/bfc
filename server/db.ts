@@ -8,3 +8,4 @@ if (!process.env.DATABASE_URL) {
 
 const pool = mysql.createPool(process.env.DATABASE_URL);
 export const db = drizzle(pool, { schema, mode: "default" });
+export { pool };
