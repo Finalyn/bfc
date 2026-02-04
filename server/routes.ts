@@ -647,11 +647,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Un client avec ce code existe déjà" });
       }
       
-      const [newClient] = await db.insert(clients).values({
+      const insertResult = await db.insert(clients).values({
         ...validatedData,
         createdAt: new Date(),
         updatedAt: new Date(),
-      }).returning();
+      });
+      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [newClient] = await db.select().from(clients).where(eq(clients.id, insertId));
       
       res.json({
         id: `db-${newClient.id}`,
@@ -705,8 +707,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             previousValues,
             modificationApproved: false,
           })
-          .where(eq(clients.code, code))
-          .returning();
+          .where(eq(clients.code, code));
+        const [updated] = await db.select().from(clients).where(eq(clients.code, code));
         
         res.json({
           id: `db-${updated.id}`,
@@ -748,7 +750,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isFromExcel: true,
         };
         
-        const [newClient] = await db.insert(clients).values(newClientData).returning();
+        const insertResult = await db.insert(clients).values(newClientData);
+        const insertId = Number((insertResult as any).insertId || (insertResult as any)[0]?.insertId);
+        const [newClient] = await db.select().from(clients).where(eq(clients.id, insertId));
         
         res.json({
           id: `db-${newClient.id}`,
@@ -1569,11 +1573,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/clients", async (req, res) => {
     try {
       const validated = insertClientSchema.parse(req.body);
-      const [created] = await db.insert(clients).values({
+      const insertResult = await db.insert(clients).values({
         ...validated,
         createdAt: new Date(),
         updatedAt: new Date(),
-      }).returning();
+      });
+      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
       res.json(created);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1587,11 +1593,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (id === 0) {
         // For Excel-sourced clients, create a new DB entry with their data
         const validated = insertClientSchema.parse(req.body);
-        const [created] = await db.insert(clients).values({
+        const insertResult = await db.insert(clients).values({
           ...validated,
           createdAt: new Date(),
           updatedAt: new Date(),
-        }).returning();
+        });
+        const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+        const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
         return res.json(created);
       }
       
@@ -1631,7 +1639,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const [updated] = await db.update(clients).set(updateData).where(eq(clients.id, id)).returning();
+      await db.update(clients).set(updateData).where(eq(clients.id, id));
+      const [updated] = await db.select().from(clients).where(eq(clients.id, id));
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1660,11 +1669,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Client non trouvé" });
       }
       
-      const [updated] = await db.update(clients).set({
+      await db.update(clients).set({
         modificationApproved: true,
         approvedAt: new Date(),
         previousValues: null,
-      }).where(eq(clients.id, id)).returning();
+      }).where(eq(clients.id, id));
+      const [updated] = await db.select().from(clients).where(eq(clients.id, id));
       
       if (!updated) {
         return res.status(404).json({ message: "Client non trouvé" });
@@ -1727,7 +1737,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/commerciaux", async (req, res) => {
     try {
       const validated = insertCommercialSchema.parse(req.body);
-      const [created] = await db.insert(commerciaux).values(validated).returning();
+      const insertResult = await db.insert(commerciaux).values(validated);
+      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [created] = await db.select().from(commerciaux).where(eq(commerciaux.id, insertId));
       invalidateCommerciauxCache();
       res.json(created);
     } catch (error: any) {
@@ -1739,7 +1751,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const validated = insertCommercialSchema.partial().parse(req.body);
-      const [updated] = await db.update(commerciaux).set(validated).where(eq(commerciaux.id, id)).returning();
+      await db.update(commerciaux).set(validated).where(eq(commerciaux.id, id));
+      const [updated] = await db.select().from(commerciaux).where(eq(commerciaux.id, id));
       if (!updated) return res.status(404).json({ message: "Non trouvé" });
       invalidateCommerciauxCache();
       res.json(updated);
@@ -1806,7 +1819,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/fournisseurs", async (req, res) => {
     try {
       const validated = insertFournisseurSchema.parse(req.body);
-      const [created] = await db.insert(fournisseurs).values(validated).returning();
+      const insertResult = await db.insert(fournisseurs).values(validated);
+      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [created] = await db.select().from(fournisseurs).where(eq(fournisseurs.id, insertId));
       res.json(created);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1817,7 +1832,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const validated = insertFournisseurSchema.partial().parse(req.body);
-      const [updated] = await db.update(fournisseurs).set(validated).where(eq(fournisseurs.id, id)).returning();
+      await db.update(fournisseurs).set(validated).where(eq(fournisseurs.id, id));
+      const [updated] = await db.select().from(fournisseurs).where(eq(fournisseurs.id, id));
       if (!updated) return res.status(404).json({ message: "Non trouvé" });
       res.json(updated);
     } catch (error: any) {
@@ -1884,7 +1900,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/themes", async (req, res) => {
     try {
       const validated = insertThemeSchema.parse(req.body);
-      const [created] = await db.insert(themes).values(validated).returning();
+      const insertResult = await db.insert(themes).values(validated);
+      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [created] = await db.select().from(themes).where(eq(themes.id, insertId));
       res.json(created);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1895,7 +1913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const validated = insertThemeSchema.partial().parse(req.body);
-      const [updated] = await db.update(themes).set(validated).where(eq(themes.id, id)).returning();
+      await db.update(themes).set(validated).where(eq(themes.id, id));
+      const [updated] = await db.select().from(themes).where(eq(themes.id, id));
       if (!updated) return res.status(404).json({ message: "Non trouvé" });
       res.json(updated);
     } catch (error: any) {
@@ -2207,10 +2226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (dateRetour !== undefined) updateData.dateRetour = dateRetour;
       
       // Update the order
-      const [updated] = await db.update(orders)
+      await db.update(orders)
         .set(updateData)
-        .where(eq(orders.id, id))
-        .returning();
+        .where(eq(orders.id, id));
+      const [updated] = await db.select().from(orders).where(eq(orders.id, id));
       
       res.json(updated);
     } catch (error: any) {
