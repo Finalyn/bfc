@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { pgTable, text, serial, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { mysqlTable, text, serial, boolean, datetime, int, timestamp } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 
 // Table des clients
-export const clients = pgTable("clients", {
+export const clients = mysqlTable("clients", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
   nom: text("nom").notNull(),
@@ -22,7 +22,7 @@ export const clients = pgTable("clients", {
   updatedAt: timestamp("updated_at").defaultNow(),
   previousValues: text("previous_values"),
   modificationApproved: boolean("modification_approved").default(true),
-  approvedAt: timestamp("approved_at"),
+  approvedAt: datetime("approved_at"),
 });
 
 export const insertClientSchema = createInsertSchema(clients).omit({
@@ -163,7 +163,7 @@ export const emailConfigSchema = z.object({
 export type EmailConfig = z.infer<typeof emailConfigSchema>;
 
 // Table des commerciaux
-export const commerciaux = pgTable("commerciaux", {
+export const commerciaux = mysqlTable("commerciaux", {
   id: serial("id").primaryKey(),
   prenom: text("prenom").notNull().default(""),
   nom: text("nom").notNull(),
@@ -180,7 +180,7 @@ export type Commercial = typeof commerciaux.$inferSelect;
 export type InsertCommercial = z.infer<typeof insertCommercialSchema>;
 
 // Table des fournisseurs
-export const fournisseurs = pgTable("fournisseurs", {
+export const fournisseurs = mysqlTable("fournisseurs", {
   id: serial("id").primaryKey(),
   nom: text("nom").notNull(),
   nomCourt: text("nom_court").notNull(),
@@ -194,7 +194,7 @@ export type Fournisseur = typeof fournisseurs.$inferSelect;
 export type InsertFournisseur = z.infer<typeof insertFournisseurSchema>;
 
 // Table des thèmes
-export const themes = pgTable("themes", {
+export const themes = mysqlTable("themes", {
   id: serial("id").primaryKey(),
   theme: text("theme").notNull(),
   fournisseur: text("fournisseur").notNull(),
@@ -209,7 +209,7 @@ export type Theme = typeof themes.$inferSelect;
 export type InsertTheme = z.infer<typeof insertThemeSchema>;
 
 // Table des commandes
-export const orders = pgTable("orders", {
+export const orders = mysqlTable("orders", {
   id: serial("id").primaryKey(),
   orderCode: text("order_code").notNull().unique(),
   orderDate: text("order_date").notNull(),
@@ -219,7 +219,7 @@ export const orders = pgTable("orders", {
   
   // Commercial
   salesRepName: text("sales_rep_name").notNull(),
-  commercialId: integer("commercial_id"),
+  commercialId: int("commercial_id"),
   
   // Client/Responsable
   clientName: text("client_name").notNull(),
@@ -288,7 +288,7 @@ export type InsertOrderDb = z.infer<typeof insertOrderDbSchema>;
 export type UpdateOrderDates = z.infer<typeof updateOrderDatesSchema>;
 
 // Table des souscriptions push notifications
-export const pushSubscriptions = pgTable("push_subscriptions", {
+export const pushSubscriptions = mysqlTable("push_subscriptions", {
   id: serial("id").primaryKey(),
   userName: text("user_name").notNull(),
   endpoint: text("endpoint").notNull().unique(),

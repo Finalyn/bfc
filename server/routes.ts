@@ -16,7 +16,7 @@ import { format } from "date-fns";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { data, loadExcelData, type Client as ExcelClient } from "./dataLoader";
 import { db } from "./db";
-import { eq, ilike, or, sql, count, asc, desc } from "drizzle-orm";
+import { eq, or, sql, count, asc, desc } from "drizzle-orm";
 
 // Stockage en mémoire des fichiers générés
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
