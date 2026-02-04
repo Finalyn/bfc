@@ -647,12 +647,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Un client avec ce code existe déjà" });
       }
       
-      const insertResult = await db.insert(clients).values({
+      await db.insert(clients).values({
         ...validatedData,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      const insertId = Number((idResult as any).id);
       const [newClient] = await db.select().from(clients).where(eq(clients.id, insertId));
       
       res.json({
@@ -750,8 +751,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isFromExcel: true,
         };
         
-        const insertResult = await db.insert(clients).values(newClientData);
-        const insertId = Number((insertResult as any).insertId || (insertResult as any)[0]?.insertId);
+        await db.insert(clients).values(newClientData);
+        const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+        const insertId = Number((idResult as any).id);
         const [newClient] = await db.select().from(clients).where(eq(clients.id, insertId));
         
         res.json({
@@ -1573,12 +1575,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/clients", async (req, res) => {
     try {
       const validated = insertClientSchema.parse(req.body);
-      const insertResult = await db.insert(clients).values({
+      await db.insert(clients).values({
         ...validated,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      const insertId = Number((idResult as any).id);
       const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
       res.json(created);
     } catch (error: any) {
@@ -1593,12 +1596,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (id === 0) {
         // For Excel-sourced clients, create a new DB entry with their data
         const validated = insertClientSchema.parse(req.body);
-        const insertResult = await db.insert(clients).values({
+        await db.insert(clients).values({
           ...validated,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
-        const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+        const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+        const insertId = Number((idResult as any).id);
         const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
         return res.json(created);
       }
@@ -1737,8 +1741,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/commerciaux", async (req, res) => {
     try {
       const validated = insertCommercialSchema.parse(req.body);
-      const insertResult = await db.insert(commerciaux).values(validated);
-      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      await db.insert(commerciaux).values(validated);
+      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      const insertId = Number((idResult as any).id);
       const [created] = await db.select().from(commerciaux).where(eq(commerciaux.id, insertId));
       invalidateCommerciauxCache();
       res.json(created);
@@ -1819,8 +1824,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/fournisseurs", async (req, res) => {
     try {
       const validated = insertFournisseurSchema.parse(req.body);
-      const insertResult = await db.insert(fournisseurs).values(validated);
-      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      await db.insert(fournisseurs).values(validated);
+      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      const insertId = Number((idResult as any).id);
       const [created] = await db.select().from(fournisseurs).where(eq(fournisseurs.id, insertId));
       res.json(created);
     } catch (error: any) {
@@ -1900,8 +1906,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/themes", async (req, res) => {
     try {
       const validated = insertThemeSchema.parse(req.body);
-      const insertResult = await db.insert(themes).values(validated);
-      const insertId = Number((insertResult as any)[0]?.insertId || (insertResult as any).insertId);
+      await db.insert(themes).values(validated);
+      const [idResult] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      const insertId = Number((idResult as any).id);
       const [created] = await db.select().from(themes).where(eq(themes.id, insertId));
       res.json(created);
     } catch (error: any) {
