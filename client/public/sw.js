@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bfc-app-v3';
-const STATIC_CACHE = 'bfc-static-v3';
-const DATA_CACHE = 'bfc-data-v3';
+const CACHE_NAME = 'bfc-app-v4';
+const STATIC_CACHE = 'bfc-static-v4';
+const DATA_CACHE = 'bfc-data-v4';
 const PDF_CACHE = 'bfc-pdf-v1';
 
 const STATIC_ASSETS = [
@@ -142,40 +142,55 @@ function promisifyRequest(request) {
 }
 
 self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'Nouvelle notification BFC APP',
+  let title = 'BFC APP';
+  let options = {
+    body: 'Nouvelle notification',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
+    data: { url: '/' },
     actions: [
       { action: 'open', title: 'Ouvrir' },
       { action: 'close', title: 'Fermer' }
     ]
   };
 
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      title = payload.title || title;
+      options.body = payload.body || options.body;
+      if (payload.icon) options.icon = payload.icon;
+      if (payload.badge) options.badge = payload.badge;
+      if (payload.tag) options.tag = payload.tag;
+      if (payload.data) options.data = payload.data;
+    } catch (e) {
+      options.body = event.data.text();
+    }
+  }
+
   event.waitUntil(
-    self.registration.showNotification('BFC APP', options)
+    self.registration.showNotification(title, options)
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
+
   if (event.action === 'close') return;
-  
+
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetUrl);
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('/');
+        return clients.openWindow(targetUrl);
       }
     })
   );

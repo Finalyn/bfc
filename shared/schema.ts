@@ -304,3 +304,14 @@ export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+
+// Table de suivi des notifications envoyées (déduplication)
+export const notificationLogs = mysqlTable("notification_logs", {
+  id: serial("id").primaryKey(),
+  userName: text("user_name").notNull(),
+  orderId: int("order_id").notNull(),
+  eventType: text("event_type").notNull(),
+  eventDate: text("event_date").notNull(),
+  notifType: text("notif_type").notNull(),
+  sentAt: timestamp("sent_at").defaultNow(),
+});

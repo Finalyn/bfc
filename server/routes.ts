@@ -2853,6 +2853,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint pour vérifier les notifications push
+  app.post("/api/notifications/test-send", async (req, res) => {
+    try {
+      const { userName } = req.body;
+      if (!userName || typeof userName !== "string") {
+        return res.status(400).json({ error: "userName requis" });
+      }
+
+      const { sendPushToUser } = await import("./utils/notificationSender");
+
+      const payload = {
+        title: "Test BFC APP",
+        body: "Les notifications push fonctionnent !",
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/icon-72x72.png",
+        tag: "test-" + Date.now(),
+        data: {
+          url: "/my-dashboard",
+          eventType: "test",
+          orderCode: "TEST",
+          eventDate: "",
+        },
+      };
+
+      const result = await sendPushToUser(userName, payload);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error sending test notification:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
