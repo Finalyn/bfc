@@ -238,7 +238,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
       if (selection?.deliveryDate) {
-        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4); } catch (e) {}
+        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + tableWidth - 9, rowY + 4); } catch (e) {}
       }
     });
 
@@ -254,7 +254,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
       if (selection?.deliveryDate) {
-        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4); } catch (e) {}
+        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + 2 * tableWidth + gap - 9, rowY + 4); } catch (e) {}
       }
     });
 
@@ -293,7 +293,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.text(selection.category || "", margin + fullTableWidth * 0.5, rowY + 4);
       doc.text(selection.quantity || "", margin + fullTableWidth - 28, rowY + 4);
       if (selection.deliveryDate) {
-        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + fullTableWidth - 15, rowY + 4);
+        doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + fullTableWidth - 15, rowY + 4);
       }
     });
 

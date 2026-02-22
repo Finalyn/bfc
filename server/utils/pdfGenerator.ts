@@ -279,7 +279,7 @@ export function generateOrderPDF(order: Order): Buffer {
       }
       if (selection?.deliveryDate) {
         try {
-          doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + tableWidth - 9, rowY + 4);
         } catch (e) {
           doc.text(selection.deliveryDate, margin + tableWidth - 9, rowY + 4);
         }
@@ -303,7 +303,7 @@ export function generateOrderPDF(order: Order): Buffer {
       }
       if (selection?.deliveryDate) {
         try {
-          doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + 2 * tableWidth + gap - 9, rowY + 4);
         } catch (e) {
           doc.text(selection.deliveryDate, margin + 2 * tableWidth + gap - 9, rowY + 4);
         }
@@ -352,7 +352,7 @@ export function generateOrderPDF(order: Order): Buffer {
             doc.text(t.quantity, margin + tableWidth - 28, yPos + 4);
           }
           if (t.deliveryDate) {
-            doc.text(format(new Date(t.deliveryDate), "dd/MM"), margin + tableWidth - 13, yPos + 4);
+            doc.text(format(new Date(t.deliveryDate), "dd/MM/yy"), margin + tableWidth - 13, yPos + 4);
           }
           yPos += rowHeight;
         });
