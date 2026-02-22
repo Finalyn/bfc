@@ -212,7 +212,20 @@ export function generateOrderPDF(order: Order): Buffer {
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
 
+    // Build a direct lookup by index: for each themeSelection, find which row it should go in
+    // First, create a map from normalized theme name to selection data
+    const selectionByTheme = new Map<string, ThemeSelection>();
+    for (const s of themeSelections) {
+      if (s.theme) {
+        selectionByTheme.set(normalizeThemeName(s.theme), s);
+        // Also store by exact name
+        selectionByTheme.set(s.theme, s);
+      }
+    }
+
     let matchCount = 0;
+    // Track which selections have been matched
+    const matchedSelections = new Set<string>();
 
     THEMES_TOUTE_ANNEE.forEach((theme, idx) => {
       const rowY = yPos + idx * rowHeight;
@@ -223,11 +236,20 @@ export function generateOrderPDF(order: Order): Buffer {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE", "TOUTE L'ANNEE"], themeLookup);
+      // Try multiple matching strategies
+      let selection: ThemeSelection | undefined;
+      // 1. Lookup map (normalized + category)
+      selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE", "TOUTE L'ANNEE"], themeLookup);
+      // 2. Direct name lookup (exact or normalized, ignoring category)
+      if (!selection) {
+        selection = selectionByTheme.get(theme) || selectionByTheme.get(normalizeThemeName(theme));
+      }
+
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
         matchCount++;
+        matchedSelections.add(normalizeThemeName(selection.theme));
       }
       if (selection?.deliveryDate) {
         try {
@@ -247,11 +269,17 @@ export function generateOrderPDF(order: Order): Buffer {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"], themeLookup);
+      let selection: ThemeSelection | undefined;
+      selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"], themeLookup);
+      if (!selection) {
+        selection = selectionByTheme.get(theme) || selectionByTheme.get(normalizeThemeName(theme));
+      }
+
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
         matchCount++;
+        matchedSelections.add(normalizeThemeName(selection.theme));
       }
       if (selection?.deliveryDate) {
         try {
@@ -262,13 +290,51 @@ export function generateOrderPDF(order: Order): Buffer {
       }
     });
 
-    console.log(`📋 PDF BDIS - ${matchCount} matches found out of ${filteredThemes.length} filled themes`);
+    yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * 5.5;
+
+    // FAILSAFE: If no matches found but we have data, render selections directly below the grid
+    const unmatchedSelections = filteredThemes.filter(t => !matchedSelections.has(normalizeThemeName(t.theme)));
+    console.log(`📋 PDF BDIS - ${matchCount} matches, ${unmatchedSelections.length} unmatched, ${filteredThemes.length} total filled`);
+
     if (matchCount === 0 && filteredThemes.length > 0) {
-      console.log(`⚠️ PDF BDIS - NO MATCHES! Theme names in selections:`, filteredThemes.map(t => `"${t.theme}" [${t.category}]`));
-      console.log(`⚠️ PDF BDIS - Expected themes (TOUTE_ANNEE):`, THEMES_TOUTE_ANNEE.map(t => `"${t}"`));
+      // NOTHING matched - render ALL selections directly
+      console.log(`⚠️ PDF BDIS - NO MATCHES! Rendering failsafe. Selections:`, filteredThemes.map(t => `"${t.theme}" [${t.category}] qty=${t.quantity}`));
+      yPos += 2;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.text("PRODUITS COMMANDÉS:", margin, yPos + 3);
+      yPos += 5;
+      doc.setFont("helvetica", "normal");
+      filteredThemes.forEach((t, idx) => {
+        if (idx % 2 === 0) {
+          doc.setFillColor(255, 255, 220);
+          doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight, "F");
+        }
+        doc.setDrawColor(180, 180, 180);
+        doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight);
+        doc.text(`${t.theme} [${t.category}]`, margin + 2, yPos + 4);
+        if (t.quantity) doc.text(t.quantity, pageWidth - margin - 30, yPos + 4);
+        if (t.deliveryDate) {
+          try {
+            doc.text(format(new Date(t.deliveryDate), "dd/MM"), pageWidth - margin - 15, yPos + 4);
+          } catch (e) {
+            doc.text(t.deliveryDate, pageWidth - margin - 15, yPos + 4);
+          }
+        }
+        yPos += rowHeight;
+      });
+    } else if (unmatchedSelections.length > 0) {
+      // Some matched, some didn't - show unmatched ones
+      yPos += 2;
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "italic");
+      unmatchedSelections.forEach((t) => {
+        doc.text(`+ ${t.theme}: ${t.quantity || ""} ${t.deliveryDate ? format(new Date(t.deliveryDate), "dd/MM") : ""}`, margin, yPos + 3);
+        yPos += 4;
+      });
     }
 
-    yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * 5.5 + 8;
+    yPos += 8;
   } else {
     // Layout autres fournisseurs: afficher uniquement les produits commandés par catégorie
     const tableWidth = pageWidth - 2 * margin;

@@ -198,6 +198,17 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
 
+    // Build direct lookup by theme name (exact + normalized)
+    const selectionByTheme = new Map<string, ThemeSelection>();
+    for (const s of themeSelections) {
+      if (s.theme) {
+        selectionByTheme.set(s.theme, s);
+        selectionByTheme.set(normalizeThemeName(s.theme), s);
+      }
+    }
+    let matchCount = 0;
+    const matchedSelections = new Set<string>();
+
     THEMES_TOUTE_ANNEE.forEach((theme, idx) => {
       const rowY = yPos + idx * rowHeight;
       if (idx % 2 === 0) {
@@ -207,13 +218,20 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE", "TOUTE L'ANNEE"], themeLookup);
+      let selection: ThemeSelection | undefined;
+      selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE", "TOUTE L'ANNEE"], themeLookup);
+      if (!selection) selection = selectionByTheme.get(theme) || selectionByTheme.get(normalizeThemeName(theme));
+
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
+        matchCount++;
+        matchedSelections.add(normalizeThemeName(selection.theme));
       }
       if (selection?.deliveryDate) {
-        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
+        try {
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
+        } catch (e) { /* ignore */ }
       }
     });
 
@@ -226,21 +244,51 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"], themeLookup);
+      let selection: ThemeSelection | undefined;
+      selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"], themeLookup);
+      if (!selection) selection = selectionByTheme.get(theme) || selectionByTheme.get(normalizeThemeName(theme));
+
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
+        matchCount++;
+        matchedSelections.add(normalizeThemeName(selection.theme));
       }
       if (selection?.deliveryDate) {
         try {
           doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
-        } catch (e) {
-          doc.text(selection.deliveryDate, margin + 2 * tableWidth + gap - 9, rowY + 4);
-        }
+        } catch (e) { /* ignore */ }
       }
     });
 
-    yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * 5.5 + 8;
+    yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * 5.5;
+
+    // FAILSAFE: if no matches but we have data, render directly
+    if (matchCount === 0 && filledSelections.length > 0) {
+      console.log("PDF Client FAILSAFE: rendering selections directly", filledSelections);
+      yPos += 2;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.text("PRODUITS COMMANDÉS:", margin, yPos + 3);
+      yPos += 5;
+      doc.setFont("helvetica", "normal");
+      filledSelections.forEach((t, idx) => {
+        if (idx % 2 === 0) {
+          doc.setFillColor(255, 255, 220);
+          doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight, "F");
+        }
+        doc.setDrawColor(180, 180, 180);
+        doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight);
+        doc.text(`${t.theme} [${t.category}]`, margin + 2, yPos + 4);
+        if (t.quantity) doc.text(t.quantity, pageWidth - margin - 30, yPos + 4);
+        if (t.deliveryDate) {
+          try { doc.text(format(new Date(t.deliveryDate), "dd/MM"), pageWidth - margin - 15, yPos + 4); } catch (e) {}
+        }
+        yPos += rowHeight;
+      });
+    }
+
+    yPos += 8;
   } else {
     const fullTableWidth = pageWidth - 2 * margin;
     const headerHeight = 7;
