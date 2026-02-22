@@ -16,14 +16,40 @@ function normalizeThemeName(name: string): string {
     .trim();
 }
 
+// Build a lookup map for fast and flexible theme matching
+function buildThemeLookup(selections: ThemeSelection[]): Map<string, ThemeSelection> {
+  const map = new Map<string, ThemeSelection>();
+  for (const s of selections) {
+    if (!s.theme) continue;
+    const norm = normalizeThemeName(s.theme);
+    map.set(`${norm}|${s.category}`, s);
+    if (!map.has(`${norm}|*`)) {
+      map.set(`${norm}|*`, s);
+    }
+  }
+  return map;
+}
+
 function findThemeSelection(
   selections: ThemeSelection[],
   theme: string,
-  categories: string[]
+  categories: string[],
+  lookupMap?: Map<string, ThemeSelection>
 ): ThemeSelection | undefined {
   const normalizedTheme = normalizeThemeName(theme);
+
+  if (lookupMap) {
+    for (const cat of categories) {
+      const result = lookupMap.get(`${normalizedTheme}|${cat}`);
+      if (result) return result;
+    }
+    const anyCategory = lookupMap.get(`${normalizedTheme}|*`);
+    if (anyCategory) return anyCategory;
+  }
+
+  // Linear search fallback (any category)
   return selections.find(
-    t => normalizeThemeName(t.theme) === normalizedTheme && categories.includes(t.category)
+    t => normalizeThemeName(t.theme) === normalizedTheme
   );
 }
 
@@ -127,10 +153,17 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
 
   const gap = 6;
   const tableWidth = (pageWidth - 2 * margin - gap) / 2;
-  const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
-  
+  let themeSelections: ThemeSelection[] = [];
+  try {
+    themeSelections = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+  } catch (e) {
+    console.error("PDF Client: Erreur parsing themeSelections:", e);
+  }
+
   const filledSelections = themeSelections.filter(t => t.quantity && parseInt(t.quantity) > 0);
-  
+  const themeLookup = buildThemeLookup(themeSelections);
+  console.log(`PDF Client: ${themeSelections.length} entries, ${filledSelections.length} with qty`, themeSelections.slice(0, 3));
+
   if (order.fournisseur === "BDIS" || !order.fournisseur) {
     const headerHeight = 7;
     doc.setFillColor(60, 60, 60);
@@ -174,7 +207,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE"]);
+      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE", "TOUTE L'ANNEE"], themeLookup);
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
@@ -193,13 +226,17 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"]);
+      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"], themeLookup);
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
       }
       if (selection?.deliveryDate) {
-        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+        try {
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+        } catch (e) {
+          doc.text(selection.deliveryDate, margin + 2 * tableWidth + gap - 9, rowY + 4);
+        }
       }
     });
 

@@ -572,7 +572,16 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
   const proceedWithSubmit = (data: FormData) => {
     const filteredSelections = themeSelections.filter(t => t.quantity || t.deliveryDate);
-    
+
+    // Debug logging
+    console.log(`📋 OrderForm - themeSelections state: ${themeSelections.length} entries`);
+    console.log(`📋 OrderForm - filteredSelections: ${filteredSelections.length} entries`);
+    if (filteredSelections.length > 0) {
+      console.log(`📋 OrderForm - entries:`, filteredSelections.map(t => `${t.theme} [${t.category}] qty=${t.quantity} date=${t.deliveryDate}`));
+    } else {
+      console.log(`⚠️ OrderForm - NO SELECTIONS! Full themeSelections state:`, themeSelections);
+    }
+
     onNext({
       ...data,
       fournisseur: data.fournisseur,

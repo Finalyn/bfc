@@ -165,8 +165,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Générer une commande avec PDF et Excel
   app.post("/api/orders/generate", async (req, res) => {
     try {
+      // Debug: log raw themeSelections from request
+      const rawThemeSelections = req.body?.themeSelections;
+      console.log(`📋 /api/orders/generate - themeSelections type: ${typeof rawThemeSelections}, length: ${(rawThemeSelections || "").length}`);
+      if (typeof rawThemeSelections === "string") {
+        try {
+          const parsed = JSON.parse(rawThemeSelections);
+          console.log(`📋 /api/orders/generate - parsed ${Array.isArray(parsed) ? parsed.length : 0} theme entries`);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`📋 /api/orders/generate - first entries:`, parsed.slice(0, 3).map((t: any) => `${t.theme} [${t.category}] qty=${t.quantity}`));
+          }
+        } catch (e) {
+          console.error(`❌ /api/orders/generate - Failed to parse themeSelections:`, rawThemeSelections?.substring(0, 200));
+        }
+      }
+
       const validatedData = insertOrderSchema.parse(req.body);
-      
+
       // Valider la signature
       const signatureValidation = validateSignature(validatedData.signature);
       if (!signatureValidation.valid) {
@@ -253,12 +268,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emailError = error.message || "Erreur lors de l'envoi des emails";
       }
 
+      // Debug: include themeSelections count in response
+      let themeCount = 0;
+      try {
+        const parsedThemes = JSON.parse(order.themeSelections || "[]");
+        themeCount = Array.isArray(parsedThemes) ? parsedThemes.length : 0;
+      } catch (e) {}
+
       res.json({
         orderCode,
         pdfUrl: `/api/orders/${orderCode}/pdf`,
         excelUrl: `/api/orders/${orderCode}/excel`,
         emailsSent,
         emailError,
+        _debug_themeCount: themeCount,
       });
     } catch (error: any) {
       console.error("Erreur lors de la génération de la commande:", error);

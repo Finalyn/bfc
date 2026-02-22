@@ -7,7 +7,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import * as fs from "fs";
 import * as path from "path";
 
-// Normalize theme name for flexible matching (handles accents, case, whitespace)
+// Normalize theme name for flexible matching (handles accents, case, whitespace, punctuation)
 function normalizeThemeName(name: string): string {
   return name
     .toLowerCase()
@@ -17,14 +17,44 @@ function normalizeThemeName(name: string): string {
     .trim();
 }
 
+// Build a lookup map for fast and flexible theme matching
+function buildThemeLookup(selections: ThemeSelection[]): Map<string, ThemeSelection> {
+  const map = new Map<string, ThemeSelection>();
+  for (const s of selections) {
+    if (!s.theme) continue;
+    const norm = normalizeThemeName(s.theme);
+    // Index by normalized theme + category
+    map.set(`${norm}|${s.category}`, s);
+    // Also index by just normalized theme (for category-agnostic fallback)
+    if (!map.has(`${norm}|*`)) {
+      map.set(`${norm}|*`, s);
+    }
+  }
+  return map;
+}
+
 function findThemeSelection(
   selections: ThemeSelection[],
   theme: string,
-  categories: string[]
+  categories: string[],
+  lookupMap?: Map<string, ThemeSelection>
 ): ThemeSelection | undefined {
   const normalizedTheme = normalizeThemeName(theme);
+
+  if (lookupMap) {
+    // Try exact category match first
+    for (const cat of categories) {
+      const result = lookupMap.get(`${normalizedTheme}|${cat}`);
+      if (result) return result;
+    }
+    // Fallback: any category with same theme name
+    const anyCategory = lookupMap.get(`${normalizedTheme}|*`);
+    if (anyCategory) return anyCategory;
+  }
+
+  // Linear search fallback with normalized matching (any category)
   return selections.find(
-    t => normalizeThemeName(t.theme) === normalizedTheme && categories.includes(t.category)
+    t => normalizeThemeName(t.theme) === normalizedTheme
   );
 }
 
@@ -122,8 +152,25 @@ export function generateOrderPDF(order: Order): Buffer {
 
   // === TABLEAU DES THÈMES ===
   const gap = 6;
-  const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+  let themeSelections: ThemeSelection[] = [];
+  try {
+    themeSelections = order.themeSelections ? JSON.parse(order.themeSelections) : [];
+  } catch (e) {
+    console.error("❌ PDF: Erreur parsing themeSelections:", e, "Raw value:", order.themeSelections);
+  }
   const filteredThemes = themeSelections.filter(t => t.quantity || t.deliveryDate);
+
+  // Debug logging
+  console.log(`📋 PDF Generation - themeSelections: ${themeSelections.length} entries, ${filteredThemes.length} with data`);
+  if (themeSelections.length > 0) {
+    console.log(`📋 PDF - First entries:`, themeSelections.slice(0, 3).map(t => `${t.theme} [${t.category}] qty=${t.quantity} date=${t.deliveryDate}`));
+  } else {
+    console.log(`⚠️ PDF - themeSelections is EMPTY! Raw value type: ${typeof order.themeSelections}, length: ${(order.themeSelections || "").length}`);
+    console.log(`⚠️ PDF - Raw themeSelections (first 500 chars):`, (order.themeSelections || "").substring(0, 500));
+  }
+
+  // Build lookup map for efficient matching
+  const themeLookup = buildThemeLookup(themeSelections);
 
   // Récupérer les catégories du fournisseur
   const fournisseurThemes = fournisseurConfig.themes || [];
@@ -165,6 +212,8 @@ export function generateOrderPDF(order: Order): Buffer {
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
 
+    let matchCount = 0;
+
     THEMES_TOUTE_ANNEE.forEach((theme, idx) => {
       const rowY = yPos + idx * rowHeight;
       if (idx % 2 === 0) {
@@ -174,13 +223,18 @@ export function generateOrderPDF(order: Order): Buffer {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE"]);
+      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE", "TOUTE L'ANNEE"], themeLookup);
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
+        matchCount++;
       }
       if (selection?.deliveryDate) {
-        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
+        try {
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + tableWidth - 9, rowY + 4);
+        } catch (e) {
+          doc.text(selection.deliveryDate, margin + tableWidth - 9, rowY + 4);
+        }
       }
     });
 
@@ -193,15 +247,26 @@ export function generateOrderPDF(order: Order): Buffer {
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
 
-      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"]);
+      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"], themeLookup);
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
+        matchCount++;
       }
       if (selection?.deliveryDate) {
-        doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+        try {
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+        } catch (e) {
+          doc.text(selection.deliveryDate, margin + 2 * tableWidth + gap - 9, rowY + 4);
+        }
       }
     });
+
+    console.log(`📋 PDF BDIS - ${matchCount} matches found out of ${filteredThemes.length} filled themes`);
+    if (matchCount === 0 && filteredThemes.length > 0) {
+      console.log(`⚠️ PDF BDIS - NO MATCHES! Theme names in selections:`, filteredThemes.map(t => `"${t.theme}" [${t.category}]`));
+      console.log(`⚠️ PDF BDIS - Expected themes (TOUTE_ANNEE):`, THEMES_TOUTE_ANNEE.map(t => `"${t}"`));
+    }
 
     yPos += Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length) * 5.5 + 8;
   } else {
@@ -376,8 +441,9 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFontSize(5);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(80, 80, 80);
+  // Debug info (temporary) - shows how many theme selections were received
   doc.text(
-    `Document généré le ${formatInTimeZone(new Date(), "Europe/Paris", "dd/MM/yyyy à HH:mm", { locale: fr })} - Réf: ${order.orderCode}`,
+    `Document généré le ${formatInTimeZone(new Date(), "Europe/Paris", "dd/MM/yyyy à HH:mm", { locale: fr })} - Réf: ${order.orderCode} - [${filteredThemes.length} produits reçus, raw=${(order.themeSelections || "").length}c]`,
     pageWidth / 2,
     pageHeight - 6,
     { align: "center" }
