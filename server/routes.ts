@@ -700,10 +700,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Mettre à jour le client existant avec approbation en attente
-        const [updated] = await db
+        await db
           .update(clients)
-          .set({ 
-            ...validatedData, 
+          .set({
+            ...validatedData,
             updatedAt: new Date(),
             previousValues,
             modificationApproved: false,
@@ -1952,8 +1952,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Extract unique themes from orders (keyed by theme+fournisseur)
-      const themesFromOrders = new Map<string, { theme: string; fournisseur: string }>();
-      
+      const themesFromOrders = new Map<string, { theme: string; fournisseur: string; categorie: string }>();
+
       allOrders.forEach(order => {
         try {
           const orderFournisseur = order.fournisseur || "";
@@ -1966,6 +1966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   themesFromOrders.set(compositeKey, {
                     theme: t.theme,
                     fournisseur: orderFournisseur,
+                    categorie: t.category || "TOUTE_ANNEE",
                   });
                 }
               }
@@ -1973,7 +1974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (e) {}
       });
-      
+
       // Insert new themes into database
       let added = 0;
       const themesToAdd = Array.from(themesFromOrders.values());
@@ -1981,6 +1982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(themes).values({
           theme: themeData.theme,
           fournisseur: themeData.fournisseur,
+          categorie: themeData.categorie,
         });
         added++;
       }

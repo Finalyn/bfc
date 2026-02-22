@@ -353,14 +353,17 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     
     if (dbThemesForFournisseur.length > 0) {
       // Utiliser les thèmes de la BDD avec catégorisation
+      // Gérer les variantes de noms de catégories (TOUTE_ANNEE, TOUTE L'ANNÉE, etc.)
+      const isTouteAnnee = (cat: string | null) => !cat || cat === "TOUTE_ANNEE" || cat.toUpperCase().includes("TOUTE");
+      const isSaisonnier = (cat: string | null) => cat === "SAISONNIER" || (cat || "").toUpperCase().includes("SAISONNIER");
       const touteAnnee = dbThemesForFournisseur
-        .filter(t => !t.categorie || t.categorie === "TOUTE_ANNEE")
+        .filter(t => isTouteAnnee(t.categorie) && !isSaisonnier(t.categorie))
         .map(t => t.theme);
       const saisonnier = dbThemesForFournisseur
-        .filter(t => t.categorie === "SAISONNIER")
+        .filter(t => isSaisonnier(t.categorie))
         .map(t => t.theme);
       const autres = dbThemesForFournisseur
-        .filter(t => t.categorie && t.categorie !== "TOUTE_ANNEE" && t.categorie !== "SAISONNIER")
+        .filter(t => !isTouteAnnee(t.categorie) && !isSaisonnier(t.categorie))
         .map(t => t.theme);
       return { touteAnnee, saisonnier, autres };
     }

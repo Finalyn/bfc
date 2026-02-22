@@ -7,6 +7,27 @@ import { formatInTimeZone } from "date-fns-tz";
 import * as fs from "fs";
 import * as path from "path";
 
+// Normalize theme name for flexible matching (handles accents, case, whitespace)
+function normalizeThemeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findThemeSelection(
+  selections: ThemeSelection[],
+  theme: string,
+  categories: string[]
+): ThemeSelection | undefined {
+  const normalizedTheme = normalizeThemeName(theme);
+  return selections.find(
+    t => normalizeThemeName(t.theme) === normalizedTheme && categories.includes(t.category)
+  );
+}
+
 // Load header image once at startup
 const headerImagePath = path.join(process.cwd(), "attached_assets", "Haut_de_page_BFC_1767019338721.jpg");
 let headerImageBase64: string | null = null;
@@ -152,8 +173,8 @@ export function generateOrderPDF(order: Order): Buffer {
       }
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin, rowY, tableWidth, rowHeight);
-      
-      const selection = themeSelections.find(t => t.theme === theme && t.category === "TOUTE_ANNEE");
+
+      const selection = findThemeSelection(themeSelections, theme, ["TOUTE_ANNEE", "TOUTE L'ANNÉE"]);
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
@@ -171,8 +192,8 @@ export function generateOrderPDF(order: Order): Buffer {
       }
       doc.setDrawColor(180, 180, 180);
       doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
-      
-      const selection = themeSelections.find(t => t.theme === theme && t.category === "SAISONNIER");
+
+      const selection = findThemeSelection(themeSelections, theme, ["SAISONNIER"]);
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) {
         doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
