@@ -128,12 +128,33 @@ async function checkAndSendNotifications(
   console.log(`[NOTIF] ${notifType}: sent ${totalSent} notification(s)`);
 }
 
-export function startNotificationScheduler(): void {
+async function ensureNotificationLogsTable(): Promise<void> {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notification_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_name TEXT NOT NULL,
+        order_id INT NOT NULL,
+        event_type TEXT NOT NULL,
+        event_date TEXT NOT NULL,
+        notif_type TEXT NOT NULL,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("[NOTIF] notification_logs table ready");
+  } catch (error) {
+    console.error("[NOTIF] Error creating notification_logs table:", error);
+  }
+}
+
+export async function startNotificationScheduler(): Promise<void> {
   const configured = initializeWebPush();
   if (!configured) {
     console.log("[NOTIF] Scheduler not started (VAPID not configured)");
     return;
   }
+
+  await ensureNotificationLogsTable();
 
   // Veille - 18h00 Europe/Paris
   cron.schedule(
