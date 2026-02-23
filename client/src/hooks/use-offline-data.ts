@@ -109,17 +109,17 @@ export function useOfflineDataClients(options: UseOfflineDataOptions = {}) {
   useEffect(() => {
     getCachedDataClients().then((data) => {
       if (data) {
-        const enriched = data.map(c => ({
+        const enriched = data.map((c: any) => ({
           ...c,
-          id: c.code,
-          displayName: `${c.code} - ${c.nom}`,
+          id: c.id || c.code,
+          displayName: c.displayName || `${c.code} - ${c.nom}`,
         }));
         setCachedData(enriched as ClientData[]);
       }
     });
   }, []);
 
-  const query = useQuery<Array<{ code: string; nom: string }>>({
+  const query = useQuery<Array<Record<string, any>>>({
     queryKey: ["/api/data/clients"],
     enabled: enabled && online,
   });
@@ -129,15 +129,15 @@ export function useOfflineDataClients(options: UseOfflineDataOptions = {}) {
       cacheDataClients(query.data);
       const enriched = query.data.map(c => ({
         ...c,
-        id: c.code,
-        displayName: `${c.code} - ${c.nom}`,
+        id: c.id || c.code,
+        displayName: c.displayName || `${c.code} - ${c.nom}`,
       }));
       setCachedData(enriched as ClientData[]);
     }
   }, [query.data]);
 
   return {
-    data: online && query.data ? query.data.map(c => ({ ...c, id: c.code, displayName: `${c.code} - ${c.nom}` })) as ClientData[] : cachedData || [],
+    data: online && query.data ? query.data.map(c => ({ ...c, id: c.id || c.code, displayName: c.displayName || `${c.code} - ${c.nom}` })) as ClientData[] : cachedData || [],
     isLoading: online ? query.isLoading : !cachedData,
     isOffline: !online,
     fromCache: !online || !query.data,
