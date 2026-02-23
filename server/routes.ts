@@ -2522,8 +2522,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
       const ExcelJS = await import("exceljs");
-      const workbook = new ExcelJS.Workbook();
-      
+      const Workbook = ExcelJS.default?.Workbook || ExcelJS.Workbook;
+      const workbook = new Workbook();
+
       // Résumé
       const summarySheet = workbook.addWorksheet("Résumé");
       summarySheet.columns = [
@@ -2647,8 +2648,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { orders } = req.body;
       
       const ExcelJS = await import("exceljs");
-      const workbook = new ExcelJS.Workbook();
-      
+      const Workbook = ExcelJS.default?.Workbook || ExcelJS.Workbook;
+      const workbook = new Workbook();
+
       const planningSheet = workbook.addWorksheet("Planning");
       planningSheet.columns = [
         { header: "Code Commande", key: "orderCode", width: 20 },

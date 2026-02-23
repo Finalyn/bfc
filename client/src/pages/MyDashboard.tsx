@@ -368,7 +368,19 @@ export default function MyDashboard() {
       const response = await fetch('/api/planning/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orders: filteredOrders }),
+        body: JSON.stringify({ orders: filteredOrders.map(o => ({
+          orderCode: o.orderCode,
+          salesRepName: o.salesRepName,
+          livraisonEnseigne: o.livraisonEnseigne,
+          fournisseur: o.fournisseur,
+          orderDate: o.orderDate,
+          dateLivraison: o.dateLivraison,
+          dateInventairePrevu: o.dateInventairePrevu,
+          dateInventaire: o.dateInventaire,
+          dateRetour: o.dateRetour,
+          livraisonAdresse: o.livraisonAdresse,
+          livraisonCpVille: o.livraisonCpVille,
+        })) }),
       });
       if (!response.ok) throw new Error('Erreur export');
       const blob = await response.blob();
