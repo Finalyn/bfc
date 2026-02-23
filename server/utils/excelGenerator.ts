@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { type Order, type ThemeSelection } from "@shared/schema";
 import { FOURNISSEURS_CONFIG, getFournisseurConfig } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -75,11 +75,16 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
 
   // Thèmes
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
-  const filteredThemes = themeSelections.filter(t => t.quantity || t.deliveryDate);
+  const filteredThemes = themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
   const isBDIS = order.fournisseur === "BDIS";
 
   if (isBDIS) {
-    // Layout BDIS: deux colonnes
+    // Layout BDIS: deux colonnes - utiliser les thèmes de la commande directement
+    const isTouteAnneeCat = (cat: string) => cat === "TOUTE_ANNEE" || cat.toUpperCase().includes("TOUTE");
+    const isSaisonnierCat = (cat: string) => cat === "SAISONNIER" || cat.toUpperCase().includes("SAISONNIER");
+    const touteAnneeThemes = themeSelections.filter(t => isTouteAnneeCat(t.category));
+    const saisonnierThemes = themeSelections.filter(t => isSaisonnierCat(t.category));
+
     worksheet.getCell(`A${currentRow}`).value = "TOUTE L'ANNEE";
     worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: "FFFFFFFF" } };
     worksheet.getCell(`A${currentRow}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
@@ -105,25 +110,23 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
     });
     currentRow++;
 
-    const maxThemes = Math.max(THEMES_TOUTE_ANNEE.length, THEMES_SAISONNIER.length);
+    const maxThemes = Math.max(touteAnneeThemes.length, saisonnierThemes.length);
     for (let i = 0; i < maxThemes; i++) {
-      const toutAnnee = THEMES_TOUTE_ANNEE[i];
-      const saisonnier = THEMES_SAISONNIER[i];
+      const toutAnnee = touteAnneeThemes[i];
+      const saisonnier = saisonnierThemes[i];
 
       if (toutAnnee) {
-        worksheet.getCell(`A${currentRow}`).value = toutAnnee;
+        worksheet.getCell(`A${currentRow}`).value = toutAnnee.theme;
         worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-        const selection = themeSelections.find(t => t.theme === toutAnnee && t.category === "TOUTE_ANNEE");
-        if (selection?.quantity) worksheet.getCell(`C${currentRow}`).value = selection.quantity;
-        if (selection?.deliveryDate) worksheet.getCell(`D${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
+        if (toutAnnee.quantity && parseInt(toutAnnee.quantity, 10) > 0) worksheet.getCell(`C${currentRow}`).value = toutAnnee.quantity;
+        if (toutAnnee.deliveryDate) worksheet.getCell(`D${currentRow}`).value = format(new Date(toutAnnee.deliveryDate), "dd/MM");
       }
 
       if (saisonnier) {
-        worksheet.getCell(`E${currentRow}`).value = saisonnier;
+        worksheet.getCell(`E${currentRow}`).value = saisonnier.theme;
         worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
-        const selection = themeSelections.find(t => t.theme === saisonnier && t.category === "SAISONNIER");
-        if (selection?.quantity) worksheet.getCell(`G${currentRow}`).value = selection.quantity;
-        if (selection?.deliveryDate) worksheet.getCell(`H${currentRow}`).value = format(new Date(selection.deliveryDate), "dd/MM");
+        if (saisonnier.quantity && parseInt(saisonnier.quantity, 10) > 0) worksheet.getCell(`G${currentRow}`).value = saisonnier.quantity;
+        if (saisonnier.deliveryDate) worksheet.getCell(`H${currentRow}`).value = format(new Date(saisonnier.deliveryDate), "dd/MM");
       }
 
       ["A", "B", "C", "D", "E", "F", "G", "H"].forEach(col => {

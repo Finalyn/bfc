@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { type Order, type ThemeSelection } from "@shared/schema";
 import { FOURNISSEURS_CONFIG, getFournisseurConfig } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -178,15 +178,14 @@ export function generateOrderPDF(order: Order): Buffer {
 
   if (isBDIS) {
     // Layout BDIS: deux colonnes (TOUTE L'ANNEE et SAISONNIER)
-    // Build theme lists FROM the actual selections data, supplemented by hardcoded constants
+    // Utiliser directement les thèmes de la commande (tous sauvegardés pour BDIS)
     const isTouteAnneeCat = (cat: string) => cat === "TOUTE_ANNEE" || cat.toUpperCase().includes("TOUTE");
     const isSaisonnierCat = (cat: string) => cat === "SAISONNIER" || cat.toUpperCase().includes("SAISONNIER");
 
-    // Get unique theme names from selections, preserving order
     const selectionTouteAnnee = themeSelections.filter(t => isTouteAnneeCat(t.category));
     const selectionSaisonnier = themeSelections.filter(t => isSaisonnierCat(t.category));
 
-    // Build display lists: use selection theme names first, then add any hardcoded ones not already present
+    // Dédupliquer par nom normalisé
     const touteAnneeNames: string[] = [];
     const touteAnneeUsed = new Set<string>();
     for (const s of selectionTouteAnnee) {
@@ -194,12 +193,6 @@ export function generateOrderPDF(order: Order): Buffer {
       if (!touteAnneeUsed.has(norm)) {
         touteAnneeNames.push(s.theme);
         touteAnneeUsed.add(norm);
-      }
-    }
-    for (const t of THEMES_TOUTE_ANNEE) {
-      if (!touteAnneeUsed.has(normalizeThemeName(t))) {
-        touteAnneeNames.push(t);
-        touteAnneeUsed.add(normalizeThemeName(t));
       }
     }
 
@@ -210,12 +203,6 @@ export function generateOrderPDF(order: Order): Buffer {
       if (!saisonnierUsed.has(norm)) {
         saisonnierNames.push(s.theme);
         saisonnierUsed.add(norm);
-      }
-    }
-    for (const t of THEMES_SAISONNIER) {
-      if (!saisonnierUsed.has(normalizeThemeName(t))) {
-        saisonnierNames.push(t);
-        saisonnierUsed.add(normalizeThemeName(t));
       }
     }
 

@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { type Order, THEMES_TOUTE_ANNEE, THEMES_SAISONNIER, type ThemeSelection } from "@shared/schema";
+import { type Order, type ThemeSelection } from "@shared/schema";
 import { FOURNISSEURS_CONFIG } from "@shared/fournisseurs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -165,7 +165,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   console.log(`PDF Client: ${themeSelections.length} entries, ${filledSelections.length} with qty`, themeSelections.slice(0, 3));
 
   if (order.fournisseur === "BDIS" || !order.fournisseur) {
-    // Build theme lists FROM actual selections, supplemented by hardcoded constants
+    // Layout BDIS: utiliser directement les thèmes de la commande (tous sauvegardés pour BDIS)
     const isTouteAnneeCat = (cat: string) => cat === "TOUTE_ANNEE" || cat.toUpperCase().includes("TOUTE");
     const isSaisonnierCat = (cat: string) => cat === "SAISONNIER" || cat.toUpperCase().includes("SAISONNIER");
 
@@ -178,18 +178,12 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       const norm = normalizeThemeName(s.theme);
       if (!touteAnneeUsed.has(norm)) { touteAnneeNames.push(s.theme); touteAnneeUsed.add(norm); }
     }
-    for (const t of THEMES_TOUTE_ANNEE) {
-      if (!touteAnneeUsed.has(normalizeThemeName(t))) { touteAnneeNames.push(t); touteAnneeUsed.add(normalizeThemeName(t)); }
-    }
 
     const saisonnierNames: string[] = [];
     const saisonnierUsed = new Set<string>();
     for (const s of selectionSaisonnier) {
       const norm = normalizeThemeName(s.theme);
       if (!saisonnierUsed.has(norm)) { saisonnierNames.push(s.theme); saisonnierUsed.add(norm); }
-    }
-    for (const t of THEMES_SAISONNIER) {
-      if (!saisonnierUsed.has(normalizeThemeName(t))) { saisonnierNames.push(t); saisonnierUsed.add(normalizeThemeName(t)); }
     }
 
     const selectionMap = new Map<string, ThemeSelection>();

@@ -602,27 +602,28 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   };
 
   const proceedWithSubmit = (data: FormData) => {
-    const filteredSelections = themeSelections.filter(t => t.quantity || t.deliveryDate);
+    const isBDIS = data.fournisseur === "BDIS";
+    // BDIS: sauvegarder TOUS les thèmes (le PDF affiche tout le catalogue)
+    // Autres: sauvegarder uniquement les thèmes commandés
+    const selectionsToSave = isBDIS
+      ? themeSelections
+      : themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
+    const filledSelections = themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
 
     // Debug logging
     console.log(`📋 OrderForm - themeSelections state: ${themeSelections.length} entries`);
-    console.log(`📋 OrderForm - filteredSelections: ${filteredSelections.length} entries`);
-    if (filteredSelections.length > 0) {
-      console.log(`📋 OrderForm - entries:`, filteredSelections.map(t => `${t.theme} [${t.category}] qty=${t.quantity} date=${t.deliveryDate}`));
-    } else {
-      console.log(`⚠️ OrderForm - NO SELECTIONS! Full themeSelections state:`, themeSelections);
-    }
+    console.log(`📋 OrderForm - selectionsToSave: ${selectionsToSave.length}, filledSelections: ${filledSelections.length}`);
 
     onNext({
       ...data,
       fournisseur: data.fournisseur,
-      themeSelections: JSON.stringify(filteredSelections),
+      themeSelections: JSON.stringify(selectionsToSave),
       clientName: data.responsableName,
       clientEmail: data.responsableEmail,
       supplier: data.fournisseur,
-      productTheme: filteredSelections.map(t => t.theme).join(", ") || "Divers",
-      quantity: filteredSelections.map(t => t.quantity).filter(Boolean).join(", ") || "1",
-      deliveryDate: filteredSelections[0]?.deliveryDate || data.orderDate,
+      productTheme: filledSelections.map(t => t.theme).join(", ") || "Divers",
+      quantity: filledSelections.map(t => t.quantity).filter(Boolean).join(", ") || "1",
+      deliveryDate: filledSelections[0]?.deliveryDate || data.orderDate,
       originalClientData: originalClientData ? JSON.stringify(originalClientData) : null,
       numeroTva: data.numeroTva,
     });
