@@ -254,44 +254,55 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
 
     yPos += Math.max(touteAnneeNames.length, saisonnierNames.length) * 5.5 + 8;
   } else {
+    // Layout autres fournisseurs: afficher tous les thèmes par catégorie
     const fullTableWidth = pageWidth - 2 * margin;
-    const headerHeight = 7;
-    doc.setFillColor(60, 60, 60);
-    doc.rect(margin, yPos, fullTableWidth, headerHeight, "F");
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text("PRODUIT", margin + 2, yPos + 5);
-    doc.text("CATEGORIE", margin + fullTableWidth * 0.5, yPos + 5);
-    doc.text("QTE", margin + fullTableWidth - 30, yPos + 5);
-    doc.text("Date livr.", margin + fullTableWidth - 18, yPos + 5);
-    doc.setTextColor(0, 0, 0);
-
-    yPos += headerHeight;
     const rowHeight = 5.5;
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
 
-    filledSelections.forEach((selection, idx) => {
-      const rowY = yPos + idx * rowHeight;
-      if (idx % 2 === 0) {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin, rowY, fullTableWidth, rowHeight, "F");
-      }
-      doc.setDrawColor(180, 180, 180);
-      doc.rect(margin, rowY, fullTableWidth, rowHeight);
-      
-      const themeName = selection.theme.length > 35 ? selection.theme.substring(0, 32) + "..." : selection.theme;
-      doc.text(themeName, margin + 2, rowY + 4);
-      doc.text(selection.category || "", margin + fullTableWidth * 0.5, rowY + 4);
-      doc.text(selection.quantity || "", margin + fullTableWidth - 28, rowY + 4);
-      if (selection.deliveryDate) {
-        doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + fullTableWidth - 15, rowY + 4);
-      }
-    });
+    const categoriesUniques = Array.from(new Set(themeSelections.map(t => t.category)));
 
-    yPos += Math.max(filledSelections.length, 1) * rowHeight + 8;
+    if (categoriesUniques.length > 0) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+
+      categoriesUniques.forEach((category) => {
+        const categoryThemes = themeSelections.filter(t => t.category === category);
+
+        // En-tête de catégorie
+        doc.setFillColor(60, 60, 60);
+        doc.rect(margin, yPos, fullTableWidth, 6, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.text(category, margin + 2, yPos + 4);
+        doc.text("QTE", margin + fullTableWidth - 30, yPos + 4);
+        doc.text("Date", margin + fullTableWidth - 15, yPos + 4);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+
+        // Lignes des produits
+        doc.setFont("helvetica", "normal");
+        categoryThemes.forEach((t, idx) => {
+          if (idx % 2 === 0) {
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, yPos, fullTableWidth, rowHeight, "F");
+          }
+          doc.setDrawColor(180, 180, 180);
+          doc.rect(margin, yPos, fullTableWidth, rowHeight);
+
+          doc.text(t.theme, margin + 2, yPos + 4);
+          if (t.quantity && parseInt(t.quantity, 10) > 0) {
+            doc.text(t.quantity, margin + fullTableWidth - 28, yPos + 4);
+          }
+          if (t.deliveryDate) {
+            try { doc.text(format(new Date(t.deliveryDate), "dd/MM/yy"), margin + fullTableWidth - 13, yPos + 4); } catch (e) {}
+          }
+          yPos += rowHeight;
+        });
+
+        yPos += 3;
+      });
+
+      yPos += 5;
+    }
   }
 
   const boxWidth = (pageWidth - 2 * margin - gap) / 2;

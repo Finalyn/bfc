@@ -75,7 +75,6 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
 
   // Thèmes
   const themeSelections: ThemeSelection[] = order.themeSelections ? JSON.parse(order.themeSelections) : [];
-  const filteredThemes = themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
   const isBDIS = order.fournisseur === "BDIS";
 
   if (isBDIS) {
@@ -141,17 +140,17 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
       currentRow++;
     }
   } else {
-    // Layout autres fournisseurs: afficher uniquement les produits commandés par catégorie
-    const categoriesUniques = Array.from(new Set(filteredThemes.map(t => t.category)));
-    
+    // Layout autres fournisseurs: afficher tous les thèmes par catégorie
+    const categoriesUniques = Array.from(new Set(themeSelections.map(t => t.category)));
+
     if (categoriesUniques.length > 0) {
-      worksheet.getCell(`A${currentRow}`).value = "PRODUITS COMMANDÉS";
+      worksheet.getCell(`A${currentRow}`).value = "PRODUITS";
       worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
       worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
       currentRow++;
 
       categoriesUniques.forEach((category) => {
-        const categoryThemes = filteredThemes.filter(t => t.category === category);
+        const categoryThemes = themeSelections.filter(t => t.category === category);
         
         // En-tête de catégorie
         worksheet.getCell(`A${currentRow}`).value = category;

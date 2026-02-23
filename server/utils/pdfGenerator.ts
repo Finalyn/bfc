@@ -299,19 +299,19 @@ export function generateOrderPDF(order: Order): Buffer {
 
     yPos += Math.max(touteAnneeNames.length, saisonnierNames.length) * 5.5 + 8;
   } else {
-    // Layout autres fournisseurs: afficher uniquement les produits commandés par catégorie
+    // Layout autres fournisseurs: afficher tous les thèmes par catégorie
     const tableWidth = pageWidth - 2 * margin;
     const rowHeight = 5.5;
-    
+
     // Grouper les thèmes par catégorie
-    const categoriesUniques = Array.from(new Set(filteredThemes.map(t => t.category)));
-    
+    const categoriesUniques = Array.from(new Set(themeSelections.map(t => t.category)));
+
     if (categoriesUniques.length > 0) {
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      
+
       categoriesUniques.forEach((category, catIdx) => {
-        const categoryThemes = filteredThemes.filter(t => t.category === category);
+        const categoryThemes = themeSelections.filter(t => t.category === category);
         
         // En-tête de catégorie
         doc.setFillColor(60, 60, 60);
