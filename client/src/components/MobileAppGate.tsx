@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Smartphone, Download, Share, Plus, ArrowDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Apple, Smartphone, Share, Plus, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { APP_VERSION } from "@/lib/version";
 
 interface MobileAppGateProps {
   children: React.ReactNode;
@@ -10,19 +11,15 @@ interface MobileAppGateProps {
 
 function detectMobileDevice(): boolean {
   if (typeof window === 'undefined') return false;
-  
   const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
   const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i;
-  
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const isSmallScreen = window.innerWidth < 768;
-  
   return mobileRegex.test(userAgent.toLowerCase()) || (isTouchDevice && isSmallScreen);
 }
 
 function isStandalonePwa(): boolean {
   if (typeof window === 'undefined') return false;
-  
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     (window.navigator as any).standalone === true ||
@@ -31,49 +28,35 @@ function isStandalonePwa(): boolean {
   );
 }
 
-function isIOS(): boolean {
-  if (typeof window === 'undefined') return false;
-  return /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
-}
+type Screen = "select" | "ios" | "android";
 
 export function MobileAppGate({ children }: MobileAppGateProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [screen, setScreen] = useState<Screen>("select");
   const { installable, install } = usePwaInstall();
 
   useEffect(() => {
     const checkDevice = () => {
-      const mobile = detectMobileDevice();
-      const standalone = isStandalonePwa();
-      
-      setIsMobile(mobile);
-      setIsInstalled(standalone);
-    };
-
-    checkDevice();
-    
-    window.addEventListener('resize', checkDevice);
-    
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const handleDisplayModeChange = () => {
+      setIsMobile(detectMobileDevice());
       setIsInstalled(isStandalonePwa());
     };
-    mediaQuery.addEventListener('change', handleDisplayModeChange);
-
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleChange = () => setIsInstalled(isStandalonePwa());
+    mediaQuery.addEventListener('change', handleChange);
     return () => {
       window.removeEventListener('resize', checkDevice);
-      mediaQuery.removeEventListener('change', handleDisplayModeChange);
+      mediaQuery.removeEventListener('change', handleChange);
     };
   }, []);
 
-  const handleInstall = async () => {
-    if (isIOS()) {
-      setShowIOSInstructions(true);
-    } else if (installable) {
+  const handleAndroidClick = async () => {
+    if (installable) {
       await install();
     } else {
-      setShowIOSInstructions(true);
+      setScreen("android");
     }
   };
 
@@ -82,120 +65,151 @@ export function MobileAppGate({ children }: MobileAppGateProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
-      <Card className="w-full max-w-md border-2 border-primary/20">
-        <CardContent className="p-8 text-center space-y-6">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <Smartphone className="w-10 h-10 text-primary" />
-          </div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-black text-gray-900">BFC APP</h1>
+          <p className="text-sm text-gray-500">Gestion de commandes</p>
+        </div>
 
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              BFC APP
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Pour une meilleure expérience, installez l'application sur votre téléphone
-            </p>
-          </div>
+        {/* Card */}
+        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+          <CardContent className="p-6">
+            {screen === "select" && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Installer l'application</h2>
+                  <p className="text-sm text-gray-500">Choisissez votre appareil</p>
+                </div>
 
-          {!showIOSInstructions ? (
-            <>
-              <Button 
-                size="lg" 
-                className="w-full h-14 text-lg gap-3"
-                onClick={handleInstall}
-                data-testid="button-install-app"
-              >
-                <Download className="w-5 h-5" />
-                Installer l'application
-              </Button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setScreen("ios")}
+                    className="w-full flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Apple className="w-5 h-5 text-gray-700" />
+                    <span className="font-medium text-gray-900 flex-1">iPhone / iPad</span>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </button>
 
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>Avantages de l'application :</p>
-                <ul className="text-left space-y-1 pl-4">
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Accès rapide depuis l'écran d'accueil
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Notifications push pour les commandes
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Mode hors-ligne
-                  </li>
-                </ul>
+                  <button
+                    onClick={handleAndroidClick}
+                    className="w-full flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Smartphone className="w-5 h-5 text-gray-700" />
+                    <span className="font-medium text-gray-900 flex-1">Android</span>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              <p className="font-medium text-gray-900 dark:text-white">
-                {isIOS() ? "Installation sur iPhone/iPad :" : "Installation manuelle :"}
-              </p>
-              
-              <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">
-                    1
+            )}
+
+            {screen === "ios" && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Installer l'application</h2>
+                  <p className="text-sm text-blue-500">iPhone / iPad</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      1
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span>Dans le navigateur, appuyez sur</span>
+                      <Share className="w-4 h-4 text-blue-500" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span>Appuyez sur</span>
-                    {isIOS() ? (
-                      <Share className="w-5 h-5 text-primary" />
-                    ) : (
-                      <span className="font-mono text-xs bg-gray-200 px-2 py-1 rounded">⋮</span>
-                    )}
-                    <span>{isIOS() ? "(Partager)" : "(Menu)"}</span>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      2
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Plus className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium">"Sur l'écran d'accueil"</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      3
+                    </div>
+                    <span className="text-gray-700">Confirmez l'installation</span>
                   </div>
                 </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">
-                    2
+
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => setScreen("select")}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Retour
+                </Button>
+              </div>
+            )}
+
+            {screen === "android" && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Installer l'application</h2>
+                  <p className="text-sm text-blue-500">Android</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      1
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span>Appuyez sur</span>
+                      <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded">&#8942;</span>
+                      <span>(Menu)</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span>Sélectionnez</span>
-                    {isIOS() ? (
-                      <>
-                        <Plus className="w-5 h-5 text-primary" />
-                        <span className="font-medium">"Sur l'écran d'accueil"</span>
-                      </>
-                    ) : (
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      2
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Download className="w-4 h-4 text-blue-500" />
                       <span className="font-medium">"Installer l'application"</span>
-                    )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                      3
+                    </div>
+                    <span className="text-gray-700">Confirmez l'installation</span>
                   </div>
                 </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">
-                    3
-                  </div>
-                  <span>Confirmez l'installation</span>
-                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => setScreen("select")}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Retour
+                </Button>
               </div>
+            )}
+          </CardContent>
+        </Card>
 
-              <div className="flex items-center justify-center gap-2 text-primary">
-                <ArrowDown className="w-5 h-5 animate-bounce" />
-                <span className="text-sm font-medium">Barre de navigation en bas</span>
-                <ArrowDown className="w-5 h-5 animate-bounce" />
-              </div>
-
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowIOSInstructions(false)}
-              >
-                Retour
-              </Button>
-            </div>
-          )}
-
-          <p className="text-xs text-muted-foreground">
-            Cette application nécessite une installation pour fonctionner sur mobile
+        {/* Footer */}
+        <div className="text-center space-y-1">
+          <p className="text-xs text-gray-400">Application interne BFC</p>
+          <p className="text-xs text-gray-400">
+            v{APP_VERSION} - <a href="mailto:support@finalyn.app" className="text-blue-400 hover:underline">support@finalyn.app</a>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

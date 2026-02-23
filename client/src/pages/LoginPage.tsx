@@ -134,7 +134,7 @@ export default function LoginPage() {
           Application réservée aux commerciaux BFC
         </p>
         <p className="text-center text-xs text-gray-400 mt-4" data-testid="text-app-version">
-          Version {APP_VERSION}
+          Version {APP_VERSION} - <a href="mailto:support@finalyn.app" className="text-blue-400 hover:underline">support@finalyn.app</a>
         </p>
       </div>
     </div>
