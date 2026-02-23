@@ -602,12 +602,9 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   };
 
   const proceedWithSubmit = (data: FormData) => {
-    const isBDIS = data.fournisseur === "BDIS";
-    // BDIS: sauvegarder TOUS les thèmes (le PDF affiche tout le catalogue)
-    // Autres: sauvegarder uniquement les thèmes commandés
-    const selectionsToSave = isBDIS
-      ? themeSelections
-      : themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
+    // Sauvegarder TOUS les thèmes pour tous les fournisseurs
+    // (le PDF filtre ensuite selon le fournisseur : BDIS affiche tout, les autres uniquement les commandés)
+    const selectionsToSave = themeSelections;
     const filledSelections = themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
 
     // Debug logging
