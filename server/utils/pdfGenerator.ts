@@ -158,7 +158,7 @@ export function generateOrderPDF(order: Order): Buffer {
   } catch (e) {
     console.error("❌ PDF: Erreur parsing themeSelections:", e, "Raw value:", order.themeSelections);
   }
-  const filteredThemes = themeSelections.filter(t => t.quantity || t.deliveryDate);
+  const filteredThemes = themeSelections.filter(t => parseInt(t.quantity || "0", 10) > 0);
 
   // Debug logging
   console.log(`📋 PDF Generation - themeSelections: ${themeSelections.length} entries, ${filteredThemes.length} with data`);
@@ -237,12 +237,12 @@ export function generateOrderPDF(order: Order): Buffer {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
     doc.text("THEME", margin + 2, yPos + 5);
-    doc.text("QTE", margin + tableWidth - 20, yPos + 5);
-    doc.text("Date", margin + tableWidth - 10, yPos + 5);
+    doc.text("QTE", margin + tableWidth - 26, yPos + 5);
+    doc.text("Date", margin + tableWidth - 16, yPos + 5);
 
     doc.text("THEME", margin + tableWidth + gap + 2, yPos + 5);
-    doc.text("QTE", margin + 2 * tableWidth + gap - 20, yPos + 5);
-    doc.text("Date", margin + 2 * tableWidth + gap - 10, yPos + 5);
+    doc.text("QTE", margin + 2 * tableWidth + gap - 26, yPos + 5);
+    doc.text("Date", margin + 2 * tableWidth + gap - 16, yPos + 5);
     doc.setTextColor(0, 0, 0);
 
     yPos += headerHeight;
@@ -275,13 +275,13 @@ export function generateOrderPDF(order: Order): Buffer {
       const selection = selectionMap.get(theme);
       doc.text(theme, margin + 2, rowY + 4);
       if (selection?.quantity) {
-        doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
+        doc.text(selection.quantity, margin + tableWidth - 24, rowY + 4);
       }
       if (selection?.deliveryDate) {
         try {
-          doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + tableWidth - 9, rowY + 4);
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + tableWidth - 15, rowY + 4);
         } catch (e) {
-          doc.text(selection.deliveryDate, margin + tableWidth - 9, rowY + 4);
+          doc.text(selection.deliveryDate, margin + tableWidth - 15, rowY + 4);
         }
       }
     });
@@ -299,13 +299,13 @@ export function generateOrderPDF(order: Order): Buffer {
       const selection = selectionMap.get(theme);
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
       if (selection?.quantity) {
-        doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
+        doc.text(selection.quantity, margin + 2 * tableWidth + gap - 24, rowY + 4);
       }
       if (selection?.deliveryDate) {
         try {
-          doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + 2 * tableWidth + gap - 9, rowY + 4);
+          doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + 2 * tableWidth + gap - 15, rowY + 4);
         } catch (e) {
-          doc.text(selection.deliveryDate, margin + 2 * tableWidth + gap - 9, rowY + 4);
+          doc.text(selection.deliveryDate, margin + 2 * tableWidth + gap - 15, rowY + 4);
         }
       }
     });

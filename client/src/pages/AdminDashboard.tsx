@@ -972,7 +972,7 @@ export default function AdminDashboard() {
                             const hasPendingModification = client.modificationApproved === false && client.previousValues;
                             const hasRecentlyApproved = approvedAt && approvedAt > twoMonthsAgo;
                             
-                            let previousData: { interloc?: string; tel?: string; portable?: string; mail?: string } = {};
+                            let previousData: { nom?: string; adresse1?: string; codePostal?: string; ville?: string; interloc?: string; tel?: string; portable?: string; mail?: string } = {};
                             if (client.previousValues) {
                               try {
                                 previousData = JSON.parse(client.previousValues);
@@ -1002,28 +1002,56 @@ export default function AdminDashboard() {
                                         <div className="space-y-3">
                                           <h4 className="font-medium text-sm">Modifications en attente</h4>
                                           <div className="space-y-2 text-xs">
-                                            {previousData.interloc !== client.interloc && (
+                                            {previousData.nom !== undefined && previousData.nom !== client.nom && (
+                                              <div>
+                                                <span className="font-medium">Nom:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.nom || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.nom || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.adresse1 !== undefined && previousData.adresse1 !== client.adresse1 && (
+                                              <div>
+                                                <span className="font-medium">Adresse:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.adresse1 || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.adresse1 || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.codePostal !== undefined && previousData.codePostal !== client.codePostal && (
+                                              <div>
+                                                <span className="font-medium">Code postal:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.codePostal || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.codePostal || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.ville !== undefined && previousData.ville !== client.ville && (
+                                              <div>
+                                                <span className="font-medium">Ville:</span>
+                                                <div className="text-muted-foreground line-through">{previousData.ville || "(vide)"}</div>
+                                                <div className="text-primary font-medium">{client.ville || "(vide)"}</div>
+                                              </div>
+                                            )}
+                                            {previousData.interloc !== undefined && previousData.interloc !== client.interloc && (
                                               <div>
                                                 <span className="font-medium">Interlocuteur:</span>
                                                 <div className="text-muted-foreground line-through">{previousData.interloc || "(vide)"}</div>
                                                 <div className="text-primary font-medium">{client.interloc || "(vide)"}</div>
                                               </div>
                                             )}
-                                            {previousData.portable !== client.portable && (
+                                            {previousData.portable !== undefined && previousData.portable !== client.portable && (
                                               <div>
                                                 <span className="font-medium">Portable:</span>
                                                 <div className="text-muted-foreground line-through">{previousData.portable || "(vide)"}</div>
                                                 <div className="text-primary font-medium">{client.portable || "(vide)"}</div>
                                               </div>
                                             )}
-                                            {previousData.tel !== client.tel && (
+                                            {previousData.tel !== undefined && previousData.tel !== client.tel && (
                                               <div>
                                                 <span className="font-medium">Téléphone:</span>
                                                 <div className="text-muted-foreground line-through">{previousData.tel || "(vide)"}</div>
                                                 <div className="text-primary font-medium">{client.tel || "(vide)"}</div>
                                               </div>
                                             )}
-                                            {previousData.mail !== client.mail && (
+                                            {previousData.mail !== undefined && previousData.mail !== client.mail && (
                                               <div>
                                                 <span className="font-medium">Email:</span>
                                                 <div className="text-muted-foreground line-through">{previousData.mail || "(vide)"}</div>

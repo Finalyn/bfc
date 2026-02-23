@@ -1638,25 +1638,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validated = updateClientSchema.parse(req.body);
       
-      // Check if contact fields are being modified
-      const contactFields = ['interloc', 'portable', 'tel', 'mail'];
-      const hasContactChanges = contactFields.some(field => {
+      // Check if tracked fields are being modified
+      const trackedFields = ['nom', 'adresse1', 'codePostal', 'ville', 'interloc', 'portable', 'tel', 'mail'];
+      const hasChanges = trackedFields.some(field => {
         const newVal = (validated as any)[field];
         const oldVal = (currentClient as any)[field] || "";
         return newVal !== undefined && newVal !== oldVal;
       });
-      
+
       // Prepare update data
       const updateData: any = {
         ...validated,
         updatedAt: new Date(),
       };
-      
-      // If contact fields changed, store previous values and mark as pending approval
-      if (hasContactChanges) {
+
+      // If tracked fields changed, store previous values and mark as pending approval
+      if (hasChanges) {
         // Only store if not already pending (to keep original values)
         if (currentClient.modificationApproved !== false) {
           updateData.previousValues = JSON.stringify({
+            nom: currentClient.nom || "",
+            adresse1: currentClient.adresse1 || "",
+            codePostal: currentClient.codePostal || "",
+            ville: currentClient.ville || "",
             interloc: currentClient.interloc || "",
             portable: currentClient.portable || "",
             tel: currentClient.tel || "",

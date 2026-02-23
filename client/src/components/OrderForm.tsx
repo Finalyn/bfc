@@ -536,37 +536,68 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
   // Fonction pour détecter les changements dans les informations client
   const detectClientChanges = (data: FormData): {field: string, old: string, new: string}[] => {
     if (!originalClientData) return [];
-    
+
     const changes: {field: string, old: string, new: string}[] = [];
-    
-    // Comparer le nom du responsable avec l'interlocuteur
-    if (data.responsableName !== (originalClientData.interloc || "") && data.responsableName) {
-      changes.push({ 
-        field: "Interlocuteur", 
-        old: originalClientData.interloc || "(vide)", 
-        new: data.responsableName 
+
+    // Comparer le nom/enseigne
+    if (data.livraisonEnseigne !== (originalClientData.nom || "") && data.livraisonEnseigne) {
+      changes.push({
+        field: "Nom / Enseigne",
+        old: originalClientData.nom || "(vide)",
+        new: data.livraisonEnseigne
       });
     }
-    
+
+    // Comparer l'adresse
+    const originalAdresse = originalClientData.adresse2
+      ? `${originalClientData.adresse1}, ${originalClientData.adresse2}`
+      : originalClientData.adresse1 || "";
+    if (data.livraisonAdresse !== originalAdresse && data.livraisonAdresse) {
+      changes.push({
+        field: "Adresse",
+        old: originalAdresse || "(vide)",
+        new: data.livraisonAdresse
+      });
+    }
+
+    // Comparer CP / Ville
+    const originalCpVille = `${originalClientData.codePostal || ""} ${originalClientData.ville || ""}`.trim();
+    if (data.livraisonCpVille !== originalCpVille && data.livraisonCpVille) {
+      changes.push({
+        field: "CP / Ville",
+        old: originalCpVille || "(vide)",
+        new: data.livraisonCpVille
+      });
+    }
+
+    // Comparer l'interlocuteur
+    if (data.responsableName !== (originalClientData.interloc || "") && data.responsableName) {
+      changes.push({
+        field: "Interlocuteur",
+        old: originalClientData.interloc || "(vide)",
+        new: data.responsableName
+      });
+    }
+
     // Comparer le téléphone
     const originalTel = originalClientData.portable || originalClientData.tel || "";
     if (data.responsableTel !== originalTel && data.responsableTel) {
-      changes.push({ 
-        field: "Téléphone", 
-        old: originalTel || "(vide)", 
-        new: data.responsableTel 
+      changes.push({
+        field: "Téléphone",
+        old: originalTel || "(vide)",
+        new: data.responsableTel
       });
     }
-    
+
     // Comparer l'email
     if (data.responsableEmail !== (originalClientData.mail || "") && data.responsableEmail) {
-      changes.push({ 
-        field: "Email", 
-        old: originalClientData.mail || "(vide)", 
-        new: data.responsableEmail 
+      changes.push({
+        field: "Email",
+        old: originalClientData.mail || "(vide)",
+        new: data.responsableEmail
       });
     }
-    
+
     return changes;
   };
 
@@ -658,6 +689,27 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     
     // Préparer les données de mise à jour
     const updates: any = {};
+    if (pendingFormData.livraisonEnseigne !== (originalClientData.nom || "")) {
+      updates.nom = pendingFormData.livraisonEnseigne;
+    }
+    // Extraire adresse1 depuis l'adresse combinée
+    const originalAdresse = originalClientData.adresse2
+      ? `${originalClientData.adresse1}, ${originalClientData.adresse2}`
+      : originalClientData.adresse1 || "";
+    if (pendingFormData.livraisonAdresse !== originalAdresse) {
+      updates.adresse1 = pendingFormData.livraisonAdresse;
+    }
+    // Extraire CP et ville
+    const originalCpVille = `${originalClientData.codePostal || ""} ${originalClientData.ville || ""}`.trim();
+    if (pendingFormData.livraisonCpVille !== originalCpVille) {
+      const cpVilleParts = (pendingFormData.livraisonCpVille || "").match(/^(\d{5})\s*(.*)$/);
+      if (cpVilleParts) {
+        updates.codePostal = cpVilleParts[1];
+        updates.ville = cpVilleParts[2];
+      } else {
+        updates.ville = pendingFormData.livraisonCpVille;
+      }
+    }
     if (pendingFormData.responsableName !== (originalClientData.interloc || "")) {
       updates.interloc = pendingFormData.responsableName;
     }

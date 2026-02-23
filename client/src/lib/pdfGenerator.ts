@@ -204,11 +204,11 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
     doc.text("THEME", margin + 2, yPos + 5);
-    doc.text("QTE", margin + tableWidth - 20, yPos + 5);
-    doc.text("Date", margin + tableWidth - 10, yPos + 5);
+    doc.text("QTE", margin + tableWidth - 26, yPos + 5);
+    doc.text("Date", margin + tableWidth - 16, yPos + 5);
     doc.text("THEME", margin + tableWidth + gap + 2, yPos + 5);
-    doc.text("QTE", margin + 2 * tableWidth + gap - 20, yPos + 5);
-    doc.text("Date", margin + 2 * tableWidth + gap - 10, yPos + 5);
+    doc.text("QTE", margin + 2 * tableWidth + gap - 26, yPos + 5);
+    doc.text("Date", margin + 2 * tableWidth + gap - 16, yPos + 5);
     doc.setTextColor(0, 0, 0);
 
     yPos += headerHeight;
@@ -236,9 +236,9 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.rect(margin, rowY, tableWidth, rowHeight);
       const selection = selectionMap.get(theme);
       doc.text(theme, margin + 2, rowY + 4);
-      if (selection?.quantity) doc.text(selection.quantity, margin + tableWidth - 18, rowY + 4);
+      if (selection?.quantity) doc.text(selection.quantity, margin + tableWidth - 24, rowY + 4);
       if (selection?.deliveryDate) {
-        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + tableWidth - 9, rowY + 4); } catch (e) {}
+        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + tableWidth - 15, rowY + 4); } catch (e) {}
       }
     });
 
@@ -252,9 +252,9 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       doc.rect(margin + tableWidth + gap, rowY, tableWidth, rowHeight);
       const selection = selectionMap.get(theme);
       doc.text(theme, margin + tableWidth + gap + 2, rowY + 4);
-      if (selection?.quantity) doc.text(selection.quantity, margin + 2 * tableWidth + gap - 18, rowY + 4);
+      if (selection?.quantity) doc.text(selection.quantity, margin + 2 * tableWidth + gap - 24, rowY + 4);
       if (selection?.deliveryDate) {
-        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + 2 * tableWidth + gap - 9, rowY + 4); } catch (e) {}
+        try { doc.text(format(new Date(selection.deliveryDate), "dd/MM/yy"), margin + 2 * tableWidth + gap - 15, rowY + 4); } catch (e) {}
       }
     });
 

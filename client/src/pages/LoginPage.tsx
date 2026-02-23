@@ -64,12 +64,12 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+        <Card className="border-0 border-l-4 border-l-blue-500 shadow-md rounded-xl">
           <CardContent className="p-6">
             <div className="space-y-5">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Connexion</h2>
-                <p className="text-sm text-blue-500">Espace commercial</p>
+                <p className="text-sm text-gray-500">Espace commercial</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -124,17 +124,16 @@ export default function LoginPage() {
                   {!isLoading && <ArrowRight className="w-4 h-4" />}
                 </Button>
               </form>
+
+              <p className="text-xs text-gray-400 text-center pt-2">Application interne BFC</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Footer */}
-        <div className="text-center space-y-1">
-          <p className="text-xs text-gray-400">Application interne BFC</p>
-          <p className="text-center text-xs text-gray-400" data-testid="text-app-version">
-            v{APP_VERSION} - <a href="mailto:support@finalyn.app" className="text-blue-400 hover:underline">support@finalyn.app</a>
-          </p>
-        </div>
+        <p className="text-center text-xs text-gray-400" data-testid="text-app-version">
+          v{APP_VERSION} - <a href="mailto:support@finalyn.app" className="text-blue-400 hover:underline">support@finalyn.app</a>
+        </p>
       </div>
     </div>
   );
