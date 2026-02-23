@@ -12,7 +12,7 @@ export function OfflineBanner() {
   const { installable, install } = usePwaInstall();
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('banner-dismissed') === 'true');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function OfflineBanner() {
     }
   };
 
-  if (dismissed && online && pendingCount === 0 && !installable) {
+  if (dismissed && online && pendingCount === 0) {
     return null;
   }
 
@@ -142,7 +142,7 @@ export function OfflineBanner() {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setDismissed(true)}
+              onClick={() => { setDismissed(true); sessionStorage.setItem('banner-dismissed', 'true'); }}
               className="h-6 w-6 text-white hover:bg-white/20"
               data-testid="button-dismiss-banner"
             >

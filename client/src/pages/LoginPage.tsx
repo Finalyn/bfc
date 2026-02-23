@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, User } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { APP_VERSION } from "@/lib/version";
 
@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!username || !password) {
       toast({
         title: "Erreur",
@@ -34,7 +34,7 @@ export default function LoginPage() {
         username,
         password
       });
-      
+
       if (data.success) {
         localStorage.setItem("authenticated", "true");
         localStorage.setItem("user", JSON.stringify(data.user));
@@ -55,87 +55,86 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-white">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-200">
-              <Lock className="w-8 h-8 text-gray-500" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Gestion de Commandes
-            </h1>
-            <p className="text-sm text-gray-600">
-              Connectez-vous avec votre identifiant commercial
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">
-                Identifiant
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="username"
-                  type="text"
-                  data-testid="input-username"
-                  placeholder="Identifiant"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                  className="h-12 text-base pl-10"
-                  disabled={isLoading}
-                  autoComplete="username"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
-                Mot de passe
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  data-testid="input-password"
-                  placeholder="Entrez le mot de passe"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !isLoading) {
-                      e.preventDefault();
-                      handleSubmit(e as any);
-                    }
-                  }}
-                  className="h-12 text-base pl-10"
-                  disabled={isLoading}
-                  autoComplete="current-password"
-                  enterKeyHint="go"
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              data-testid="button-login"
-              className="w-full h-14 text-base font-medium"
-              disabled={isLoading}
-            >
-              {isLoading ? "Connexion..." : "Se connecter"}
-            </Button>
-          </form>
-
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-black text-gray-900">BFC APP</h1>
+          <p className="text-sm text-gray-500">Gestion de commandes</p>
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-6">
-          Application réservée aux commerciaux BFC
-        </p>
-        <p className="text-center text-xs text-gray-400 mt-4" data-testid="text-app-version">
-          Version {APP_VERSION} - <a href="mailto:support@finalyn.app" className="text-blue-400 hover:underline">support@finalyn.app</a>
-        </p>
+        {/* Card */}
+        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+          <CardContent className="p-6">
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Connexion</h2>
+                <p className="text-sm text-blue-500">Espace commercial</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="username" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Identifiant
+                  </label>
+                  <Input
+                    id="username"
+                    type="text"
+                    data-testid="input-username"
+                    placeholder="Identifiant"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                    className="h-11 text-base"
+                    disabled={isLoading}
+                    autoComplete="username"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Mot de passe
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    data-testid="input-password"
+                    placeholder="Mot de passe"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isLoading) {
+                        e.preventDefault();
+                        handleSubmit(e as any);
+                      }
+                    }}
+                    className="h-11 text-base"
+                    disabled={isLoading}
+                    autoComplete="current-password"
+                    enterKeyHint="go"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  data-testid="button-login"
+                  className="w-full h-12 text-base font-medium gap-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Connexion..." : "Se connecter"}
+                  {!isLoading && <ArrowRight className="w-4 h-4" />}
+                </Button>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Footer */}
+        <div className="text-center space-y-1">
+          <p className="text-xs text-gray-400">Application interne BFC</p>
+          <p className="text-center text-xs text-gray-400" data-testid="text-app-version">
+            v{APP_VERSION} - <a href="mailto:support@finalyn.app" className="text-blue-400 hover:underline">support@finalyn.app</a>
+          </p>
+        </div>
       </div>
     </div>
   );
