@@ -444,7 +444,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const [isImporting, setIsImporting] = useState(false);
   const [isMigratingCategories, setIsMigratingCategories] = useState(false);
 
   const handleMigrateCategories = async () => {
@@ -489,30 +488,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleImportExcel = async () => {
-    if (isImporting) return;
-    setIsImporting(true);
-    try {
-      const response = await fetch('/api/admin/import-excel', { method: 'POST' });
-      const data = await response.json();
-      if (response.ok) {
-        toast({ 
-          title: "Import réussi", 
-          description: `Importé: ${data.imported.commerciaux} commerciaux, ${data.imported.fournisseurs} fournisseurs, ${data.imported.themes} thèmes, ${data.imported.clients} clients` 
-        });
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/commerciaux'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/fournisseurs'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/themes'] });
-      } else {
-        throw new Error(data.message || "Erreur d'import");
-      }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    } finally {
-      setIsImporting(false);
-    }
-  };
 
   const openCreateModal = () => {
     setIsCreating(true);
@@ -860,18 +835,6 @@ export default function AdminDashboard() {
                       <FileSpreadsheet className="w-4 h-4 mr-2" />
                     )}
                     {exportingAll ? "Export en cours..." : "Exporter toute la base"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={handleImportExcel}
-                    disabled={isImporting}
-                    data-testid="menu-import-excel"
-                  >
-                    {isImporting ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    {isImporting ? "Import en cours..." : "Importer depuis Excel"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -14,7 +14,7 @@ import { generateOrderExcel } from "./utils/excelGenerator";
 import { sendOrderEmails } from "./utils/emailSender";
 import { format } from "date-fns";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
-import { data, loadExcelData, type Client as ExcelClient } from "./dataLoader";
+import { data, type Client as ExcelClient } from "./dataLoader";
 import { db, pool } from "./db";
 import { eq, or, sql, count, asc, desc } from "drizzle-orm";
 
@@ -1371,84 +1371,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { page, pageSize, search, sortField, sortDir, offset: (page - 1) * pageSize };
   };
 
-  // Import Excel data to PostgreSQL
-  app.post("/api/admin/import-excel", async (req, res) => {
-    try {
-      const excelData = loadExcelData();
-      let imported = { commerciaux: 0, fournisseurs: 0, themes: 0, clients: 0 };
-      
-      // Import commerciaux
-      const existingCommerciaux = await db.select().from(commerciaux);
-      if (existingCommerciaux.length === 0) {
-        for (const c of excelData.commerciaux) {
-          await db.insert(commerciaux).values({ nom: c.displayName || c.nom });
-        }
-        imported.commerciaux = excelData.commerciaux.length;
-      }
-      
-      // Import fournisseurs
-      const existingFournisseurs = await db.select().from(fournisseurs);
-      if (existingFournisseurs.length === 0) {
-        for (const f of excelData.fournisseurs) {
-          await db.insert(fournisseurs).values({ nom: f.nom, nomCourt: f.nomCourt });
-        }
-        imported.fournisseurs = excelData.fournisseurs.length;
-      }
-      
-      // Import themes
-      const existingThemes = await db.select().from(themes);
-      if (existingThemes.length === 0) {
-        for (const t of excelData.themes) {
-          await db.insert(themes).values({ 
-            theme: t.theme, 
-            fournisseur: t.fournisseur,
-            categorie: t.categorie || "TOUTE_ANNEE"
-          });
-        }
-        imported.themes = excelData.themes.length;
-      }
-      
-      // Import clients from Excel (batch insert)
-      const existingClients = await db.select().from(clients);
-      const existingCodes = new Set(existingClients.map(c => c.code));
-      const now = new Date();
-      
-      const clientsToInsert = excelData.clients
-        .filter(c => !existingCodes.has(c.code))
-        .map(c => ({
-          code: c.code,
-          nom: c.nom,
-          adresse1: c.adresse1 || "",
-          adresse2: c.adresse2 || "",
-          codePostal: c.codePostal || "",
-          ville: c.ville || "",
-          pays: c.pays || "",
-          interloc: c.interloc || "",
-          tel: c.tel || "",
-          portable: c.portable || "",
-          fax: c.fax || "",
-          mail: c.mail || "",
-          isFromExcel: true,
-          createdAt: now,
-          updatedAt: now,
-        }));
-      
-      // Insert in batches of 500
-      const BATCH_SIZE = 500;
-      for (let i = 0; i < clientsToInsert.length; i += BATCH_SIZE) {
-        const batch = clientsToInsert.slice(i, i + BATCH_SIZE);
-        if (batch.length > 0) {
-          await db.insert(clients).values(batch);
-        }
-      }
-      imported.clients = clientsToInsert.length;
-      
-      res.json({ success: true, imported });
-    } catch (error: any) {
-      console.error("Erreur import Excel:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
 
   // ===== CLIENTS PAGINATED =====
   app.get("/api/admin/clients", async (req, res) => {
