@@ -453,7 +453,12 @@ export function generateOrderPDF(order: Order): Buffer {
 
   if (order.signature) {
     try {
-      doc.addImage(order.signature, "PNG", margin + 3, yPos + 12, sigBoxWidth - 6, sigBoxHeight - 6);
+      // Garder les proportions de la signature (ne pas étirer sur toute la largeur)
+      const sigMaxWidth = 80;
+      const sigHeight = sigBoxHeight - 6;
+      const sigWidth = Math.min(sigMaxWidth, sigBoxWidth - 6);
+      const sigX = margin + (sigBoxWidth - sigWidth) / 2; // Centrer
+      doc.addImage(order.signature, "PNG", sigX, yPos + 12, sigWidth, sigHeight);
     } catch (error) {
       console.error("Erreur signature:", error);
     }
