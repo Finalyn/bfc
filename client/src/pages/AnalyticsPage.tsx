@@ -6,17 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  TrendingUp, 
-  Users, 
-  Calendar, 
+import {
+  ArrowLeft,
+  TrendingUp,
+  Users,
+  Calendar,
   Package,
   BarChart3,
   PieChart,
   Clock,
   Star,
-  ShoppingCart
+  ShoppingCart,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Loader2
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { format, parseISO, getMonth, getYear, differenceInDays } from "date-fns";
@@ -67,6 +71,7 @@ const MONTH_NAMES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août'
 export default function AnalyticsPage() {
   const [, setLocation] = useLocation();
   const [selectedClient, setSelectedClient] = useState<string>("all");
+  const [isExporting, setIsExporting] = useState<"excel" | "pdf" | null>(null);
   const isAuthenticated = localStorage.getItem("authenticated") === "true";
 
   if (!isAuthenticated) {
@@ -208,6 +213,116 @@ export default function AnalyticsPage() {
     return clientAnalytics.find(c => c.name === selectedClient || c.enseigne === selectedClient);
   }, [selectedClient, clientAnalytics]);
 
+  const buildExportData = () => {
+    // Build theme data with quantities
+    const themeMap: { [key: string]: { orders: number; quantity: number; fournisseur: string } } = {};
+    orders.forEach(order => {
+      try {
+        const selections: ThemeSelection[] = JSON.parse(order.themeSelections || "[]");
+        selections.forEach(sel => {
+          if (sel.theme) {
+            if (!themeMap[sel.theme]) themeMap[sel.theme] = { orders: 0, quantity: 0, fournisseur: sel.category || "" };
+            themeMap[sel.theme].orders++;
+            themeMap[sel.theme].quantity += parseInt(sel.quantity || "0") || 0;
+          }
+        });
+      } catch (e) {}
+    });
+
+    const allThemes = Object.entries(themeMap)
+      .sort((a, b) => b[1].orders - a[1].orders)
+      .map(([name, data]) => ({ name, ...data }));
+
+    // Build supplier data
+    const supplierMap: { [key: string]: { value: number; quantity: number } } = {};
+    orders.forEach(order => {
+      const fournisseur = (order as any).fournisseur || "BDIS";
+      if (!supplierMap[fournisseur]) supplierMap[fournisseur] = { value: 0, quantity: 0 };
+      supplierMap[fournisseur].value++;
+      try {
+        const selections: ThemeSelection[] = JSON.parse(order.themeSelections || "[]");
+        selections.forEach(sel => {
+          supplierMap[fournisseur].quantity += parseInt(sel.quantity || "0") || 0;
+        });
+      } catch (e) {}
+    });
+
+    const fournisseurData = Object.entries(supplierMap)
+      .map(([name, data]) => ({ name, ...data }));
+
+    const totalQuantity = clientAnalytics.reduce((sum, c) => sum + c.totalQuantity, 0);
+
+    return {
+      fournisseurData,
+      allThemes,
+      clientAnalytics: clientAnalytics.map(c => ({
+        name: c.name,
+        enseigne: c.enseigne,
+        totalOrders: c.totalOrders,
+        totalQuantity: c.totalQuantity,
+        preferredThemes: c.preferredThemes,
+        avgDaysBetweenOrders: c.avgDaysBetweenOrders,
+        lastOrderDate: c.lastOrderDate?.toISOString() || null,
+      })),
+      monthlyData: globalStats.monthlyData,
+      totalQuantity,
+    };
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting("excel");
+    try {
+      const data = buildExportData();
+      const response = await fetch("/api/stats/export-excel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Erreur export");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `analyse_bfc_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export Excel error:", e);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setIsExporting("pdf");
+    try {
+      const data = buildExportData();
+      const response = await fetch("/api/stats/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Erreur export");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `analyse_bfc_${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export PDF error:", e);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -230,7 +345,36 @@ export default function AnalyticsPage() {
             Menu
           </Button>
           <h1 className="text-lg font-semibold">Analyse des Clients</h1>
-          <div className="w-20" />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={isExporting !== null || orders.length === 0}
+              data-testid="button-export-excel"
+            >
+              {isExporting === "excel" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline ml-1">Excel</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={isExporting !== null || orders.length === 0}
+              data-testid="button-export-pdf"
+            >
+              {isExporting === "pdf" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline ml-1">PDF</span>
+            </Button>
+          </div>
         </div>
       </header>
 

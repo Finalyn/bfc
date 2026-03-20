@@ -1,7 +1,5 @@
-const CACHE_NAME = 'bfc-app-v4';
-const STATIC_CACHE = 'bfc-static-v4';
-const DATA_CACHE = 'bfc-data-v4';
-const PDF_CACHE = 'bfc-pdf-v1';
+const STATIC_CACHE = 'bfc-static-v5';
+const DATA_CACHE = 'bfc-data-v5';
 
 const STATIC_ASSETS = [
   '/',
@@ -18,6 +16,9 @@ const DATA_URLS = [
   '/api/data/themes',
 ];
 
+// Versions de cache à conserver
+const VALID_CACHES = [STATIC_CACHE, DATA_CACHE];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
@@ -32,7 +33,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name.startsWith('bfc-') && !name.includes('-v3') && !name.includes('-v1'))
+          .filter((name) => name.startsWith('bfc-') && !VALID_CACHES.includes(name))
           .map((name) => caches.delete(name))
       );
     })
@@ -40,7 +41,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Background Sync - synchronisation automatique quand le réseau revient
+// === BACKGROUND SYNC ===
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-orders') {
     event.waitUntil(syncPendingOrdersInBackground());
@@ -49,50 +50,50 @@ self.addEventListener('sync', (event) => {
 
 async function syncPendingOrdersInBackground() {
   try {
-    // Récupérer les commandes en attente depuis IndexedDB
     const db = await openOfflineDB();
     const tx = db.transaction('offline_orders', 'readonly');
     const store = tx.objectStore('offline_orders');
     const allOrders = await promisifyRequest(store.getAll());
-    
-    const pendingOrders = allOrders.filter(order => !order.syncedToServer || !order.emailSent);
-    
-    let successCount = 0;
+
+    // Sync orders that haven't been sent to server yet
+    const pendingOrders = allOrders.filter(order => !order.syncedToServer);
+
+    let syncedCount = 0;
     let failedCount = 0;
-    
+
     for (const offlineOrder of pendingOrders) {
       try {
-        // Synchroniser avec le serveur
         const response = await fetch('/api/orders/sync-offline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ order: offlineOrder.order })
         });
-        
+
         if (response.ok) {
           const result = await response.json();
-          
-          // Mettre à jour le statut dans IndexedDB
+
           const updateTx = db.transaction('offline_orders', 'readwrite');
           const updateStore = updateTx.objectStore('offline_orders');
           offlineOrder.syncedToServer = true;
-          offlineOrder.emailSent = result.emailsSent;
+          offlineOrder.syncedAt = new Date().toISOString();
+          offlineOrder.emailSent = result.emailsSent || false;
           if (result.emailError) offlineOrder.emailError = result.emailError;
           await promisifyRequest(updateStore.put(offlineOrder));
-          
-          if (result.emailsSent) successCount++;
-          else failedCount++;
+
+          syncedCount++;
+        } else {
+          failedCount++;
         }
       } catch (error) {
         console.error('Erreur sync ordre:', error);
         failedCount++;
       }
     }
-    
-    // Envoyer notification si des commandes ont été synchronisées
-    if (successCount > 0) {
+
+    // Notification de résultat
+    if (syncedCount > 0) {
       await self.registration.showNotification('BFC APP - Synchronisation', {
-        body: `${successCount} commande(s) synchronisée(s) et email(s) envoyé(s)`,
+        body: `${syncedCount} commande(s) synchronisée(s) avec succès`,
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
         vibrate: [100, 50, 100],
@@ -100,17 +101,17 @@ async function syncPendingOrdersInBackground() {
         renotify: true
       });
     }
-    
-    // Notifier les clients de la mise à jour
+
+    // Notifier l'app
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
       client.postMessage({
         type: 'SYNC_COMPLETE',
-        success: successCount,
+        success: syncedCount,
         failed: failedCount
       });
     });
-    
+
   } catch (error) {
     console.error('Background sync error:', error);
   }
@@ -123,7 +124,6 @@ function openOfflineDB() {
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      // Utiliser le même nom de store que l'application: "offline_orders"
       if (!db.objectStoreNames.contains('offline_orders')) {
         const store = db.createObjectStore('offline_orders', { keyPath: 'id' });
         store.createIndex('emailSent', 'emailSent', { unique: false });
@@ -141,6 +141,7 @@ function promisifyRequest(request) {
   });
 }
 
+// === PUSH NOTIFICATIONS ===
 self.addEventListener('push', (event) => {
   let title = 'BFC APP';
   let options = {
@@ -196,14 +197,15 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// === FETCH HANDLER ===
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (request.method !== 'GET') {
-    return;
-  }
+  // Only handle GET requests
+  if (request.method !== 'GET') return;
 
+  // Data API URLs: network-first, cache fallback
   if (DATA_URLS.some(dataUrl => url.pathname.startsWith(dataUrl))) {
     event.respondWith(
       caches.open(DATA_CACHE).then(async (cache) => {
@@ -215,9 +217,7 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         } catch (error) {
           const cachedResponse = await cache.match(request);
-          if (cachedResponse) {
-            return cachedResponse;
-          }
+          if (cachedResponse) return cachedResponse;
           return new Response(JSON.stringify({ error: 'Hors ligne' }), {
             status: 503,
             headers: { 'Content-Type': 'application/json' },
@@ -228,17 +228,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
-    return;
-  }
+  // Other API calls: let them pass through (no caching)
+  if (url.pathname.startsWith('/api/')) return;
 
+  // App assets (JS, CSS, HTML, images): cache-first with network update
+  // This ensures the app works offline after the first visit
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(request).then((networkResponse) => {
+      // Return cache immediately if available
+      const fetchPromise = fetch(request).then((networkResponse) => {
         if (networkResponse.ok && request.url.startsWith(self.location.origin)) {
           const responseClone = networkResponse.clone();
           caches.open(STATIC_CACHE).then((cache) => {
@@ -247,6 +245,22 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch(() => {
+        // Offline fallback for navigation
+        if (request.mode === 'navigate') {
+          return caches.match('/');
+        }
+        return null;
+      });
+
+      // If cached, return immediately; otherwise wait for network
+      if (cachedResponse) {
+        // Update cache in background (stale-while-revalidate)
+        fetchPromise;
+        return cachedResponse;
+      }
+      return fetchPromise.then(response => {
+        if (response) return response;
+        // Last resort for navigation
         if (request.mode === 'navigate') {
           return caches.match('/');
         }
@@ -260,7 +274,7 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'CACHE_DATA') {
     event.waitUntil(
       caches.open(DATA_CACHE).then(async (cache) => {

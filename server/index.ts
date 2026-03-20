@@ -1,9 +1,20 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startNotificationScheduler } from "./notificationScheduler";
+import { startBackupScheduler } from "./backupScheduler";
 
 const app = express();
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Désactivé pour ne pas casser le frontend
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Masquer le header X-Powered-By
+app.disable("x-powered-by");
 
 declare module 'http' {
   interface IncomingMessage {
@@ -72,5 +83,6 @@ app.use((req, res, next) => {
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
     startNotificationScheduler();
+    startBackupScheduler();
   });
 })();

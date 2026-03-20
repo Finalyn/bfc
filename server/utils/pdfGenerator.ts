@@ -77,13 +77,22 @@ export function generateOrderPDF(order: Order): Buffer {
   const margin = 10;
   let yPos = 8;
 
-  // === IMAGE EN-TÊTE BDIS ===
-  if (headerImageBase64) {
+  // === EN-TÊTE HAUT DE PAGE ===
+  const isBDISOrder = order.fournisseur === "BDIS";
+  if (isBDISOrder && headerImageBase64) {
+    // BDIS: image en-tête
     const imgWidth = pageWidth - 2 * margin;
-    // Hauteur ajustée pour le ratio de l'image
     const imgHeight = 28;
     doc.addImage(`data:image/jpeg;base64,${headerImageBase64}`, "JPEG", margin, yPos, imgWidth, imgHeight);
     yPos += imgHeight + 6;
+  } else if (!isBDISOrder) {
+    // Autres fournisseurs: nom en gros texte
+    const fournisseurNom = (FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0]).nom;
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text(fournisseurNom, pageWidth / 2, yPos + 18, { align: "center" });
+    yPos += 30;
   }
 
   // === EN-TÊTE ===
@@ -426,11 +435,10 @@ export function generateOrderPDF(order: Order): Buffer {
   }
   yPos += 22;
 
-  // === SIGNATURES ===
-  const sigBoxWidth = (pageWidth - 2 * margin - 20) / 2;
+  // === SIGNATURE ===
+  const sigBoxWidth = pageWidth - 2 * margin;
   const sigBoxHeight = 32;
 
-  // Signature magasin (gauche)
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.text("Le Magasin", margin + sigBoxWidth / 2, yPos, { align: "center" });
@@ -439,11 +447,10 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.text("Cachet et signature obligatoires", margin + sigBoxWidth / 2, yPos + 4, { align: "center" });
   doc.setFont("helvetica", "italic");
   doc.text("Le client reconnait avoir pris connaissance des CGV", margin + sigBoxWidth / 2, yPos + 8, { align: "center" });
-  
+
   doc.setDrawColor(100, 100, 100);
   doc.rect(margin, yPos + 10, sigBoxWidth, sigBoxHeight);
-  
-  // Ajouter la signature du client
+
   if (order.signature) {
     try {
       doc.addImage(order.signature, "PNG", margin + 3, yPos + 12, sigBoxWidth - 6, sigBoxHeight - 6);
@@ -451,20 +458,11 @@ export function generateOrderPDF(order: Order): Buffer {
       console.error("Erreur signature:", error);
     }
   }
-  
-  // Infos signature
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 14);
   doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 18);
-
-  // Signature société (droite)
-  const sigRightX = margin + sigBoxWidth + 20;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("Pour la société", sigRightX + sigBoxWidth / 2, yPos, { align: "center" });
-  
-  doc.rect(sigRightX, yPos + 10, sigBoxWidth, sigBoxHeight);
 
   // === PIED DE PAGE ===
   doc.setFontSize(5);

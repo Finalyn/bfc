@@ -86,11 +86,21 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   const margin = 10;
   let yPos = 8;
 
-  if (headerImage) {
+  const isBDISOrder = order.fournisseur === "BDIS" || !order.fournisseur;
+  if (isBDISOrder && headerImage) {
+    // BDIS: image en-tête
     const imgWidth = pageWidth - 2 * margin;
     const imgHeight = 28;
     doc.addImage(headerImage, "JPEG", margin, yPos, imgWidth, imgHeight);
     yPos += imgHeight + 6;
+  } else if (!isBDISOrder) {
+    // Autres fournisseurs: nom en gros texte
+    const fournisseurNom = (FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0]).nom;
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text(fournisseurNom, pageWidth / 2, yPos + 18, { align: "center" });
+    yPos += 30;
   }
 
   doc.setFontSize(10);
@@ -374,7 +384,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   }
   yPos += 22;
 
-  const sigBoxWidth = (pageWidth - 2 * margin - 20) / 2;
+  const sigBoxWidth = pageWidth - 2 * margin;
   const sigBoxHeight = 32;
 
   doc.setFont("helvetica", "bold");
@@ -385,10 +395,10 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   doc.text("Cachet et signature obligatoires", margin + sigBoxWidth / 2, yPos + 4, { align: "center" });
   doc.setFont("helvetica", "italic");
   doc.text("Le client reconnait avoir pris connaissance des CGV", margin + sigBoxWidth / 2, yPos + 8, { align: "center" });
-  
+
   doc.setDrawColor(100, 100, 100);
   doc.rect(margin, yPos + 10, sigBoxWidth, sigBoxHeight);
-  
+
   if (order.signature) {
     try {
       doc.addImage(order.signature, "PNG", margin + 3, yPos + 12, sigBoxWidth - 6, sigBoxHeight - 6);
@@ -396,18 +406,11 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
       console.error("Erreur signature:", error);
     }
   }
-  
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   doc.text(`Signé par: ${order.clientSignedName || ""}`, margin + 2, yPos + sigBoxHeight + 14);
   doc.text(`Le: ${formatInTimeZone(new Date(order.signatureDate), "Europe/Paris", "dd/MM/yyyy", { locale: fr })} à ${order.signatureLocation || ""}`, margin + 2, yPos + sigBoxHeight + 18);
-
-  const sigRightX = margin + sigBoxWidth + 20;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("Pour la société", sigRightX + sigBoxWidth / 2, yPos, { align: "center" });
-  
-  doc.rect(sigRightX, yPos + 10, sigBoxWidth, sigBoxHeight);
 
   doc.setFontSize(5);
   doc.setFont("helvetica", "italic");

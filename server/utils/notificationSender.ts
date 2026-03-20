@@ -38,12 +38,17 @@ export async function sendPushToUser(
   userName: string,
   payload: NotificationPayload
 ): Promise<{ sent: number; failed: number; cleaned: number }> {
-  if (!vapidConfigured) return { sent: 0, failed: 0, cleaned: 0 };
+  if (!vapidConfigured) {
+    console.log(`[PUSH] VAPID not configured, cannot send to ${userName}`);
+    return { sent: 0, failed: 0, cleaned: 0 };
+  }
 
   const subscriptions = await db
     .select()
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.userName, userName));
+
+  console.log(`[PUSH] Found ${subscriptions.length} subscription(s) for "${userName}"`);
 
   let sent = 0;
   let failed = 0;

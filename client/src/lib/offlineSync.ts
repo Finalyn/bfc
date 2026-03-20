@@ -1,4 +1,4 @@
-import { getPendingEmailOrders, markEmailSent, markSyncedToServer, isOnline, onOnlineStatusChange, type OfflineOrder } from "./offlineStorage";
+import { getOfflineOrders, getPendingEmailOrders, markEmailSent, markSyncedToServer, isOnline, onOnlineStatusChange, type OfflineOrder } from "./offlineStorage";
 import { apiRequest } from "./queryClient";
 
 type SyncCallback = (status: { 
@@ -53,8 +53,10 @@ export async function syncPendingOrders(): Promise<{ success: number; failed: nu
   }
   
   isSyncing = true;
-  const pendingOrders = await getPendingEmailOrders();
-  
+  // Get all offline orders that need sync (not synced to server) OR need email retry
+  const allOfflineOrders = await getOfflineOrders();
+  const pendingOrders = allOfflineOrders.filter(o => !o.syncedToServer || !o.emailSent);
+
   notifyListeners({ syncing: true, pendingCount: pendingOrders.length });
   
   let success = 0;
@@ -63,16 +65,14 @@ export async function syncPendingOrders(): Promise<{ success: number; failed: nu
   for (const offlineOrder of pendingOrders) {
     try {
       if (!offlineOrder.syncedToServer) {
+        // Sync to server (saves order in DB + sends emails)
         const syncResult = await syncOrderToServer(offlineOrder);
-        if (syncResult.emailSent) {
-          await markSyncedToServer(offlineOrder.id);
-          await markEmailSent(offlineOrder.id, true);
-          success++;
-        } else {
-          await markEmailSent(offlineOrder.id, false, syncResult.error);
-          failed++;
-        }
+        // Mark as synced regardless of email result - the order is saved
+        await markSyncedToServer(offlineOrder.id);
+        await markEmailSent(offlineOrder.id, syncResult.emailSent, syncResult.error);
+        success++;
       } else if (!offlineOrder.emailSent) {
+        // Already synced but email failed - retry email only
         const emailSuccess = await sendEmailForOrder(offlineOrder);
         await markEmailSent(offlineOrder.id, emailSuccess);
         if (emailSuccess) success++;
@@ -80,14 +80,14 @@ export async function syncPendingOrders(): Promise<{ success: number; failed: nu
       }
     } catch (error: any) {
       console.error("Sync error for order:", offlineOrder.id, error);
-      await markEmailSent(offlineOrder.id, false, error.message);
       failed++;
     }
   }
   
   isSyncing = false;
   
-  const remaining = await getPendingEmailOrders();
+  const allRemaining = await getOfflineOrders();
+  const remaining = allRemaining.filter(o => !o.syncedToServer || !o.emailSent);
   notifyListeners({ 
     syncing: false, 
     pendingCount: remaining.length,

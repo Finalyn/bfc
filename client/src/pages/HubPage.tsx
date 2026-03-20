@@ -31,7 +31,11 @@ export default function HubPage() {
     <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
       {/* Header avec profil et déconnexion */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setLocation("/profile")}
+          data-testid="button-profile"
+        >
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="w-4 h-4 text-primary" />
           </div>

@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  User, 
-  Bell, 
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  ArrowLeft,
+  User,
+  Bell,
   BellOff,
   Shield,
   LogOut,
@@ -17,10 +19,14 @@ import {
   Truck,
   Package,
   RotateCcw,
-  FileText
+  Mail,
+  Save,
+  HelpCircle,
+  FileText,
+  Loader2
 } from "lucide-react";
-import { 
-  getNotificationPermission, 
+import {
+  getNotificationPermission,
   requestNotificationPermission,
   subscribeToPush,
   unsubscribeFromPush,
@@ -29,17 +35,29 @@ import {
   isSubscribedToPush
 } from "@/lib/notifications";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+
   const userName = localStorage.getItem("userName") || "";
   const userRole = localStorage.getItem("userRole") || "commercial";
+  const userId = localStorage.getItem("userId") || "";
+  const storedEmail = localStorage.getItem("userEmail") || "";
   const isAuthenticated = localStorage.getItem("authenticated") === "true";
-  
+
+  // Parse prénom / nom from userName (format "Prénom Nom")
+  const parts = userName.split(" ");
+  const prenom = parts[0] || "";
+  const nom = parts.slice(1).join(" ") || "";
+
+  const [email, setEmail] = useState(storedEmail);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [emailDirty, setEmailDirty] = useState(false);
+
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
@@ -64,10 +82,40 @@ export default function ProfilePage() {
     return null;
   }
 
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setEmailDirty(value !== storedEmail);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!emailDirty || isSavingEmail) return;
+    setIsSavingEmail(true);
+    try {
+      await apiRequest("PATCH", "/api/user/email", {
+        userId: parseInt(userId),
+        email: email.trim(),
+      });
+      localStorage.setItem("userEmail", email.trim());
+      setEmailDirty(false);
+      toast({
+        title: "Email mis à jour",
+        description: "Votre adresse email a été enregistrée",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder l'email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
   const handleNotificationToggle = async () => {
     if (isSubscribing) return;
     setIsSubscribing(true);
-    
+
     try {
       if (isPushSubscribed) {
         await unsubscribeFromPush();
@@ -88,10 +136,10 @@ export default function ProfilePage() {
           });
           return;
         }
-        
+
         setNotifPermission("granted");
         const subscription = await subscribeToPush();
-        
+
         if (subscription) {
           await saveSubscription(subscription, userName);
           setIsPushSubscribed(true);
@@ -140,6 +188,7 @@ export default function ProfilePage() {
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
     localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
     setLocation("/login");
   };
 
@@ -147,8 +196,8 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background border-b px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => setLocation("/hub")}
             data-testid="button-back-hub"
@@ -162,17 +211,28 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-lg mx-auto p-4 space-y-4">
+        {/* Informations personnelles */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <User className="w-5 h-5" />
-              Informations
+              Informations personnelles
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Nom</span>
-              <span className="font-medium">{userName}</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Prénom</Label>
+                <div className="px-3 py-2 rounded-md bg-muted text-sm font-medium">
+                  {prenom || "-"}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Nom</Label>
+                <div className="px-3 py-2 rounded-md bg-muted text-sm font-medium">
+                  {nom || "-"}
+                </div>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Rôle</span>
@@ -184,6 +244,44 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Email */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Adresse email
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Cet email sera utilisé pour recevoir les notifications par mail (rappels de livraison, inventaires, etc.)
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="votre.email@exemple.com"
+                value={email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                className="flex-1"
+                data-testid="input-email"
+              />
+              <Button
+                size="sm"
+                onClick={handleSaveEmail}
+                disabled={!emailDirty || isSavingEmail}
+                data-testid="button-save-email"
+              >
+                {isSavingEmail ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifications */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -196,7 +294,7 @@ export default function ProfilePage() {
               <div className="space-y-1">
                 <Label htmlFor="notif-toggle">Notifications push</Label>
                 <p className="text-xs text-muted-foreground">
-                  Rappels pour livraisons, inventaires et retours
+                  Rappels sur votre téléphone pour les livraisons, inventaires et retours
                 </p>
               </div>
               {notifPermission === "unsupported" ? (
@@ -214,16 +312,16 @@ export default function ProfilePage() {
                 />
               )}
             </div>
-            
+
             {isPushSubscribed && (
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
                 <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
                   <Bell className="w-4 h-4" />
-                  Notifications activées
+                  Notifications push activées
                 </p>
               </div>
             )}
-            
+
             {notifPermission === "denied" && !isPushSubscribed && (
               <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
                 <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
@@ -235,6 +333,7 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Événements à venir */}
         {eventsData?.events && eventsData.events.length > 0 && (
           <Card>
             <CardHeader>
@@ -245,7 +344,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {eventsData.events.slice(0, 5).map((event, idx) => (
-                <div 
+                <div
                   key={`${event.orderCode}-${event.type}-${idx}`}
                   className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
                 >
@@ -263,8 +362,34 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        <Button 
-          variant="ghost" 
+        {/* Aide */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <HelpCircle className="w-5 h-5" />
+              Aide
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Pour toute question, problème technique ou demande d'assistance, contactez le support ou votre administrateur.
+            </p>
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                support@finalyn.app
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Vous pouvez aussi vous rapprocher de votre administrateur pour les questions liées à votre compte ou vos accès.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Separator />
+
+        <Button
+          variant="ghost"
           className="w-full"
           onClick={() => setLocation("/legal")}
           data-testid="button-legal"
@@ -273,9 +398,9 @@ export default function ProfilePage() {
           Mentions légales et CGU
         </Button>
 
-        <Button 
-          variant="outline" 
-          className="w-full"
+        <Button
+          variant="outline"
+          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
           onClick={handleLogout}
           data-testid="button-logout"
         >

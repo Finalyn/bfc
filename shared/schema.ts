@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { mysqlTable, text, serial, boolean, datetime, int, timestamp } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, serial, boolean, datetime, int, timestamp, index } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 
 // Table des clients
@@ -167,6 +167,7 @@ export const commerciaux = mysqlTable("commerciaux", {
   id: serial("id").primaryKey(),
   prenom: text("prenom").notNull().default(""),
   nom: text("nom").notNull(),
+  email: text("email").default(""),
   role: text("role").notNull().default("commercial"), // "admin" ou "commercial"
   actif: boolean("actif").notNull().default(true), // accès activé ou révoqué
   motDePasse: text("mot_de_passe").notNull().default("bfc26"), // mot de passe par défaut
@@ -268,7 +269,14 @@ export const orders = mysqlTable("orders", {
   // Métadonnées
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_orders_sales_rep").on(table.salesRepName),
+  index("idx_orders_date_livraison").on(table.dateLivraison),
+  index("idx_orders_date_inventaire_prevu").on(table.dateInventairePrevu),
+  index("idx_orders_date_retour").on(table.dateRetour),
+  index("idx_orders_fournisseur").on(table.fournisseur),
+  index("idx_orders_created_at").on(table.createdAt),
+]);
 
 export const insertOrderDbSchema = createInsertSchema(orders).omit({
   id: true,
@@ -295,7 +303,9 @@ export const pushSubscriptions = mysqlTable("push_subscriptions", {
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_push_sub_user").on(table.userName),
+]);
 
 export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
   id: true,

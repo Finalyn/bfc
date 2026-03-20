@@ -326,25 +326,15 @@ export default function OrderPage() {
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
-    // Détecter si c'est un rechargement de page (pas une navigation normale)
-    const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    const isPageReload = navigationType?.type === 'reload';
-    
-    // Si c'est un rechargement, effacer l'authentification et rediriger
-    if (isPageReload) {
-      localStorage.removeItem("authenticated");
-      window.location.href = "/login";
-      return;
-    }
-    
-    // Vérifier l'authentification
     const isAuthenticated = localStorage.getItem("authenticated") === "true";
-    
-    if (!isAuthenticated) {
+
+    if (!isAuthenticated && navigator.onLine) {
       window.location.href = "/login";
       return;
     }
-    
+
+    // En mode offline, on laisse passer même sans auth stricte
+    // car on ne peut pas vérifier avec le serveur
     setIsCheckingAuth(false);
   }, [setLocation]);
 

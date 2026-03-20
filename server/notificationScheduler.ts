@@ -19,6 +19,35 @@ const EVENT_TYPES = [
   { field: "dateRetour" as const, label: "Retour", type: "retour" },
 ];
 
+// Normalize date to yyyy-MM-dd format regardless of input format
+function normalizeDateToISO(dateStr: string): string | null {
+  if (!dateStr) return null;
+
+  // Already in yyyy-MM-dd format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+
+  // Handle dd/MM/yyyy format
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split("/");
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle yyyy/MM/dd format
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) {
+    return dateStr.replace(/\//g, "-");
+  }
+
+  // Try parsing as Date object
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return formatInTimeZone(d, "Europe/Paris", "yyyy-MM-dd");
+    }
+  } catch {}
+
+  return null;
+}
+
 async function checkAndSendNotifications(
   notifType: "veille" | "jour_meme"
 ): Promise<void> {
@@ -33,8 +62,9 @@ async function checkAndSendNotifications(
     targetDate = formatInTimeZone(now, "Europe/Paris", "yyyy-MM-dd");
   }
 
+  const parisTime = formatInTimeZone(now, "Europe/Paris", "yyyy-MM-dd HH:mm:ss");
   console.log(
-    `[NOTIF] Checking ${notifType} notifications (target: ${targetDate})`
+    `[NOTIF] === ${notifType} check START === (Paris: ${parisTime}, target: ${targetDate})`
   );
 
   // Get users with active push subscriptions
@@ -48,6 +78,7 @@ async function checkAndSendNotifications(
   }
 
   const userNames = subscribedUsers.map((u) => u.userName);
+  console.log(`[NOTIF] Subscribed users: ${userNames.join(", ")}`);
 
   // Fetch all orders for subscribed users
   const allOrders = await db
@@ -60,14 +91,28 @@ async function checkAndSendNotifications(
       )})`
     );
 
+  console.log(`[NOTIF] Found ${allOrders.length} orders for subscribed users`);
+
   let totalSent = 0;
+  let totalMatched = 0;
 
   for (const order of allOrders) {
     for (const eventDef of EVENT_TYPES) {
-      const eventDate = order[eventDef.field];
-      if (!eventDate || eventDate !== targetDate) continue;
+      const rawEventDate = order[eventDef.field];
+      if (!rawEventDate) continue;
 
+      // Normalize the date to handle various formats
+      const eventDate = normalizeDateToISO(rawEventDate);
+      if (!eventDate) {
+        console.log(`[NOTIF] ⚠️ Could not parse date for order ${order.orderCode} ${eventDef.field}: "${rawEventDate}"`);
+        continue;
+      }
+
+      if (eventDate !== targetDate) continue;
+
+      totalMatched++;
       const userName = order.salesRepName;
+      console.log(`[NOTIF] ✅ Match: ${eventDef.label} for ${userName} - ${order.orderCode} (date: ${eventDate})`);
 
       // Check deduplication
       const existing = await db
@@ -83,7 +128,10 @@ async function checkAndSendNotifications(
           )
         );
 
-      if (existing.length > 0) continue;
+      if (existing.length > 0) {
+        console.log(`[NOTIF] Already sent for ${order.orderCode} ${eventDef.type} ${notifType}, skipping`);
+        continue;
+      }
 
       const isVeille = notifType === "veille";
       const dateFormatted = eventDate.split("-").reverse().join("/");
@@ -105,6 +153,7 @@ async function checkAndSendNotifications(
       };
 
       const result = await sendPushToUser(userName, payload);
+      console.log(`[NOTIF] Push result for ${userName}: sent=${result.sent}, failed=${result.failed}, cleaned=${result.cleaned}`);
 
       if (result.sent > 0) {
         await db.insert(notificationLogs).values({
@@ -125,7 +174,7 @@ async function checkAndSendNotifications(
     }
   }
 
-  console.log(`[NOTIF] ${notifType}: sent ${totalSent} notification(s)`);
+  console.log(`[NOTIF] === ${notifType} DONE === matched=${totalMatched}, sent=${totalSent}`);
 }
 
 async function ensureNotificationLogsTable(): Promise<void> {
@@ -150,11 +199,29 @@ async function ensureNotificationLogsTable(): Promise<void> {
 export async function startNotificationScheduler(): Promise<void> {
   const configured = initializeWebPush();
   if (!configured) {
-    console.log("[NOTIF] Scheduler not started (VAPID not configured)");
+    console.log("[NOTIF] ❌ Scheduler not started (VAPID not configured)");
     return;
   }
 
   await ensureNotificationLogsTable();
+
+  // Run a catch-up check at startup for today's notifications
+  // This handles the case where the server restarts after the scheduled time
+  console.log("[NOTIF] Running startup catch-up check...");
+  try {
+    const parisHour = parseInt(formatInTimeZone(new Date(), "Europe/Paris", "H"));
+
+    // If server starts after 07:30, check jour_meme for today
+    if (parisHour >= 8) {
+      await checkAndSendNotifications("jour_meme");
+    }
+    // If server starts after 18:00, check veille for tomorrow
+    if (parisHour >= 18) {
+      await checkAndSendNotifications("veille");
+    }
+  } catch (error) {
+    console.error("[NOTIF] Error in startup catch-up:", error);
+  }
 
   // Veille - 18h00 Europe/Paris
   cron.schedule(
@@ -201,6 +268,6 @@ export async function startNotificationScheduler(): Promise<void> {
   );
 
   console.log(
-    "[NOTIF] Scheduler started (veille 18:00, jour_meme 07:30, cleanup 03:00)"
+    "[NOTIF] ✅ Scheduler started (veille 18:00, jour_meme 07:30, cleanup 03:00)"
   );
 }

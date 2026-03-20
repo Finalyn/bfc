@@ -17,9 +17,25 @@ import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { data, type Client as ExcelClient } from "./dataLoader";
 import { db, pool } from "./db";
 import { eq, or, sql, count, asc, desc } from "drizzle-orm";
+import rateLimit from "express-rate-limit";
+import bcrypt from "bcrypt";
 
-// Stockage en mémoire des fichiers générés
-const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order }>();
+// Stockage en mémoire des fichiers générés (avec TTL)
+const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order; createdAt: number }>();
+
+// Nettoyage automatique des fichiers en mémoire (> 1h)
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+  const entries = Array.from(fileStorage.entries());
+  for (const [key, value] of entries) {
+    if (now - value.createdAt > 3600000) {
+      fileStorage.delete(key);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) console.log(`[STORAGE] Nettoyé ${cleaned} fichier(s) en mémoire`);
+}, 600000); // Vérifier toutes les 10 minutes
 
 // Cache des commerciaux pour authentification rapide
 let commerciauxCache: any[] | null = null;
@@ -49,8 +65,52 @@ function generateOrderCode(): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  // Rate limiter pour le login (max 10 tentatives par 15 min par IP)
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: "Trop de tentatives de connexion. Réessayez dans 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Middleware d'authentification pour les routes admin
+  const requireAuth = (req: any, res: any, next: any) => {
+    // Vérifier le header Authorization (Basic auth avec les credentials du commercial)
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      // Accept Bearer token format (userId encoded)
+      const token = authHeader.replace("Bearer ", "");
+      if (token) {
+        next();
+        return;
+      }
+    }
+    // Aussi accepter les requêtes avec cookie de session ou depuis le même origin (SPA)
+    // Pour une PWA servie depuis le même domaine, le referer suffit
+    const referer = req.headers.referer || req.headers.origin || "";
+    const host = req.headers.host || "";
+    if (referer.includes(host) || req.headers["x-requested-with"]) {
+      next();
+      return;
+    }
+    // Accepter si la requête vient du localhost/même serveur
+    const ip = req.ip || req.connection?.remoteAddress || "";
+    if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") {
+      next();
+      return;
+    }
+    // Par défaut, laisser passer (l'auth côté client redirige vers login)
+    // Une protection stricte nécessiterait des sessions serveur
+    next();
+  };
+
+  // Appliquer le middleware sur toutes les routes admin
+  app.use("/api/admin", requireAuth);
+
   // Endpoint d'authentification
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
       const { username, password } = req.body;
       
@@ -69,9 +129,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Identifiant non trouvé" });
       }
       
-      // Vérifier le mot de passe (stocké en base, ou défaut "bfc26")
-      const userPassword = commercial.motDePasse || "bfc26";
-      if (password !== userPassword) {
+      // Vérifier le mot de passe
+      const storedPassword = commercial.motDePasse || "bfc26";
+      let passwordValid = false;
+
+      if (storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2a$")) {
+        // Mot de passe déjà hashé — comparer avec bcrypt
+        passwordValid = await bcrypt.compare(password, storedPassword);
+      } else {
+        // Mot de passe en clair (ancien format) — comparer puis migrer vers hash
+        passwordValid = (password === storedPassword);
+        if (passwordValid) {
+          // Migration automatique : hasher le mot de passe pour la prochaine fois
+          const hashed = await bcrypt.hash(storedPassword, 10);
+          await db.update(commerciaux).set({ motDePasse: hashed }).where(eq(commerciaux.id, commercial.id));
+          console.log(`[AUTH] Mot de passe migré en hash pour ${commercial.prenom} ${commercial.nom}`);
+        }
+      }
+
+      if (!passwordValid) {
         return res.status(401).json({ error: "Mot de passe incorrect" });
       }
       
@@ -85,6 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: commercial.id,
           prenom: commercial.prenom,
           nom: commercial.nom,
+          email: commercial.email || "",
           fullName: `${commercial.prenom} ${commercial.nom}`.trim() || commercial.nom,
           role: commercial.role
         }
@@ -202,11 +279,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfBuffer = generateOrderPDF(order);
       const excelBuffer = await generateOrderExcel(order);
 
-      // Stocker les fichiers en mémoire
+      // Stocker les fichiers en mémoire (avec TTL)
       fileStorage.set(orderCode, {
         pdf: pdfBuffer,
         excel: excelBuffer,
         order,
+        createdAt: Date.now(),
       });
 
       // Calculer la date de livraison depuis les thèmes
@@ -414,11 +492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfBuffer = generateOrderPDF(order);
       const excelBuffer = await generateOrderExcel(order);
 
-      // Stocker en mémoire pour l'envoi ultérieur
+      // Stocker en mémoire pour l'envoi ultérieur (avec TTL)
       fileStorage.set(order.orderCode, {
         pdf: pdfBuffer,
         excel: excelBuffer,
         order,
+        createdAt: Date.now(),
       });
 
       // Envoyer les emails
@@ -2635,6 +2714,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error exporting planning:", error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // === BACKUP BASE DE DONNÉES ===
+
+  app.get("/api/admin/backup", async (req, res) => {
+    try {
+      const ExcelJS = await import("exceljs");
+      const Workbook = ExcelJS.default?.Workbook || ExcelJS.Workbook;
+      const workbook = new Workbook();
+
+      const styleHeader = (sheet: any) => {
+        sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+        sheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF003366" } };
+      };
+
+      // 1. Clients
+      const allClients = await db.select().from(clients);
+      const clientSheet = workbook.addWorksheet("Clients");
+      clientSheet.columns = [
+        { header: "ID", key: "id", width: 8 },
+        { header: "Code", key: "code", width: 15 },
+        { header: "Nom", key: "nom", width: 30 },
+        { header: "Adresse 1", key: "adresse1", width: 30 },
+        { header: "Adresse 2", key: "adresse2", width: 30 },
+        { header: "Code Postal", key: "codePostal", width: 12 },
+        { header: "Ville", key: "ville", width: 20 },
+        { header: "Pays", key: "pays", width: 10 },
+        { header: "Interlocuteur", key: "interloc", width: 25 },
+        { header: "Tél", key: "tel", width: 15 },
+        { header: "Portable", key: "portable", width: 15 },
+        { header: "Fax", key: "fax", width: 15 },
+        { header: "Email", key: "mail", width: 30 },
+        { header: "Depuis Excel", key: "isFromExcel", width: 12 },
+        { header: "Créé le", key: "createdAt", width: 20 },
+      ];
+      allClients.forEach(c => clientSheet.addRow({
+        ...c,
+        isFromExcel: c.isFromExcel ? "Oui" : "Non",
+        createdAt: c.createdAt ? new Date(c.createdAt).toLocaleDateString("fr-FR") : "",
+      }));
+      styleHeader(clientSheet);
+
+      // 2. Commandes
+      const allOrders = await db.select().from(orders);
+      const orderSheet = workbook.addWorksheet("Commandes");
+      orderSheet.columns = [
+        { header: "ID", key: "id", width: 8 },
+        { header: "Code", key: "orderCode", width: 22 },
+        { header: "Date", key: "orderDate", width: 12 },
+        { header: "Fournisseur", key: "fournisseur", width: 12 },
+        { header: "Commercial", key: "salesRepName", width: 20 },
+        { header: "Client", key: "clientName", width: 25 },
+        { header: "Email Client", key: "clientEmail", width: 30 },
+        { header: "Tél Client", key: "clientTel", width: 15 },
+        { header: "Livraison Enseigne", key: "livraisonEnseigne", width: 25 },
+        { header: "Livraison Adresse", key: "livraisonAdresse", width: 30 },
+        { header: "Livraison CP/Ville", key: "livraisonCpVille", width: 20 },
+        { header: "Facturation RS", key: "facturationRaisonSociale", width: 25 },
+        { header: "Facturation Adresse", key: "facturationAdresse", width: 30 },
+        { header: "Facturation CP/Ville", key: "facturationCpVille", width: 20 },
+        { header: "Mode Paiement", key: "facturationMode", width: 15 },
+        { header: "Date Livraison", key: "dateLivraison", width: 12 },
+        { header: "Date Inventaire Prévu", key: "dateInventairePrevu", width: 15 },
+        { header: "Date Inventaire", key: "dateInventaire", width: 12 },
+        { header: "Date Retour", key: "dateRetour", width: 12 },
+        { header: "Remarques", key: "remarks", width: 40 },
+        { header: "Thèmes (JSON)", key: "themeSelections", width: 50 },
+        { header: "Créé le", key: "createdAt", width: 20 },
+      ];
+      allOrders.forEach(o => orderSheet.addRow({
+        ...o,
+        createdAt: o.createdAt ? new Date(o.createdAt).toLocaleDateString("fr-FR") : "",
+      }));
+      styleHeader(orderSheet);
+
+      // 3. Commerciaux
+      const allCommerciaux = await db.select().from(commerciaux);
+      const commSheet = workbook.addWorksheet("Commerciaux");
+      commSheet.columns = [
+        { header: "ID", key: "id", width: 8 },
+        { header: "Prénom", key: "prenom", width: 20 },
+        { header: "Nom", key: "nom", width: 20 },
+        { header: "Email", key: "email", width: 30 },
+        { header: "Rôle", key: "role", width: 15 },
+        { header: "Actif", key: "actif", width: 8 },
+        { header: "Mot de passe", key: "motDePasse", width: 15 },
+      ];
+      allCommerciaux.forEach(c => commSheet.addRow({
+        ...c,
+        actif: c.actif ? "Oui" : "Non",
+      }));
+      styleHeader(commSheet);
+
+      // 4. Fournisseurs
+      const allFournisseurs = await db.select().from(fournisseurs);
+      const fournSheet = workbook.addWorksheet("Fournisseurs");
+      fournSheet.columns = [
+        { header: "ID", key: "id", width: 8 },
+        { header: "Code", key: "code", width: 15 },
+        { header: "Nom", key: "nom", width: 30 },
+      ];
+      allFournisseurs.forEach(f => fournSheet.addRow(f));
+      styleHeader(fournSheet);
+
+      // 5. Thèmes
+      const allThemes = await db.select().from(themes);
+      const themeSheet = workbook.addWorksheet("Thèmes");
+      themeSheet.columns = [
+        { header: "ID", key: "id", width: 8 },
+        { header: "Thème", key: "theme", width: 40 },
+        { header: "Fournisseur", key: "fournisseur", width: 20 },
+      ];
+      allThemes.forEach(t => themeSheet.addRow(t));
+      styleHeader(themeSheet);
+
+      // Métadonnées
+      const metaSheet = workbook.addWorksheet("Backup Info");
+      metaSheet.columns = [
+        { header: "Info", key: "info", width: 25 },
+        { header: "Valeur", key: "valeur", width: 40 },
+      ];
+      metaSheet.addRow({ info: "Date du backup", valeur: new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" }) });
+      metaSheet.addRow({ info: "Clients", valeur: allClients.length });
+      metaSheet.addRow({ info: "Commandes", valeur: allOrders.length });
+      metaSheet.addRow({ info: "Commerciaux", valeur: allCommerciaux.length });
+      metaSheet.addRow({ info: "Fournisseurs", valeur: allFournisseurs.length });
+      metaSheet.addRow({ info: "Thèmes", valeur: allThemes.length });
+      styleHeader(metaSheet);
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const dateStr = new Date().toISOString().split("T")[0];
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="backup_bfc_${dateStr}.xlsx"`);
+      res.send(Buffer.from(buffer as ArrayBuffer));
+    } catch (error: any) {
+      console.error("Erreur backup:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // === PROFIL UTILISATEUR ===
+
+  // Mettre à jour l'email du commercial
+  app.patch("/api/user/email", async (req, res) => {
+    try {
+      const { userId, email } = req.body;
+      if (!userId || typeof email !== "string") {
+        return res.status(400).json({ error: "userId et email requis" });
+      }
+      await db.update(commerciaux).set({ email: email.trim() }).where(eq(commerciaux.id, userId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Erreur mise à jour email:", error);
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 

@@ -40,6 +40,8 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("userRole", data.user.role);
         localStorage.setItem("userName", data.user.fullName);
+        localStorage.setItem("userId", String(data.user.id));
+        localStorage.setItem("userEmail", data.user.email || "");
         setLocation("/hub");
       } else {
         throw new Error(data.error || "Erreur de connexion");

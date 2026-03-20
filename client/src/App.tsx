@@ -13,8 +13,10 @@ import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import MyDashboard from "@/pages/MyDashboard";
 import LegalPage from "@/pages/LegalPage";
+import ProfilePage from "@/pages/ProfilePage";
 import { initDataSync } from "@/lib/offlineDataSync";
 import { initLocalCache } from "@/lib/localDataCache";
+import { initAutoSync } from "@/lib/offlineSync";
 
 function HomeRedirect() {
   const isAuthenticated = localStorage.getItem("authenticated") === "true";
@@ -30,6 +32,7 @@ function Router() {
       <Route path="/dashboard" component={MyDashboard} />
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/legal" component={LegalPage} />
       <Route path="/">
         <HomeRedirect />
@@ -45,6 +48,10 @@ function App() {
       await initDataSync();
     };
     initOffline();
+
+    // Auto-sync des commandes offline quand le réseau revient (global)
+    const unsubAutoSync = initAutoSync();
+    return () => unsubAutoSync();
   }, []);
 
   return (
