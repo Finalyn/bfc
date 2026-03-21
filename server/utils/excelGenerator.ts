@@ -23,7 +23,9 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   let currentRow = 1;
   
   // Récupérer le fournisseur
-  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || {
+    id: order.fournisseur || "AUTRE", nom: order.fournisseur || "FOURNISSEUR", nomComplet: order.fournisseur || "FOURNISSEUR", themes: [], cgv: "",
+  };
   
   // Titre
   worksheet.mergeCells(`A${currentRow}:H${currentRow}`);

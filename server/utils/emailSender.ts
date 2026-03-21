@@ -49,7 +49,9 @@ export async function sendOrderEmails(
 
   const orderDate = formatInTimeZone(new Date(order.orderDate), "Europe/Paris", "d MMMM yyyy", { locale: fr });
   
-  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || {
+    id: order.fournisseur || "AUTRE", nom: order.fournisseur || "FOURNISSEUR", nomComplet: order.fournisseur || "FOURNISSEUR", themes: [], cgv: "",
+  };
   const fournisseurNom = fournisseurConfig.nom;
   const fournisseurNomComplet = fournisseurConfig.nomComplet || fournisseurNom;
   

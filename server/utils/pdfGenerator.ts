@@ -87,7 +87,7 @@ export function generateOrderPDF(order: Order): Buffer {
     yPos += imgHeight + 6;
   } else if (!isBDISOrder) {
     // Autres fournisseurs: nom en gros texte
-    const fournisseurNom = (FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0]).nom;
+    const fournisseurNom = order.fournisseur || "FOURNISSEUR";
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
@@ -108,8 +108,14 @@ export function generateOrderPDF(order: Order): Buffer {
   doc.setFont("helvetica", "normal");
   doc.text(order.salesRepName, margin + 32, yPos + 6);
 
-  // Récupérer le fournisseur
-  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  // Récupérer le fournisseur (fallback dynamique si pas dans la config statique)
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || {
+    id: order.fournisseur || "AUTRE",
+    nom: order.fournisseur || "FOURNISSEUR",
+    nomComplet: order.fournisseur || "FOURNISSEUR",
+    themes: [],
+    cgv: "Conditions générales de vente disponibles sur demande.",
+  };
 
   // Titre principal - aligné tout à droite
   doc.setFontSize(16);

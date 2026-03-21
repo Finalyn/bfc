@@ -95,7 +95,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
     yPos += imgHeight + 6;
   } else if (!isBDISOrder) {
     // Autres fournisseurs: nom en gros texte
-    const fournisseurNom = (FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0]).nom;
+    const fournisseurNom = order.fournisseur || "FOURNISSEUR";
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
@@ -115,7 +115,13 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   doc.setFont("helvetica", "normal");
   doc.text(order.salesRepName, margin + 32, yPos + 6);
 
-  const fournisseur = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  const fournisseur = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || {
+    id: order.fournisseur || "AUTRE",
+    nom: order.fournisseur || "FOURNISSEUR",
+    nomComplet: order.fournisseur || "FOURNISSEUR",
+    themes: [],
+    cgv: "Conditions générales de vente disponibles sur demande.",
+  };
   
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
@@ -357,7 +363,13 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
     doc.text(`RIB : ${order.facturationRib}`, margin + boxWidth + gap + 2, facY);
   }
 
-  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || FOURNISSEURS_CONFIG[0];
+  const fournisseurConfig = FOURNISSEURS_CONFIG.find(f => f.id === order.fournisseur) || {
+    id: order.fournisseur || "AUTRE",
+    nom: order.fournisseur || "FOURNISSEUR",
+    nomComplet: order.fournisseur || "FOURNISSEUR",
+    themes: [],
+    cgv: "Conditions générales de vente disponibles sur demande.",
+  };
   const cgvExtrait = fournisseurConfig.cgv.split("\n").slice(0, 3).join(" ").substring(0, 80);
   
   doc.setFontSize(6);
