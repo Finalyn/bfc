@@ -306,7 +306,7 @@ export function ReviewStep({
         </Card>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-2xl">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-2xl" style={{ padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px" }}>
         <div className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Button
             onClick={onBack}

@@ -1305,13 +1305,13 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
         </div>
       </div>
 
-      {/* Bouton fixé en bas */}
-      <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t border-border shadow-lg">
+      {/* Bouton fixé en bas - safe area PWA */}
+      <div className="sticky bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg" style={{ padding: "16px 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px" }}>
         <div className="max-w-2xl mx-auto">
           <Button
             onClick={handleSubmit(onSubmit)}
             data-testid="button-next-signature"
-            className="w-full h-14 text-base font-medium"
+            className="w-full h-14 text-base font-medium rounded-xl"
             size="lg"
           >
             Continuer vers la signature

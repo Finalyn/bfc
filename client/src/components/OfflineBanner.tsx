@@ -88,7 +88,7 @@ export function OfflineBanner() {
   if (!showBanner) return null;
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-50 p-2 ${!online ? 'bg-destructive' : pendingCount > 0 ? 'bg-amber-500' : 'bg-primary'} text-white shadow-lg`}>
+    <div className={`fixed bottom-0 left-0 right-0 z-50 ${!online ? 'bg-destructive' : pendingCount > 0 ? 'bg-amber-500' : 'bg-primary'} text-white shadow-lg`} style={{ padding: "8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px" }}>
       <div className="container mx-auto flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           {!online ? (
