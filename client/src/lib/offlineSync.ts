@@ -100,15 +100,24 @@ export async function syncPendingOrders(): Promise<{ success: number; failed: nu
 export function initAutoSync(): () => void {
   const unsubscribe = onOnlineStatusChange(async (online) => {
     if (online) {
-      console.log("Connexion rétablie - synchronisation des commandes...");
+      console.log("Connexion rétablie - synchronisation...");
+      // Sync des modifications clients en attente
+      try {
+        const { syncPendingClientChanges } = await import("@/components/ClientModal");
+        const clientsSynced = await syncPendingClientChanges();
+        if (clientsSynced > 0) console.log(`[SYNC] ${clientsSynced} client(s) synchronisé(s)`);
+      } catch (e) {
+        console.error("[SYNC] Erreur sync clients:", e);
+      }
+      // Sync des commandes en attente
       await syncPendingOrders();
     }
   });
-  
+
   if (isOnline()) {
     syncPendingOrders();
   }
-  
+
   return unsubscribe;
 }
 

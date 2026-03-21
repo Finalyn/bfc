@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2, Save, X, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const clientFormSchema = z.object({
@@ -55,9 +55,42 @@ interface ClientModalProps {
   onSuccess: (client: ClientData) => void;
 }
 
+// Sauvegarde locale des modifications client en attente
+function savePendingClientChange(change: { mode: "create" | "edit"; data: ClientFormData; code?: string }) {
+  const pending = JSON.parse(localStorage.getItem("pendingClientChanges") || "[]");
+  pending.push({ ...change, timestamp: new Date().toISOString() });
+  localStorage.setItem("pendingClientChanges", JSON.stringify(pending));
+}
+
+// Sync les modifications client en attente
+export async function syncPendingClientChanges(): Promise<number> {
+  const pending = JSON.parse(localStorage.getItem("pendingClientChanges") || "[]");
+  if (pending.length === 0) return 0;
+
+  let synced = 0;
+  const remaining: typeof pending = [];
+
+  for (const change of pending) {
+    try {
+      if (change.mode === "create") {
+        await apiRequest("POST", "/api/clients", change.data);
+      } else {
+        await apiRequest("PATCH", `/api/clients/${change.code}`, change.data);
+      }
+      synced++;
+    } catch {
+      remaining.push(change);
+    }
+  }
+
+  localStorage.setItem("pendingClientChanges", JSON.stringify(remaining));
+  return synced;
+}
+
 export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }: ClientModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isOnline = navigator.onLine;
 
   const {
     register,
@@ -81,7 +114,6 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
     },
   });
 
-  // Reset form when clientData changes or modal opens
   useEffect(() => {
     if (open) {
       reset({
@@ -102,10 +134,18 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
 
   const createMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
+      if (!navigator.onLine) {
+        // Sauvegarder localement
+        savePendingClientChange({ mode: "create", data });
+        return data as ClientData;
+      }
       return await apiRequest<ClientData>("POST", "/api/clients", data);
     },
     onSuccess: (data) => {
-      toast({ title: "Client créé avec succès" });
+      toast({
+        title: navigator.onLine ? "Client créé avec succès" : "Client sauvegardé localement",
+        description: navigator.onLine ? undefined : "Sera synchronisé au retour du réseau",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
       onSuccess(data);
@@ -119,10 +159,17 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
 
   const updateMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
+      if (!navigator.onLine) {
+        savePendingClientChange({ mode: "edit", data, code: clientData?.code });
+        return data as ClientData;
+      }
       return await apiRequest<ClientData>("PATCH", `/api/clients/${clientData?.code}`, data);
     },
     onSuccess: (data) => {
-      toast({ title: "Client mis à jour avec succès" });
+      toast({
+        title: navigator.onLine ? "Client mis à jour" : "Modification sauvegardée localement",
+        description: navigator.onLine ? undefined : "Sera synchronisé au retour du réseau",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
       onSuccess(data);
@@ -147,8 +194,9 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
             {mode === "create" ? "Nouveau client" : "Compléter les informations"}
+            {!isOnline && <WifiOff className="w-4 h-4 text-amber-500" />}
           </DialogTitle>
         </DialogHeader>
 
@@ -179,89 +227,55 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
 
           <div className="space-y-1">
             <Label htmlFor="adresse1" className="text-xs">Adresse</Label>
-            <Input
-              id="adresse1"
-              {...register("adresse1")}
-              className="h-10"
-              data-testid="input-client-adresse1"
-            />
+            <Input id="adresse1" {...register("adresse1")} className="h-10" data-testid="input-client-adresse1" />
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="adresse2" className="text-xs">Adresse (suite)</Label>
-            <Input
-              id="adresse2"
-              {...register("adresse2")}
-              className="h-10"
-              data-testid="input-client-adresse2"
-            />
+            <Input id="adresse2" {...register("adresse2")} className="h-10" data-testid="input-client-adresse2" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="codePostal" className="text-xs">Code postal</Label>
-              <Input
-                id="codePostal"
-                {...register("codePostal")}
-                className="h-10"
-                data-testid="input-client-codepostal"
-              />
+              <Input id="codePostal" {...register("codePostal")} className="h-10" data-testid="input-client-codepostal" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="ville" className="text-xs">Ville</Label>
-              <Input
-                id="ville"
-                {...register("ville")}
-                className="h-10"
-                data-testid="input-client-ville"
-              />
+              <Input id="ville" {...register("ville")} className="h-10" data-testid="input-client-ville" />
             </div>
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="interloc" className="text-xs">Interlocuteur / Responsable</Label>
-            <Input
-              id="interloc"
-              {...register("interloc")}
-              className="h-10"
-              data-testid="input-client-interloc"
-            />
+            <Input id="interloc" {...register("interloc")} className="h-10" data-testid="input-client-interloc" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="tel" className="text-xs">Téléphone fixe</Label>
-              <Input
-                id="tel"
-                type="tel"
-                {...register("tel")}
-                className="h-10"
-                data-testid="input-client-tel"
-              />
+              <Input id="tel" type="tel" {...register("tel")} className="h-10" data-testid="input-client-tel" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="portable" className="text-xs">Portable</Label>
-              <Input
-                id="portable"
-                type="tel"
-                {...register("portable")}
-                className="h-10"
-                data-testid="input-client-portable"
-              />
+              <Input id="portable" type="tel" {...register("portable")} className="h-10" data-testid="input-client-portable" />
             </div>
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="mail" className="text-xs">Email</Label>
-            <Input
-              id="mail"
-              type="email"
-              {...register("mail")}
-              className="h-10"
-              data-testid="input-client-mail"
-            />
+            <Input id="mail" type="email" {...register("mail")} className="h-10" data-testid="input-client-mail" />
             {errors.mail && <p className="text-xs text-destructive">{errors.mail.message}</p>}
           </div>
+
+          {!isOnline && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <p className="text-xs text-amber-700 flex items-center gap-2">
+                <WifiOff className="w-3 h-3" />
+                Mode hors ligne — les modifications seront synchronisées au retour du réseau
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button
