@@ -1314,6 +1314,8 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                 />
               </CardContent>
             </Card>
+            {/* Espace pour le bouton fixé en bas */}
+            <div className="h-24" />
           </form>
         </div>
       </div>
