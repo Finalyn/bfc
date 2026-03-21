@@ -396,8 +396,8 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
   }
   yPos += 22;
 
-  const sigBoxWidth = pageWidth - 2 * margin;
-  const sigBoxHeight = 32;
+  const sigBoxWidth = 80;
+  const sigBoxHeight = 35;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
@@ -413,12 +413,7 @@ export async function generateOrderPDFClient(order: Order): Promise<Blob> {
 
   if (order.signature) {
     try {
-      // Garder les proportions de la signature (ne pas étirer sur toute la largeur)
-      const sigMaxWidth = 80;
-      const sigHeight = sigBoxHeight - 6;
-      const sigWidth = Math.min(sigMaxWidth, sigBoxWidth - 6);
-      const sigX = margin + (sigBoxWidth - sigWidth) / 2; // Centrer
-      doc.addImage(order.signature, "PNG", sigX, yPos + 12, sigWidth, sigHeight);
+      doc.addImage(order.signature, "PNG", margin + 3, yPos + 12, sigBoxWidth - 6, sigBoxHeight - 6);
     } catch (error) {
       console.error("Erreur signature:", error);
     }
