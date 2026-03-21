@@ -832,7 +832,7 @@ export default function AdminDashboard() {
                     data-testid="menu-export"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Exporter en Excel
+                    Exporter {activeTab === "clients" ? "Clients" : activeTab === "themes" ? "Thèmes" : activeTab === "commerciaux" ? "Commerciaux" : activeTab === "fournisseurs" ? "Fournisseurs" : activeTab === "orders" ? "Commandes" : activeTab}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={exportAllDatabase}
