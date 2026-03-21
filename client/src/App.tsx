@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -42,6 +42,8 @@ function Router() {
 }
 
 function App() {
+  const [, setLocation] = useLocation();
+
   useEffect(() => {
     const initOffline = async () => {
       await initLocalCache();
@@ -51,7 +53,19 @@ function App() {
 
     // Auto-sync des commandes offline quand le réseau revient (global)
     const unsubAutoSync = initAutoSync();
-    return () => unsubAutoSync();
+
+    // Écouter les messages du service worker (navigation depuis notification)
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NAVIGATE' && event.data.url) {
+        setLocation(event.data.url);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+
+    return () => {
+      unsubAutoSync();
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+    };
   }, []);
 
   return (

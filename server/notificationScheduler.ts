@@ -145,7 +145,7 @@ async function checkAndSendNotifications(
         badge: "/icons/icon-72x72.png",
         tag: `${eventDef.type}-${order.orderCode}-${notifType}`,
         data: {
-          url: "/my-dashboard",
+          url: "/dashboard",
           eventType: eventDef.type,
           orderCode: order.orderCode,
           eventDate,
