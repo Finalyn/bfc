@@ -1,6 +1,7 @@
 import cron from "node-cron";
+import nodemailer from "nodemailer";
 import { db } from "./db";
-import { orders, pushSubscriptions, notificationLogs } from "@shared/schema";
+import { orders, commerciaux, pushSubscriptions, notificationLogs } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import {
@@ -8,6 +9,60 @@ import {
   sendPushToUser,
   type NotificationPayload,
 } from "./utils/notificationSender";
+
+// Envoyer un email de rappel au commercial
+async function sendReminderEmail(
+  email: string,
+  userName: string,
+  title: string,
+  body: string
+): Promise<boolean> {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    return false;
+  }
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+      requireTLS: parseInt(process.env.SMTP_PORT || "587") === 587,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+      },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 8000,
+    });
+
+    await transporter.sendMail({
+      from: `"BFC APP" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: title,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #2563eb; color: white; padding: 15px 20px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 18px;">BFC APP - Rappel</h2>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 16px; color: #333; margin-top: 0;">Bonjour <strong>${userName}</strong>,</p>
+            <div style="background: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 15px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 15px; color: #1e40af;"><strong>${title}</strong></p>
+              <p style="margin: 8px 0 0; color: #333;">${body}</p>
+            </div>
+            <p style="color: #666; font-size: 13px;">Connectez-vous à l'application pour plus de détails.</p>
+          </div>
+          <p style="text-align: center; color: #999; font-size: 11px; margin-top: 15px;">
+            BFC APP - Développé par Finalyn
+          </p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error(`[NOTIF] Erreur envoi email à ${email}:`, error);
+    return false;
+  }
+}
 
 const EVENT_TYPES = [
   { field: "dateLivraison" as const, label: "Livraison", type: "livraison" },
@@ -152,10 +207,33 @@ async function checkAndSendNotifications(
         },
       };
 
+      // 1. Envoi push notification
       const result = await sendPushToUser(userName, payload);
       console.log(`[NOTIF] Push result for ${userName}: sent=${result.sent}, failed=${result.failed}, cleaned=${result.cleaned}`);
 
-      if (result.sent > 0) {
+      // 2. Envoi email si le commercial a un email configuré
+      let emailSent = false;
+      try {
+        // Chercher l'email du commercial par son nom complet (prénom + nom)
+        const allCommerciaux = await db.select().from(commerciaux);
+        const commercial = allCommerciaux.find(c => {
+          const fullName = `${c.prenom} ${c.nom}`.trim();
+          return fullName === userName;
+        });
+        if (commercial?.email) {
+          emailSent = await sendReminderEmail(
+            commercial.email,
+            userName,
+            payload.title,
+            payload.body
+          );
+          console.log(`[NOTIF] Email ${emailSent ? "envoyé" : "échoué"} à ${commercial.email} pour ${userName}`);
+        }
+      } catch (emailError) {
+        console.error(`[NOTIF] Erreur email pour ${userName}:`, emailError);
+      }
+
+      if (result.sent > 0 || emailSent) {
         await db.insert(notificationLogs).values({
           userName,
           orderId: order.id,
