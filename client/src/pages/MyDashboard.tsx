@@ -1409,6 +1409,18 @@ export default function MyDashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-4 space-y-4">
+            {/* Lien vers analyse complète avec export */}
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/analytics")}
+                data-testid="button-analytics-full"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analyse complète & Export
+              </Button>
+            </div>
             {/* Stats générales (depuis toujours) */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <Card className="overflow-hidden border border-gray-200 dark:border-gray-700">

@@ -14,6 +14,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import MyDashboard from "@/pages/MyDashboard";
 import LegalPage from "@/pages/LegalPage";
 import ProfilePage from "@/pages/ProfilePage";
+import AnalyticsPage from "@/pages/AnalyticsPage";
 import { initDataSync } from "@/lib/offlineDataSync";
 import { initLocalCache } from "@/lib/localDataCache";
 import { initAutoSync } from "@/lib/offlineSync";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/legal" component={LegalPage} />
       <Route path="/">
         <HomeRedirect />
