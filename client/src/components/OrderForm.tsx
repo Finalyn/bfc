@@ -262,18 +262,31 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     };
   }, []);
   
-  // Mutation pour mettre à jour le client
+  // Mutation pour mettre à jour le client (avec fallback offline)
   const updateClientMutation = useMutation({
     mutationFn: async (data: { id: number, updates: any }) => {
-      return apiRequest("PATCH", `/api/admin/clients/${data.id}`, data.updates);
+      if (!navigator.onLine) {
+        const pending = JSON.parse(localStorage.getItem("pendingClientChanges") || "[]");
+        pending.push({ mode: "edit", data: data.updates, code: data.id, timestamp: new Date().toISOString() });
+        localStorage.setItem("pendingClientChanges", JSON.stringify(pending));
+        return { _offline: true };
+      }
+      try {
+        return await apiRequest("PATCH", `/api/admin/clients/${data.id}`, data.updates);
+      } catch (e) {
+        const pending = JSON.parse(localStorage.getItem("pendingClientChanges") || "[]");
+        pending.push({ mode: "edit", data: data.updates, code: data.id, timestamp: new Date().toISOString() });
+        localStorage.setItem("pendingClientChanges", JSON.stringify(pending));
+        return { _offline: true };
+      }
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
-      toast({ title: "Client mis à jour", description: "Les informations du client ont été sauvegardées dans la base de données." });
-    },
-    onError: (error: any) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      toast({
+        title: result?._offline ? "Modification sauvegardée localement" : "Client mis à jour",
+        description: result?._offline ? "Sera synchronisé au retour du réseau" : "Les informations du client ont été sauvegardées.",
+      });
     },
   });
 

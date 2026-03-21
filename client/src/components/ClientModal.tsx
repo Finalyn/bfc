@@ -135,16 +135,22 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
   const createMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
       if (!navigator.onLine) {
-        // Sauvegarder localement
         savePendingClientChange({ mode: "create", data });
-        return data as ClientData;
+        return { ...data, _offline: true } as ClientData & { _offline?: boolean };
       }
-      return await apiRequest<ClientData>("POST", "/api/clients", data);
+      try {
+        return await apiRequest<ClientData>("POST", "/api/clients", data);
+      } catch (e) {
+        // Erreur réseau — sauvegarder localement
+        savePendingClientChange({ mode: "create", data });
+        return { ...data, _offline: true } as ClientData & { _offline?: boolean };
+      }
     },
     onSuccess: (data) => {
+      const isOffline = (data as any)._offline;
       toast({
-        title: navigator.onLine ? "Client créé avec succès" : "Client sauvegardé localement",
-        description: navigator.onLine ? undefined : "Sera synchronisé au retour du réseau",
+        title: isOffline ? "Client sauvegardé localement" : "Client créé avec succès",
+        description: isOffline ? "Sera synchronisé au retour du réseau" : undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
@@ -152,31 +158,32 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
       onOpenChange(false);
       reset();
     },
-    onError: (error: Error) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
       if (!navigator.onLine) {
         savePendingClientChange({ mode: "edit", data, code: clientData?.code });
-        return data as ClientData;
+        return { ...data, _offline: true } as ClientData & { _offline?: boolean };
       }
-      return await apiRequest<ClientData>("PATCH", `/api/clients/${clientData?.code}`, data);
+      try {
+        return await apiRequest<ClientData>("PATCH", `/api/clients/${clientData?.code}`, data);
+      } catch (e) {
+        // Erreur réseau — sauvegarder localement
+        savePendingClientChange({ mode: "edit", data, code: clientData?.code });
+        return { ...data, _offline: true } as ClientData & { _offline?: boolean };
+      }
     },
     onSuccess: (data) => {
+      const isOffline = (data as any)._offline;
       toast({
-        title: navigator.onLine ? "Client mis à jour" : "Modification sauvegardée localement",
-        description: navigator.onLine ? undefined : "Sera synchronisé au retour du réseau",
+        title: isOffline ? "Modification sauvegardée localement" : "Client mis à jour",
+        description: isOffline ? "Sera synchronisé au retour du réseau" : undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
       onSuccess(data);
       onOpenChange(false);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     },
   });
 
