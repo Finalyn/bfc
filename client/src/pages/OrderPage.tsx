@@ -101,7 +101,7 @@ export default function OrderPage() {
   const generateOrderMutation = useMutation({
     mutationFn: async (data: InsertOrder) => {
       if (!navigator.onLine) {
-        const orderCode = `OFF-${Date.now().toString(36).toUpperCase()}`;
+        const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
         const now = new Date().toISOString();
         
         const fullOrder: Order = {
@@ -205,7 +205,7 @@ export default function OrderPage() {
     onError: async (error: Error, variables: InsertOrder) => {
       if (!navigator.onLine) {
         try {
-          const orderCode = `OFF-${Date.now().toString(36).toUpperCase()}`;
+          const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
           const now = new Date().toISOString();
           
           const fullOrder: Order = {
