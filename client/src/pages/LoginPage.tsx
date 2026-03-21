@@ -57,7 +57,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 overflow-hidden fixed inset-0">
       <div className="w-full max-w-sm space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">

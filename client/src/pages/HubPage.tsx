@@ -28,7 +28,7 @@ export default function HubPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 overflow-x-hidden">
       {/* Header avec profil et déconnexion */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <div
