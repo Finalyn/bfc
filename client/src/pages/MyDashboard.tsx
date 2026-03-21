@@ -1267,55 +1267,58 @@ export default function MyDashboard() {
                 )}
                 
                 {calendarView === "week" && (
-                  <div>
-                    <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                      {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(day => (
-                        <div key={day} className="font-medium text-muted-foreground py-1">{day}</div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {eachDayOfInterval({ 
-                        start: startOfWeek(currentDate, { weekStartsOn: 1 }), 
-                        end: endOfWeek(currentDate, { weekStartsOn: 1 }) 
-                      }).map(day => {
-                        const dayEvents = getOrderEventsForDate(day);
-                        const isToday = isSameDay(day, new Date());
-                        const eventTypes = Array.from(new Set(dayEvents.map(e => e.eventType)));
-                        return (
-                          <div 
-                            key={day.toISOString()}
-                            className={`min-h-[80px] rounded-lg p-2 text-sm cursor-pointer hover-elevate ${
-                              isToday ? "bg-primary/10 border-2 border-primary" : "bg-muted/30"
-                            }`}
-                            onClick={() => openDayDetailDialog(day)}
-                            data-testid={`calendar-week-day-${format(day, "yyyy-MM-dd")}`}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span className={`font-medium ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</span>
-                              {eventTypes.length > 0 && (
-                                <div className="flex gap-0.5">
-                                  {eventTypes.map(eventType => (
-                                    <div 
-                                      key={eventType}
-                                      className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[eventType].dotColor}`}
-                                      data-testid={`dot-${eventType}`}
-                                    />
-                                  ))}
+                  <div className="overflow-x-auto -mx-4 px-4">
+                    <div style={{ minWidth: "700px" }}>
+                      <div className="grid grid-cols-7 gap-2 text-center text-xs mb-2">
+                        {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(day => (
+                          <div key={day} className="font-medium text-muted-foreground py-1">{day}</div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-2">
+                        {eachDayOfInterval({
+                          start: startOfWeek(currentDate, { weekStartsOn: 1 }),
+                          end: endOfWeek(currentDate, { weekStartsOn: 1 })
+                        }).map(day => {
+                          const dayEvents = getOrderEventsForDate(day);
+                          const isToday = isSameDay(day, new Date());
+                          const eventTypes = Array.from(new Set(dayEvents.map(e => e.eventType)));
+                          return (
+                            <div
+                              key={day.toISOString()}
+                              className={`min-h-[120px] rounded-lg p-2 text-sm cursor-pointer hover-elevate ${
+                                isToday ? "bg-primary/10 border-2 border-primary" : "bg-muted/30"
+                              }`}
+                              onClick={() => openDayDetailDialog(day)}
+                              data-testid={`calendar-week-day-${format(day, "yyyy-MM-dd")}`}
+                            >
+                              <div className="flex items-center gap-1 mb-1">
+                                <span className={`font-semibold ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</span>
+                                <span className={`text-xs ${isToday ? "text-primary" : "text-muted-foreground"}`}>{format(day, "MMM", { locale: fr })}</span>
+                                {eventTypes.length > 0 && (
+                                  <div className="flex gap-0.5 ml-auto">
+                                    {eventTypes.map(eventType => (
+                                      <div
+                                        key={eventType}
+                                        className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[eventType].dotColor}`}
+                                        data-testid={`dot-${eventType}`}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {dayEvents.slice(0, 4).map((event, idx) => (
+                                <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`text-xs mt-1 p-1.5 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded flex items-center gap-1`}>
+                                  <div className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[event.eventType].dotColor} flex-shrink-0`} />
+                                  <span className="truncate">{event.themeName ? `${event.themeName} - ` : ""}{event.order.clientName}</span>
                                 </div>
+                              ))}
+                              {dayEvents.length > 4 && (
+                                <p className="text-xs text-muted-foreground mt-1">+{dayEvents.length - 4} autres</p>
                               )}
                             </div>
-                            {dayEvents.slice(0, 3).map((event, idx) => (
-                              <div key={`${event.order.id}-${event.eventType}-${idx}-${event.themeName || ''}`} className={`text-xs mt-1 p-1 ${DATE_EVENT_CONFIG[event.eventType].bgColor} rounded truncate flex items-center gap-1`}>
-                                <div className={`w-2 h-2 rounded-full ${DATE_EVENT_CONFIG[event.eventType].dotColor} flex-shrink-0`} />
-                                <span className="truncate">{event.themeName ? `${event.themeName} - ` : ""}{event.order.clientName}</span>
-                              </div>
-                            ))}
-                            {dayEvents.length > 3 && (
-                              <p className="text-xs text-muted-foreground">+{dayEvents.length - 3} autres</p>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
