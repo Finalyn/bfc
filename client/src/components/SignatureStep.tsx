@@ -303,6 +303,7 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
               </Button>
             </CardContent>
           </Card>
+          <div className="h-28" />
 
           <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-2xl" style={{ padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px" }}>
             <div className="max-w-lg mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3">
