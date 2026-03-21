@@ -28,9 +28,9 @@ export default function HubPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 overflow-x-hidden">
+    <div className="h-screen flex flex-col bg-white dark:bg-gray-900 overflow-hidden fixed inset-0">
       {/* Header avec profil et déconnexion */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <header className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
         <div
           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => setLocation("/profile")}
@@ -56,18 +56,18 @@ export default function HubPage() {
       </header>
 
       {/* Contenu principal */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-lg">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               BFC APP
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Choisissez votre espace de travail
             </p>
           </div>
 
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           <Card 
             className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
             onClick={() => setLocation("/order")}
@@ -76,7 +76,7 @@ export default function HubPage() {
             <CardContent className="p-0">
               <div className="flex items-stretch">
                 <div className="w-1 bg-primary" />
-                <div className="flex items-center gap-4 p-5 flex-1">
+                <div className="flex items-center gap-4 p-4 flex-1">
                   <ClipboardList className="w-6 h-6 text-primary" />
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -99,7 +99,7 @@ export default function HubPage() {
             <CardContent className="p-0">
               <div className="flex items-stretch">
                 <div className="w-1 bg-green-500" />
-                <div className="flex items-center gap-4 p-5 flex-1">
+                <div className="flex items-center gap-4 p-4 flex-1">
                   <LayoutDashboard className="w-6 h-6 text-green-600" />
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -126,7 +126,7 @@ export default function HubPage() {
               <CardContent className="p-0">
                 <div className="flex items-stretch">
                   <div className="w-1 bg-gray-400" />
-                  <div className="flex items-center gap-4 p-5 flex-1">
+                  <div className="flex items-center gap-4 p-4 flex-1">
                     <Database className="w-6 h-6 text-gray-500" />
                     <div className="flex-1">
                       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -144,7 +144,7 @@ export default function HubPage() {
         </div>
         </div>
       </div>
-      <footer className="py-4 text-center space-y-2">
+      <footer className="py-2 text-center space-y-1">
         <Link href="/legal" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 inline-flex items-center gap-1" data-testid="link-legal">
           <FileText className="w-3 h-3" />
           Mentions légales et CGU
