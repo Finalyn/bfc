@@ -185,6 +185,7 @@ export const fournisseurs = mysqlTable("fournisseurs", {
   id: serial("id").primaryKey(),
   nom: text("nom").notNull(),
   nomCourt: text("nom_court").notNull(),
+  cgv: text("cgv").default(""),
 });
 
 export const insertFournisseurSchema = createInsertSchema(fournisseurs).omit({

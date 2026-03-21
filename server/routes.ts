@@ -55,6 +55,17 @@ function invalidateCommerciauxCache() {
   commerciauxCache = null;
 }
 
+// Récupérer les CGV d'un fournisseur depuis la BDD
+async function getDbCgv(fournisseurId: string): Promise<string | undefined> {
+  try {
+    const allFournisseurs = await db.select().from(fournisseurs);
+    const found = allFournisseurs.find(f => f.nomCourt === fournisseurId || f.nom === fournisseurId);
+    return found?.cgv || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function generateOrderCode(): string {
   const parisTime = toZonedTime(new Date(), "Europe/Paris");
   const year = parisTime.getFullYear();
@@ -276,7 +287,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Générer les fichiers
-      const pdfBuffer = generateOrderPDF(order);
+      const dbCgv = await getDbCgv(order.fournisseur || "BDIS");
+      const pdfBuffer = generateOrderPDF(order, dbCgv);
       const excelBuffer = await generateOrderExcel(order);
 
       // Stocker les fichiers en mémoire (avec TTL)
@@ -489,7 +501,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Générer PDF et Excel pour l'envoi d'email
-      const pdfBuffer = generateOrderPDF(order);
+      const dbCgv = await getDbCgv(order.fournisseur || "BDIS");
+      const pdfBuffer = generateOrderPDF(order, dbCgv);
       const excelBuffer = await generateOrderExcel(order);
 
       // Stocker en mémoire pour l'envoi ultérieur (avec TTL)
@@ -2322,7 +2335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: orderDb.createdAt?.toISOString() || "",
       };
 
-      const pdfBuffer = generateOrderPDF(order);
+      const dbCgv = await getDbCgv(order.fournisseur || "BDIS");
+      const pdfBuffer = generateOrderPDF(order, dbCgv);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${orderDb.orderCode}.pdf"`);
       res.send(pdfBuffer);

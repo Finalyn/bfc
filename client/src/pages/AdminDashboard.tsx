@@ -748,6 +748,16 @@ export default function AdminDashboard() {
               <Label htmlFor="nomCourt">Nom court (code)</Label>
               <Input id="nomCourt" value={editFormData.nomCourt || ""} onChange={e => setEditFormData({...editFormData, nomCourt: e.target.value})} />
             </div>
+            <div>
+              <Label htmlFor="cgv">Conditions Générales de Vente (CGV)</Label>
+              <textarea
+                id="cgv"
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="Saisissez les CGV du fournisseur..."
+                value={editFormData.cgv || ""}
+                onChange={e => setEditFormData({...editFormData, cgv: e.target.value})}
+              />
+            </div>
           </div>
         );
       default:

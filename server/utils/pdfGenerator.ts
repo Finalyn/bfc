@@ -69,7 +69,7 @@ try {
   console.error("Failed to load header image:", e);
 }
 
-export function generateOrderPDF(order: Order): Buffer {
+export function generateOrderPDF(order: Order, dbCgv?: string): Buffer {
   const doc = new jsPDF();
   
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -114,7 +114,7 @@ export function generateOrderPDF(order: Order): Buffer {
     nom: order.fournisseur || "FOURNISSEUR",
     nomComplet: order.fournisseur || "FOURNISSEUR",
     themes: [],
-    cgv: "Conditions générales de vente disponibles sur demande.",
+    cgv: dbCgv || "Conditions générales de vente disponibles sur demande.",
   };
 
   // Titre principal - aligné tout à droite
