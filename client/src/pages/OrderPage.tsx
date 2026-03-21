@@ -156,8 +156,53 @@ export default function OrderPage() {
           isOffline: true,
         } as GeneratedOrder & { isOffline: boolean };
       }
-      const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
-      return { ...response, isOffline: false };
+      try {
+        const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
+        return { ...response, isOffline: false };
+      } catch (e) {
+        // Erreur réseau — sauvegarder en offline
+        const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
+        const now = new Date().toISOString();
+        const fullOrder: Order = {
+          orderCode,
+          orderDate: data.orderDate || now.split('T')[0],
+          salesRepName: data.salesRepName,
+          fournisseur: data.fournisseur || "BDIS",
+          responsableName: data.responsableName,
+          responsableTel: data.responsableTel,
+          responsableEmail: data.responsableEmail,
+          comptaTel: data.comptaTel,
+          comptaEmail: data.comptaEmail,
+          themeSelections: data.themeSelections,
+          livraisonEnseigne: data.livraisonEnseigne,
+          livraisonAdresse: data.livraisonAdresse,
+          livraisonCpVille: data.livraisonCpVille,
+          livraisonHoraires: data.livraisonHoraires,
+          livraisonHayon: data.livraisonHayon,
+          facturationRaisonSociale: data.facturationRaisonSociale,
+          facturationAdresse: data.facturationAdresse,
+          facturationCpVille: data.facturationCpVille,
+          facturationMode: data.facturationMode,
+          facturationRib: data.facturationRib,
+          cgvAccepted: data.cgvAccepted,
+          signature: data.signature,
+          signatureLocation: data.signatureLocation,
+          signatureDate: data.signatureDate,
+          clientSignedName: data.clientSignedName,
+          clientName: data.clientName,
+          clientEmail: data.clientEmail,
+          newsletterAccepted: data.newsletterAccepted ?? true,
+          createdAt: now,
+        };
+        try {
+          const pdfBlob = await generateOrderPDFClient(fullOrder);
+          await saveOfflineOrder(fullOrder, pdfBlob);
+        } catch {
+          await saveOfflineOrder(fullOrder);
+        }
+        await registerBackgroundSync();
+        return { orderCode, pdfUrl: "", excelUrl: "", emailsSent: false, emailError: null, isOffline: true } as GeneratedOrder & { isOffline: boolean };
+      }
     },
     onSuccess: (data) => {
       if ((data as any).isOffline) {

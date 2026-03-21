@@ -12,15 +12,27 @@ export async function apiRequest<T = any>(
   url: string,
   data?: unknown | undefined,
 ): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  const controller = new AbortController();
+  // Timeout court si hors ligne pour éviter le chargement infini
+  const timeout = navigator.onLine ? 30000 : 3000;
+  const timer = setTimeout(() => controller.abort(), timeout);
 
-  await throwIfResNotOk(res);
-  return await res.json();
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+    await throwIfResNotOk(res);
+    return await res.json();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
