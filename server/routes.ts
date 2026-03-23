@@ -219,24 +219,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/auth/elevate", loginLimiter, async (req, res) => {
     try {
-      const { userId, password } = req.body;
+      const { userId } = req.body;
       if (!userId) return res.status(400).json({ error: "userId requis" });
+      // Verify the caller has a valid user session matching the userId
+      const session = getUserSession(req);
+      if (!session || session.userId !== parseInt(userId)) {
+        return res.status(401).json({ error: "Session utilisateur invalide" });
+      }
       const [commercial] = await db.select().from(commerciaux).where(eq(commerciaux.id, parseInt(userId)));
       if (!commercial || commercial.role !== "admin") {
         return res.status(403).json({ error: "Accès non autorisé" });
-      }
-      // Require password re-verification for elevation
-      if (!password) return res.status(400).json({ error: "Mot de passe requis pour l'élévation" });
-      const storedPassword = commercial.motDePasse;
-      if (!storedPassword) return res.status(403).json({ error: "Compte non configuré" });
-      let passwordValid = false;
-      if (storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2a$")) {
-        passwordValid = await bcrypt.compare(password, storedPassword);
-      } else {
-        passwordValid = (password === storedPassword);
-      }
-      if (!passwordValid) {
-        return res.status(401).json({ error: "Mot de passe incorrect" });
       }
       createAdminSession(res);
       res.json({ success: true });

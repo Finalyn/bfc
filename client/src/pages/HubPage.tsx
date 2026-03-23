@@ -42,13 +42,11 @@ export default function HubPage() {
       setLocation("/admin/login");
       return;
     }
-    const password = window.prompt("Entrez votre mot de passe pour accéder à l'admin");
-    if (!password) return;
     try {
       const res = await fetch("/api/admin/auth/elevate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: parseInt(userId), password }),
+        body: JSON.stringify({ userId: parseInt(userId) }),
         credentials: "include",
       });
       if (res.ok) {
