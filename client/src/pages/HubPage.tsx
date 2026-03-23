@@ -141,13 +141,11 @@ export default function HubPage() {
             </Card>
           )}
         </div>
+          <p className="text-xs text-gray-400 text-center mt-4" data-testid="text-app-version">
+            v{APP_VERSION}
+          </p>
         </div>
       </div>
-      <footer className="py-2 text-center shrink-0" style={{ paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
-        <p className="text-xs text-gray-400" data-testid="text-app-version">
-          Version {APP_VERSION}
-        </p>
-      </footer>
     </div>
   );
 }
