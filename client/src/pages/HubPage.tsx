@@ -1,8 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Database, LogOut, User, LayoutDashboard, FileText } from "lucide-react";
-import { Link } from "wouter";
+import { ClipboardList, Database, LogOut, User, LayoutDashboard } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
 export default function HubPage() {
@@ -144,11 +143,7 @@ export default function HubPage() {
         </div>
         </div>
       </div>
-      <footer className="py-2 text-center space-y-1 shrink-0" style={{ paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
-        <Link href="/legal" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 inline-flex items-center gap-1" data-testid="link-legal">
-          <FileText className="w-3 h-3" />
-          Mentions légales et CGU
-        </Link>
+      <footer className="py-2 text-center shrink-0" style={{ paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
         <p className="text-xs text-gray-400" data-testid="text-app-version">
           Version {APP_VERSION}
         </p>
