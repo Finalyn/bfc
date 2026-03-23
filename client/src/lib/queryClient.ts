@@ -73,9 +73,11 @@ export const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes avant de considérer les données périmées
       gcTime: 10 * 60 * 1000, // Libérer la mémoire après 10 minutes d'inactivité
       retry: false,
+      networkMode: "always",
     },
     mutations: {
       retry: false,
+      networkMode: "always",
     },
   },
 });
