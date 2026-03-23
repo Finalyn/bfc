@@ -1031,62 +1031,33 @@ export default function AdminDashboard() {
                                         <div className="space-y-3">
                                           <h4 className="font-medium text-sm">Modifications en attente</h4>
                                           <div className="space-y-2 text-xs">
-                                            {previousData.nom !== undefined && previousData.nom !== client.nom && (
-                                              <div>
-                                                <span className="font-medium">Nom:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.nom || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.nom || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.adresse1 !== undefined && previousData.adresse1 !== client.adresse1 && (
-                                              <div>
-                                                <span className="font-medium">Adresse:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.adresse1 || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.adresse1 || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.codePostal !== undefined && previousData.codePostal !== client.codePostal && (
-                                              <div>
-                                                <span className="font-medium">Code postal:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.codePostal || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.codePostal || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.ville !== undefined && previousData.ville !== client.ville && (
-                                              <div>
-                                                <span className="font-medium">Ville:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.ville || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.ville || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.interloc !== undefined && previousData.interloc !== client.interloc && (
-                                              <div>
-                                                <span className="font-medium">Interlocuteur:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.interloc || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.interloc || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.portable !== undefined && previousData.portable !== client.portable && (
-                                              <div>
-                                                <span className="font-medium">Portable:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.portable || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.portable || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.tel !== undefined && previousData.tel !== client.tel && (
-                                              <div>
-                                                <span className="font-medium">Téléphone:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.tel || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.tel || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.mail !== undefined && previousData.mail !== client.mail && (
-                                              <div>
-                                                <span className="font-medium">Email:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.mail || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.mail || "(vide)"}</div>
-                                              </div>
-                                            )}
+                                            {(() => {
+                                              const fields: { key: string; label: string }[] = [
+                                                { key: "nom", label: "Nom" },
+                                                { key: "adresse1", label: "Adresse" },
+                                                { key: "codePostal", label: "Code postal" },
+                                                { key: "ville", label: "Ville" },
+                                                { key: "interloc", label: "Interlocuteur" },
+                                                { key: "portable", label: "Portable" },
+                                                { key: "tel", label: "Téléphone" },
+                                                { key: "mail", label: "Email" },
+                                              ];
+                                              const diffs = fields.filter(f => {
+                                                const prev = (previousData as any)[f.key];
+                                                const curr = (client as any)[f.key];
+                                                return prev !== undefined && (prev || "") !== (curr || "");
+                                              });
+                                              if (diffs.length === 0) {
+                                                return <p className="text-muted-foreground">Ce client a été modifié (les détails des changements ne sont pas disponibles).</p>;
+                                              }
+                                              return diffs.map(f => (
+                                                <div key={f.key}>
+                                                  <span className="font-medium">{f.label}:</span>
+                                                  <div className="text-muted-foreground line-through">{(previousData as any)[f.key] || "(vide)"}</div>
+                                                  <div className="text-primary font-medium">{(client as any)[f.key] || "(vide)"}</div>
+                                                </div>
+                                              ));
+                                            })()}
                                           </div>
                                           <Button 
                                             size="sm" 
