@@ -98,110 +98,68 @@ export default function OrderPage() {
   const { toast } = useToast();
   const online = useOnlineStatus();
 
+  // Helper pour sauvegarder une commande offline
+  const saveOrderOffline = async (data: InsertOrder): Promise<GeneratedOrder & { isOffline: boolean }> => {
+    const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
+    const now = new Date().toISOString();
+
+    const fullOrder = {
+      orderCode,
+      orderDate: data.orderDate || now.split('T')[0],
+      salesRepName: data.salesRepName,
+      fournisseur: data.fournisseur || "BDIS",
+      responsableName: data.responsableName,
+      responsableTel: data.responsableTel,
+      responsableEmail: data.responsableEmail,
+      comptaTel: data.comptaTel || "",
+      comptaEmail: data.comptaEmail || "",
+      themeSelections: data.themeSelections,
+      livraisonEnseigne: data.livraisonEnseigne,
+      livraisonAdresse: data.livraisonAdresse,
+      livraisonCpVille: data.livraisonCpVille,
+      livraisonHoraires: data.livraisonHoraires || "",
+      livraisonHayon: data.livraisonHayon,
+      facturationRaisonSociale: data.facturationRaisonSociale,
+      facturationAdresse: data.facturationAdresse,
+      facturationCpVille: data.facturationCpVille,
+      facturationMode: data.facturationMode,
+      facturationRib: data.facturationRib || "",
+      cgvAccepted: data.cgvAccepted,
+      signature: data.signature,
+      signatureLocation: data.signatureLocation,
+      signatureDate: data.signatureDate,
+      clientSignedName: data.clientSignedName,
+      clientName: data.clientName || "",
+      clientEmail: data.clientEmail || "",
+      newsletterAccepted: data.newsletterAccepted ?? true,
+      createdAt: now,
+    } as Order;
+
+    try {
+      const pdfBlob = await generateOrderPDFClient(fullOrder);
+      await saveOfflineOrder(fullOrder, pdfBlob);
+    } catch (pdfError) {
+      console.error("Erreur PDF offline:", pdfError);
+      await saveOfflineOrder(fullOrder);
+    }
+
+    try { await registerBackgroundSync(); } catch {}
+
+    return { orderCode, pdfUrl: "", excelUrl: "", emailsSent: false, emailError: null, isOffline: true } as GeneratedOrder & { isOffline: boolean };
+  };
+
   const generateOrderMutation = useMutation({
     mutationFn: async (data: InsertOrder) => {
+      // Mode offline détecté
       if (!navigator.onLine) {
-        const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
-        const now = new Date().toISOString();
-        
-        const fullOrder: Order = {
-          orderCode,
-          orderDate: data.orderDate || now.split('T')[0],
-          salesRepName: data.salesRepName,
-          fournisseur: data.fournisseur || "BDIS",
-          responsableName: data.responsableName,
-          responsableTel: data.responsableTel,
-          responsableEmail: data.responsableEmail,
-          comptaTel: data.comptaTel,
-          comptaEmail: data.comptaEmail,
-          themeSelections: data.themeSelections,
-          livraisonEnseigne: data.livraisonEnseigne,
-          livraisonAdresse: data.livraisonAdresse,
-          livraisonCpVille: data.livraisonCpVille,
-          livraisonHoraires: data.livraisonHoraires,
-          livraisonHayon: data.livraisonHayon,
-          facturationRaisonSociale: data.facturationRaisonSociale,
-          facturationAdresse: data.facturationAdresse,
-          facturationCpVille: data.facturationCpVille,
-          facturationMode: data.facturationMode,
-          facturationRib: data.facturationRib,
-          cgvAccepted: data.cgvAccepted,
-          signature: data.signature,
-          signatureLocation: data.signatureLocation,
-          signatureDate: data.signatureDate,
-          clientSignedName: data.clientSignedName,
-          clientName: data.clientName,
-          clientEmail: data.clientEmail,
-          newsletterAccepted: data.newsletterAccepted ?? true,
-          createdAt: now,
-        };
-        
-        try {
-          const pdfBlob = await generateOrderPDFClient(fullOrder);
-          await saveOfflineOrder(fullOrder, pdfBlob);
-        } catch (pdfError) {
-          console.error("Erreur génération PDF offline:", pdfError);
-          await saveOfflineOrder(fullOrder);
-        }
-        
-        // Enregistrer le Background Sync pour synchronisation automatique
-        await registerBackgroundSync();
-        
-        return {
-          orderCode,
-          pdfUrl: "",
-          excelUrl: "",
-          emailsSent: false,
-          emailError: null,
-          isOffline: true,
-        } as GeneratedOrder & { isOffline: boolean };
+        return await saveOrderOffline(data);
       }
+      // Mode online — essayer l'API avec fallback offline
       try {
         const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
         return { ...response, isOffline: false };
       } catch (e) {
-        // Erreur réseau — sauvegarder en offline
-        const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
-        const now = new Date().toISOString();
-        const fullOrder: Order = {
-          orderCode,
-          orderDate: data.orderDate || now.split('T')[0],
-          salesRepName: data.salesRepName,
-          fournisseur: data.fournisseur || "BDIS",
-          responsableName: data.responsableName,
-          responsableTel: data.responsableTel,
-          responsableEmail: data.responsableEmail,
-          comptaTel: data.comptaTel,
-          comptaEmail: data.comptaEmail,
-          themeSelections: data.themeSelections,
-          livraisonEnseigne: data.livraisonEnseigne,
-          livraisonAdresse: data.livraisonAdresse,
-          livraisonCpVille: data.livraisonCpVille,
-          livraisonHoraires: data.livraisonHoraires,
-          livraisonHayon: data.livraisonHayon,
-          facturationRaisonSociale: data.facturationRaisonSociale,
-          facturationAdresse: data.facturationAdresse,
-          facturationCpVille: data.facturationCpVille,
-          facturationMode: data.facturationMode,
-          facturationRib: data.facturationRib,
-          cgvAccepted: data.cgvAccepted,
-          signature: data.signature,
-          signatureLocation: data.signatureLocation,
-          signatureDate: data.signatureDate,
-          clientSignedName: data.clientSignedName,
-          clientName: data.clientName,
-          clientEmail: data.clientEmail,
-          newsletterAccepted: data.newsletterAccepted ?? true,
-          createdAt: now,
-        };
-        try {
-          const pdfBlob = await generateOrderPDFClient(fullOrder);
-          await saveOfflineOrder(fullOrder, pdfBlob);
-        } catch {
-          await saveOfflineOrder(fullOrder);
-        }
-        await registerBackgroundSync();
-        return { orderCode, pdfUrl: "", excelUrl: "", emailsSent: false, emailError: null, isOffline: true } as GeneratedOrder & { isOffline: boolean };
+        return await saveOrderOffline(data);
       }
     },
     onSuccess: (data) => {
@@ -248,71 +206,25 @@ export default function OrderPage() {
       }
     },
     onError: async (error: Error, variables: InsertOrder) => {
-      if (!navigator.onLine) {
-        try {
-          const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
-          const now = new Date().toISOString();
-          
-          const fullOrder: Order = {
-            orderCode,
-            orderDate: variables.orderDate || now.split('T')[0],
-            salesRepName: variables.salesRepName,
-            fournisseur: variables.fournisseur || "BDIS",
-            responsableName: variables.responsableName,
-            responsableTel: variables.responsableTel,
-            responsableEmail: variables.responsableEmail,
-            comptaTel: variables.comptaTel,
-            comptaEmail: variables.comptaEmail,
-            themeSelections: variables.themeSelections,
-            livraisonEnseigne: variables.livraisonEnseigne,
-            livraisonAdresse: variables.livraisonAdresse,
-            livraisonCpVille: variables.livraisonCpVille,
-            livraisonHoraires: variables.livraisonHoraires,
-            livraisonHayon: variables.livraisonHayon,
-            facturationRaisonSociale: variables.facturationRaisonSociale,
-            facturationAdresse: variables.facturationAdresse,
-            facturationCpVille: variables.facturationCpVille,
-            facturationMode: variables.facturationMode,
-            facturationRib: variables.facturationRib,
-            cgvAccepted: variables.cgvAccepted,
-            signature: variables.signature,
-            signatureLocation: variables.signatureLocation,
-            signatureDate: variables.signatureDate,
-            clientSignedName: variables.clientSignedName,
-            clientName: variables.clientName,
-            clientEmail: variables.clientEmail,
-            newsletterAccepted: variables.newsletterAccepted ?? true,
-            createdAt: now,
-          };
-          
-          try {
-            const pdfBlob = await generateOrderPDFClient(fullOrder);
-            await saveOfflineOrder(fullOrder, pdfBlob);
-          } catch (pdfError) {
-            console.error("Erreur génération PDF offline:", pdfError);
-            await saveOfflineOrder(fullOrder);
-          }
-          
-          // Enregistrer le Background Sync pour synchronisation automatique
-          await registerBackgroundSync();
-          
-          setSavedOffline(true);
-          setGeneratedOrder({
-            orderCode,
-            pdfUrl: "",
-            excelUrl: "",
-            emailsSent: false,
-            emailError: "Commande sauvegardée hors-ligne",
-          });
-          setCurrentStep("success");
-          toast({
-            title: "Commande sauvegardée",
-            description: "Connexion perdue - la commande sera envoyée automatiquement dès le retour du réseau",
-          });
-          return;
-        } catch (e) {
-          console.error("Erreur sauvegarde offline:", e);
-        }
+      // Dernière tentative de sauvegarde offline
+      try {
+        const result = await saveOrderOffline(variables);
+        setSavedOffline(true);
+        setGeneratedOrder({
+          orderCode: result.orderCode,
+          pdfUrl: "",
+          excelUrl: "",
+          emailsSent: false,
+          emailError: "Commande sauvegardée hors-ligne",
+        });
+        setCurrentStep("success");
+        toast({
+          title: "Commande sauvegardée",
+          description: "La commande sera envoyée automatiquement dès le retour du réseau",
+        });
+        return;
+      } catch (e) {
+        console.error("Erreur sauvegarde offline:", e);
       }
       // Vérifier si c'est une erreur de signature
       if (error.message && (
