@@ -4,7 +4,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import * as fs from "fs";
 import * as path from "path";
 
-const BACKUP_DIR = path.join(process.cwd(), "backups");
+const BACKUP_DIR = process.env.BACKUP_DIR || path.join(process.cwd(), "..", "bfc_backups");
 const MAX_BACKUPS = 30;
 
 async function ensureBackupDir(): Promise<void> {

@@ -5,6 +5,15 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startNotificationScheduler } from "./notificationScheduler";
 import { startBackupScheduler } from "./backupScheduler";
+// Validate critical environment variables in production
+if (process.env.NODE_ENV === "production") {
+  const required = ["DATABASE_URL", "ADMIN_PASSWORD", "SESSION_SECRET"];
+  const missing = required.filter(v => !process.env[v]);
+  if (missing.length > 0) {
+    console.error(`FATAL: Missing required environment variables: ${missing.join(", ")}`);
+    process.exit(1);
+  }
+}
 
 const app = express();
 
@@ -16,7 +25,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"],
@@ -37,12 +46,12 @@ declare module 'http' {
   }
 }
 app.use(express.json({
-  limit: '10mb',
+  limit: '3mb',
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '3mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -79,10 +88,9 @@ app.use((req, res, next) => {
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
+    const message = process.env.NODE_ENV === "production" ? "Erreur serveur" : (err.message || "Internal Server Error");
+    console.error(`[ERROR] ${err.message}`, err.stack);
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after

@@ -291,14 +291,11 @@ export default function OrderPage() {
   // Vérifier l'authentification au chargement
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("authenticated") === "true";
-
-    if (!isAuthenticated && navigator.onLine) {
+    if (!isAuthenticated) {
       window.location.href = "/login";
       return;
     }
-
-    // En mode offline, on laisse passer même sans auth stricte
-    // car on ne peut pas vérifier avec le serveur
+    // User is authenticated (at least has a localStorage session)
     setIsCheckingAuth(false);
   }, [setLocation]);
 
@@ -315,14 +312,6 @@ export default function OrderPage() {
   }
 
   const handleFormNext = (data: Partial<InsertOrder>) => {
-    // Debug: log what the form sends
-    console.log(`📋 handleFormNext - received themeSelections type: ${typeof data.themeSelections}, length: ${(data.themeSelections || "").length}`);
-    try {
-      const parsed = JSON.parse(data.themeSelections || "[]");
-      console.log(`📋 handleFormNext - parsed ${parsed.length} themes:`, parsed.slice(0, 3));
-    } catch (e) {
-      console.error(`❌ handleFormNext - themeSelections parse error`);
-    }
     setOrderData({ ...orderData, ...data });
     setCurrentStep("preview");
   };
@@ -344,16 +333,6 @@ export default function OrderPage() {
   };
 
   const handleGenerate = () => {
-    // Debug: log themeSelections before sending
-    console.log(`📋 handleGenerate - orderData.themeSelections type: ${typeof orderData.themeSelections}`);
-    console.log(`📋 handleGenerate - orderData.themeSelections length: ${(orderData.themeSelections || "").length}`);
-    try {
-      const parsed = JSON.parse(orderData.themeSelections || "[]");
-      console.log(`📋 handleGenerate - parsed ${parsed.length} themes:`, parsed.slice(0, 3));
-    } catch (e) {
-      console.error(`❌ handleGenerate - Failed to parse themeSelections:`, orderData.themeSelections);
-    }
-
     if (orderData.clientName && orderData.signature) {
       generateOrderMutation.mutate(orderData as InsertOrder);
     }

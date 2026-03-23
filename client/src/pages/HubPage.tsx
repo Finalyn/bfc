@@ -17,7 +17,14 @@ export default function HubPage() {
     return null;
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {}
+    // Clear cached sensitive data from service worker
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHES' });
+    }
     localStorage.removeItem("authenticated");
     localStorage.removeItem("adminAuthenticated");
     localStorage.removeItem("user");
@@ -35,18 +42,21 @@ export default function HubPage() {
       setLocation("/admin/login");
       return;
     }
+    const password = window.prompt("Entrez votre mot de passe pour accéder à l'admin");
+    if (!password) return;
     try {
       const res = await fetch("/api/admin/auth/elevate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: parseInt(userId) }),
+        body: JSON.stringify({ userId: parseInt(userId), password }),
         credentials: "include",
       });
       if (res.ok) {
         localStorage.setItem("adminAuthenticated", "true");
         setLocation("/admin");
       } else {
-        setLocation("/admin/login");
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Accès refusé");
       }
     } catch {
       setLocation("/admin/login");

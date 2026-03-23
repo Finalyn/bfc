@@ -191,7 +191,7 @@ export default function AdminDashboard() {
   const downloadPdf = async (order: OrderDb) => {
     setDownloadingPdf(true);
     try {
-      const response = await fetch(`/api/admin/orders/${order.id}/pdf`);
+      const response = await fetch(`/api/admin/orders/${order.id}/pdf`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors du téléchargement");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -213,7 +213,7 @@ export default function AdminDashboard() {
   const downloadExcel = async (order: OrderDb) => {
     setDownloadingExcel(true);
     try {
-      const response = await fetch(`/api/admin/orders/${order.id}/excel`);
+      const response = await fetch(`/api/admin/orders/${order.id}/excel`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors du téléchargement");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
   const exportAllDatabase = async () => {
     setExportingAll(true);
     try {
-      const response = await fetch("/api/admin/export-all");
+      const response = await fetch("/api/admin/export-all", { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors de l'export");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -301,8 +301,14 @@ export default function AdminDashboard() {
         }
       })
       .catch(() => {
-        // Allow access if offline (already passed localStorage check)
-        setIsCheckingAuth(false);
+        // Deny access if we cannot verify the session
+        if (navigator.onLine) {
+          localStorage.removeItem("adminAuthenticated");
+          setLocation("/admin/login");
+        } else {
+          // Offline: allow if admin session was previously verified
+          setIsCheckingAuth(false);
+        }
       });
   }, [setLocation]);
 
@@ -313,38 +319,38 @@ export default function AdminDashboard() {
   // Charger les totaux de toutes les entités dès le départ pour les compteurs des onglets
   const { data: clientsTotals } = useQuery<PaginatedResponse<Client>>({
     queryKey: ["/api/admin/clients", "totals"],
-    queryFn: () => fetch(`/api/admin/clients?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/clients?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: themesTotals } = useQuery<PaginatedResponse<Theme>>({
     queryKey: ["/api/admin/themes", "totals"],
-    queryFn: () => fetch(`/api/admin/themes?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/themes?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: commerciauxTotals } = useQuery<PaginatedResponse<Commercial>>({
     queryKey: ["/api/admin/commerciaux", "totals"],
-    queryFn: () => fetch(`/api/admin/commerciaux?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/commerciaux?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: fournisseursTotals } = useQuery<PaginatedResponse<Fournisseur>>({
     queryKey: ["/api/admin/fournisseurs", "totals"],
-    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   // Liste complète des fournisseurs pour les formulaires (thèmes)
   const { data: allFournisseurs } = useQuery<PaginatedResponse<Fournisseur>>({
     queryKey: ["/api/admin/fournisseurs", "all"],
-    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=100`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=100`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: ordersTotals } = useQuery<PaginatedResponse<OrderDb>>({
     queryKey: ["/api/admin/orders", "totals"],
-    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
@@ -359,37 +365,37 @@ export default function AdminDashboard() {
   }
   const { data: statsData } = useQuery<StatsData>({
     queryKey: ["/api/admin/stats"],
-    queryFn: () => fetch(`/api/admin/stats`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/stats`, { credentials: "include" }).then(r => r.json()),
     enabled: false,
   });
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<PaginatedResponse<Client>>({
     queryKey: ["/api/admin/clients", currentPage, debouncedSearch, sortField, sortDirection, clientBadgeFilter],
-    queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}&badgeFilter=${clientBadgeFilter}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}&badgeFilter=${clientBadgeFilter}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "clients",
   });
 
   const { data: themesData, isLoading: themesLoading } = useQuery<PaginatedResponse<Theme>>({
     queryKey: ["/api/admin/themes", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/themes${buildQueryParams()}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/themes${buildQueryParams()}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "themes",
   });
 
   const { data: commerciauxData, isLoading: commerciauxLoading } = useQuery<PaginatedResponse<Commercial>>({
     queryKey: ["/api/admin/commerciaux", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/commerciaux${buildQueryParams()}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/commerciaux${buildQueryParams()}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "commerciaux",
   });
 
   const { data: fournisseursData, isLoading: fournisseursLoading } = useQuery<PaginatedResponse<Fournisseur>>({
     queryKey: ["/api/admin/fournisseurs", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "fournisseurs",
   });
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery<PaginatedResponse<OrderDb>>({
     queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection, orderFournisseurFilter],
-    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
   });
 
@@ -482,7 +488,7 @@ export default function AdminDashboard() {
 
   const handleExport = async (entity: string) => {
     try {
-      const response = await fetch(`/api/admin/export/${entity}`);
+      const response = await fetch(`/api/admin/export/${entity}`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur d'export");
       
       const blob = await response.blob();
@@ -528,7 +534,7 @@ export default function AdminDashboard() {
       case "themes":
         return { theme: "", fournisseur: "" };
       case "commerciaux":
-        return { prenom: "", nom: "", role: "commercial", actif: true, motDePasse: "bfc26" };
+        return { prenom: "", nom: "", role: "commercial", actif: true, motDePasse: "" };
       case "fournisseurs":
         return { nom: "", nomCourt: "" };
       default:
@@ -736,16 +742,16 @@ export default function AdminDashboard() {
               {isCreating ? (
                 <Input
                   id="motDePasse"
-                  type="text"
-                  value={editFormData.motDePasse || "bfc26"}
+                  type="password"
+                  value={editFormData.motDePasse || ""}
                   onChange={e => setEditFormData({...editFormData, motDePasse: e.target.value})}
                   data-testid="input-mot-de-passe"
-                  placeholder="bfc26"
+                  placeholder="Mot de passe initial"
                 />
               ) : (
                 <div className="flex gap-2 mt-1">
                   <Input
-                    type="text"
+                    type="password"
                     placeholder="Nouveau mot de passe"
                     value={editFormData._newPassword || ""}
                     onChange={e => setEditFormData({...editFormData, _newPassword: e.target.value})}

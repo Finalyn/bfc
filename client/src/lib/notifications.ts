@@ -1,4 +1,16 @@
-const VAPID_PUBLIC_KEY = 'BENT7AYR6TeM2pfS1-HEbOZA0SrU6NZ1uWWOrvCwE0EioFss_vJ909Iu74JIGMbA5HfBWbd5yV8X7QBtPi3uYmY';
+let VAPID_PUBLIC_KEY = '';
+
+async function getVapidKey(): Promise<string> {
+  if (VAPID_PUBLIC_KEY) return VAPID_PUBLIC_KEY;
+  try {
+    const res = await fetch('/api/vapid-public-key', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      VAPID_PUBLIC_KEY = data.key;
+    }
+  } catch {}
+  return VAPID_PUBLIC_KEY;
+}
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!('Notification' in window)) {
@@ -22,9 +34,11 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     let subscription = await registration.pushManager.getSubscription();
     
     if (!subscription) {
+      const vapidKey = await getVapidKey();
+      if (!vapidKey) return null;
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
       });
     }
     

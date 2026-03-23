@@ -224,7 +224,7 @@ export default function MyDashboard() {
   }
 
   const { data: ordersResponse, isLoading } = useQuery<OrdersResponse>({
-    queryKey: ["/api/admin/orders?pageSize=10000"],
+    queryKey: ["/api/user/orders?pageSize=10000"],
   });
 
   interface CommerciauxResponse {
@@ -232,24 +232,22 @@ export default function MyDashboard() {
   }
   
   const { data: commerciauxResponse } = useQuery<CommerciauxResponse>({
-    queryKey: ["/api/admin/commerciaux?pageSize=100"],
+    queryKey: ["/api/user/commerciaux"],
     enabled: isAdmin,
   });
 
-  interface FournisseursResponse {
-    data: Array<{ id: number; nom: string; nomCourt: string }>;
-  }
-  
-  const { data: fournisseursResponse } = useQuery<FournisseursResponse>({
-    queryKey: ["/api/admin/fournisseurs?pageSize=100"],
+  type FournisseurItem = { id: number; nom: string; nomCourt: string };
+
+  const { data: fournisseursRaw } = useQuery<FournisseurItem[]>({
+    queryKey: ["/api/data/fournisseurs"],
   });
 
   const fournisseursList = useMemo(() => {
-    return (fournisseursResponse?.data || []).map(f => ({
+    return (fournisseursRaw || []).map((f: FournisseurItem) => ({
       id: f.nomCourt || f.nom,
       nom: f.nom
     }));
-  }, [fournisseursResponse]);
+  }, [fournisseursRaw]);
 
   const allOrders = ordersResponse?.data || [];
   const commerciaux = useMemo(() => {
@@ -261,11 +259,11 @@ export default function MyDashboard() {
 
   const updateDatesMutation = useMutation({
     mutationFn: async ({ orderId, data }: { orderId: number; data: DateUpdateData }) => {
-      return apiRequest("PATCH", `/api/admin/orders/${orderId}/dates`, data);
+      return apiRequest("PATCH", `/api/user/orders/${orderId}/dates`, data);
     },
     onSuccess: () => {
       toast({ title: "Dates mises à jour", description: "Les dates de la commande ont été modifiées avec succès." });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders?pageSize=10000"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/orders?pageSize=10000"] });
       setDatesDialogOpen(false);
       setSelectedOrder(null);
     },
@@ -320,7 +318,7 @@ export default function MyDashboard() {
   const downloadPdf = async (order: OrderDb) => {
     setDownloadingPdf(true);
     try {
-      const response = await fetch(`/api/admin/orders/${order.id}/pdf`);
+      const response = await fetch(`/api/user/orders/${order.id}/pdf`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors du téléchargement");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -342,7 +340,7 @@ export default function MyDashboard() {
   const downloadExcel = async (order: OrderDb) => {
     setDownloadingExcel(true);
     try {
-      const response = await fetch(`/api/admin/orders/${order.id}/excel`);
+      const response = await fetch(`/api/user/orders/${order.id}/excel`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors du téléchargement");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

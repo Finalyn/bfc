@@ -302,4 +302,16 @@ self.addEventListener('message', (event) => {
       })
     );
   }
+
+  if (event.data && event.data.type === 'CLEAR_CACHES') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((name) => name === DATA_CACHE)
+            .map((name) => caches.delete(name))
+        );
+      })
+    );
+  }
 });

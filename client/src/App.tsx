@@ -71,7 +71,11 @@ function App() {
     // Écouter les messages du service worker (navigation depuis notification)
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data?.type === 'NAVIGATE' && event.data.url) {
-        setLocation(event.data.url);
+        const allowedPaths = ['/hub', '/order', '/dashboard', '/admin', '/admin/login', '/profile', '/analytics', '/login', '/legal'];
+        const url = event.data.url;
+        if (typeof url === 'string' && allowedPaths.some(p => url === p || url.startsWith(p + '/'))) {
+          setLocation(url);
+        }
       }
     };
     navigator.serviceWorker?.addEventListener('message', handleSWMessage);

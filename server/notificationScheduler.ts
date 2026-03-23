@@ -10,6 +10,10 @@ import {
   type NotificationPayload,
 } from "./utils/notificationSender";
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // Envoyer un email de rappel au commercial
 async function sendReminderEmail(
   email: string,
@@ -30,7 +34,7 @@ async function sendReminderEmail(
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
-      tls: { rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false" },
+      tls: { rejectUnauthorized: process.env.NODE_ENV === "production" ? true : (process.env.SMTP_REJECT_UNAUTHORIZED !== "false") },
       connectionTimeout: 8000,
     });
 
@@ -44,10 +48,10 @@ async function sendReminderEmail(
             <h2 style="margin: 0; font-size: 18px;">BFC APP - Rappel</h2>
           </div>
           <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p style="font-size: 16px; color: #333; margin-top: 0;">Bonjour <strong>${userName}</strong>,</p>
+            <p style="font-size: 16px; color: #333; margin-top: 0;">Bonjour <strong>${escapeHtml(userName)}</strong>,</p>
             <div style="background: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 15px 0; border-radius: 4px;">
-              <p style="margin: 0; font-size: 15px; color: #1e40af;"><strong>${title}</strong></p>
-              <p style="margin: 8px 0 0; color: #333;">${body}</p>
+              <p style="margin: 0; font-size: 15px; color: #1e40af;"><strong>${escapeHtml(title)}</strong></p>
+              <p style="margin: 8px 0 0; color: #333;">${escapeHtml(body)}</p>
             </div>
             <p style="color: #666; font-size: 13px;">Connectez-vous à l'application pour plus de détails.</p>
           </div>
