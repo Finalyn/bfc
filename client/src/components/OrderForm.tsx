@@ -1343,7 +1343,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       </div>
 
       {/* Bouton fixé en bas - safe area PWA */}
-      <div className="sticky bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg" style={{ padding: "16px 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px" }}>
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg z-40" style={{ padding: "16px 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px" }}>
         <div className="max-w-2xl mx-auto">
           <Button
             onClick={handleSubmit(onSubmit)}
