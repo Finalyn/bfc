@@ -14,7 +14,7 @@ export async function apiRequest<T = any>(
   options?: { timeout?: number },
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = options?.timeout ?? (navigator.onLine ? 15000 : 3000);
+  const timeout = options?.timeout ?? (navigator.onLine ? 5000 : 2000);
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
@@ -41,16 +41,27 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), navigator.onLine ? 5000 : 2000);
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    try {
+      const res = await fetch(queryKey.join("/") as string, {
+        credentials: "include",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

@@ -163,7 +163,7 @@ export default function OrderPage() {
       }
       // Mode online — essayer l'API avec timeout court pour détecter hors-ligne rapidement
       try {
-        const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data, { timeout: 10000 });
+        const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data, { timeout: 5000 });
         return { ...response, isOffline: false };
       } catch (e) {
         return await saveOrderOffline(data);

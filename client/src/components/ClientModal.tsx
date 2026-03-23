@@ -159,8 +159,10 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
         title: isOffline ? "Client sauvegardé localement" : "Client créé avec succès",
         description: isOffline ? "Sera synchronisé au retour du réseau" : undefined,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
+      if (!isOffline) {
+        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
+      }
       onSuccess(data);
       onOpenChange(false);
       reset();
@@ -187,8 +189,10 @@ export function ClientModal({ open, onOpenChange, mode, clientData, onSuccess }:
         title: isOffline ? "Modification sauvegardée localement" : "Client mis à jour",
         description: isOffline ? "Sera synchronisé au retour du réseau" : undefined,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
+      if (!isOffline) {
+        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
+      }
       onSuccess(data);
       onOpenChange(false);
     },
