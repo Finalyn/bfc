@@ -1127,24 +1127,10 @@ export default function AdminDashboard() {
           <TabsContent value="themes">
             <Card>
               <CardContent className="p-0">
-                <div className="p-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="p-3 border-b">
                   <span className="text-sm text-muted-foreground">
                     Thèmes liés aux fournisseurs - Les modifications sont automatiquement reflétées dans les bons de commande
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleMigrateCategories}
-                    disabled={isMigratingCategories}
-                    data-testid="button-migrate-categories"
-                  >
-                    {isMigratingCategories ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Package className="w-4 h-4 mr-2" />
-                    )}
-                    {isMigratingCategories ? "Migration..." : "Migrer catégories"}
-                  </Button>
                 </div>
                 {themesLoading ? (
                   <div className="p-8 text-center">
