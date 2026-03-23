@@ -136,8 +136,15 @@ export default function OrderPage() {
     } as Order;
 
     try {
-      const pdfBlob = await generateOrderPDFClient(fullOrder);
-      await saveOfflineOrder(fullOrder, pdfBlob);
+      // Timeout de 5s sur la génération PDF pour éviter le blocage en offline
+      const pdfPromise = generateOrderPDFClient(fullOrder);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+      const pdfBlob = await Promise.race([pdfPromise, timeoutPromise]);
+      if (pdfBlob) {
+        await saveOfflineOrder(fullOrder, pdfBlob);
+      } else {
+        await saveOfflineOrder(fullOrder);
+      }
     } catch (pdfError) {
       console.error("Erreur PDF offline:", pdfError);
       await saveOfflineOrder(fullOrder);

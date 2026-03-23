@@ -57,9 +57,12 @@ let headerImageBase64: string | null = null;
 
 async function loadHeaderImage(): Promise<string | null> {
   if (headerImageBase64) return headerImageBase64;
-  
+
   try {
-    const response = await fetch(headerImageUrl);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(headerImageUrl, { signal: controller.signal });
+    clearTimeout(timer);
     const blob = await response.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -71,7 +74,6 @@ async function loadHeaderImage(): Promise<string | null> {
       reader.readAsDataURL(blob);
     });
   } catch (e) {
-    console.error("Failed to load header image:", e);
     return null;
   }
 }
