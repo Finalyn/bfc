@@ -1610,77 +1610,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
       
-      // Get DB clients
-      const dbClients = await db.select().from(clients);
-      const dbClientsByCode = new Map(dbClients.map(c => [c.code, c]));
-      
-      // Merge with Excel clients
-      let allClients = data.clients.map(excelClient => {
-        const dbClient = dbClientsByCode.get(excelClient.code);
-        if (dbClient) {
-          return {
-            id: dbClient.id,
-            code: dbClient.code,
-            nom: dbClient.nom,
-            adresse1: dbClient.adresse1 || "",
-            codePostal: dbClient.codePostal || "",
-            ville: dbClient.ville || "",
-            interloc: dbClient.interloc || "",
-            tel: dbClient.tel || "",
-            portable: dbClient.portable || "",
-            mail: dbClient.mail || "",
-            createdAt: dbClient.createdAt,
-            updatedAt: dbClient.updatedAt,
-            isFromExcel: dbClient.isFromExcel || false,
-            previousValues: dbClient.previousValues,
-            modificationApproved: dbClient.modificationApproved ?? true,
-            approvedAt: dbClient.approvedAt,
-          };
-        }
-        return {
-          id: 0,
-          code: excelClient.code,
-          nom: excelClient.nom,
-          adresse1: excelClient.adresse1,
-          codePostal: excelClient.codePostal,
-          ville: excelClient.ville,
-          interloc: excelClient.interloc,
-          tel: excelClient.tel,
-          portable: excelClient.portable,
-          mail: excelClient.mail,
-          createdAt: null,
-          updatedAt: null,
-          isFromExcel: true,
-          previousValues: null,
-          modificationApproved: true,
-          approvedAt: null,
-        };
-      });
-      
-      // Add new DB clients not in Excel
-      const excelCodes = new Set(data.clients.map(c => c.code));
-      const newDbClients = dbClients
-        .filter(c => !excelCodes.has(c.code))
-        .map(c => ({
-          id: c.id,
-          code: c.code,
-          nom: c.nom,
-          adresse1: c.adresse1 || "",
-          codePostal: c.codePostal || "",
-          ville: c.ville || "",
-          interloc: c.interloc || "",
-          tel: c.tel || "",
-          portable: c.portable || "",
-          mail: c.mail || "",
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-          isFromExcel: c.isFromExcel || false,
-          previousValues: c.previousValues,
-          modificationApproved: c.modificationApproved ?? true,
-          approvedAt: c.approvedAt,
-        }));
-      
-      allClients = [...allClients, ...newDbClients];
+      // All clients from database (single source of truth)
+      let allClients = (await db.select().from(clients)).map(c => ({
+        id: c.id,
+        code: c.code,
+        nom: c.nom,
+        adresse1: c.adresse1 || "",
+        codePostal: c.codePostal || "",
+        ville: c.ville || "",
+        interloc: c.interloc || "",
+        tel: c.tel || "",
+        portable: c.portable || "",
+        mail: c.mail || "",
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        isFromExcel: c.isFromExcel || false,
+        previousValues: c.previousValues,
+        modificationApproved: c.modificationApproved ?? true,
+        approvedAt: c.approvedAt,
+      }));
       
       // Filter by search
       if (search) {
