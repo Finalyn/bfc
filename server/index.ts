@@ -5,13 +5,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startNotificationScheduler } from "./notificationScheduler";
 import { startBackupScheduler } from "./backupScheduler";
-// Validate critical environment variables in production
+// Warn about missing environment variables in production
 if (process.env.NODE_ENV === "production") {
-  const required = ["DATABASE_URL", "ADMIN_PASSWORD", "SESSION_SECRET"];
-  const missing = required.filter(v => !process.env[v]);
+  const recommended = ["DATABASE_URL", "ADMIN_PASSWORD", "SESSION_SECRET"];
+  const missing = recommended.filter(v => !process.env[v]);
   if (missing.length > 0) {
-    console.error(`FATAL: Missing required environment variables: ${missing.join(", ")}`);
-    process.exit(1);
+    console.warn(`⚠️  WARNING: Missing recommended environment variables: ${missing.join(", ")}`);
   }
 }
 
