@@ -2878,6 +2878,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === IMPORT EXCEL → BDD ===
+  app.post("/api/admin/import-excel-clients", async (req, res) => {
+    try {
+      const dbClients = await db.select().from(clients);
+      const dbCodes = new Set(dbClients.map(c => c.code));
+
+      let imported = 0;
+      for (const excelClient of data.clients) {
+        if (!dbCodes.has(excelClient.code)) {
+          await db.insert(clients).values({
+            code: excelClient.code,
+            nom: excelClient.nom,
+            adresse1: excelClient.adresse1 || "",
+            adresse2: (excelClient as any).adresse2 || "",
+            codePostal: excelClient.codePostal || "",
+            ville: excelClient.ville || "",
+            pays: (excelClient as any).pays || "",
+            interloc: excelClient.interloc || "",
+            tel: excelClient.tel || "",
+            portable: excelClient.portable || "",
+            fax: (excelClient as any).fax || "",
+            mail: excelClient.mail || "",
+            isFromExcel: true,
+          });
+          imported++;
+        }
+      }
+
+      res.json({ success: true, imported, total: data.clients.length, alreadyInDb: data.clients.length - imported });
+    } catch (error: any) {
+      console.error("Erreur import Excel:", error);
+      res.status(500).json({ error: "Erreur lors de l'import" });
+    }
+  });
+
   // === BACKUP BASE DE DONNÉES ===
 
   app.get("/api/admin/backup", async (req, res) => {
