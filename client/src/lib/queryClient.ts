@@ -11,10 +11,10 @@ export async function apiRequest<T = any>(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { timeout?: number },
 ): Promise<T> {
   const controller = new AbortController();
-  // Timeout court si hors ligne pour éviter le chargement infini
-  const timeout = navigator.onLine ? 30000 : 3000;
+  const timeout = options?.timeout ?? (navigator.onLine ? 15000 : 3000);
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
@@ -59,7 +59,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 5 * 60 * 1000, // 5 minutes avant de considérer les données périmées
+      gcTime: 10 * 60 * 1000, // Libérer la mémoire après 10 minutes d'inactivité
       retry: false,
     },
     mutations: {

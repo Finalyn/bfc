@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { 
-  insertOrderSchema, type Order, 
+import crypto from "crypto";
+import {
+  insertOrderSchema, type Order,
   clients, insertClientSchema, updateClientSchema,
   commerciaux, insertCommercialSchema,
   fournisseurs, insertFournisseurSchema,
@@ -20,6 +21,8 @@ import { eq, or, sql, count, asc, desc } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcrypt";
 
+const BCRYPT_ROUNDS = 12;
+
 // Stockage en mémoire des fichiers générés (avec TTL)
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order; createdAt: number }>();
 
@@ -27,15 +30,44 @@ const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order; 
 setInterval(() => {
   const now = Date.now();
   let cleaned = 0;
-  const entries = Array.from(fileStorage.entries());
-  for (const [key, value] of entries) {
+  fileStorage.forEach((value, key) => {
     if (now - value.createdAt > 3600000) {
       fileStorage.delete(key);
       cleaned++;
     }
-  }
+  });
   if (cleaned > 0) console.log(`[STORAGE] Nettoyé ${cleaned} fichier(s) en mémoire`);
-}, 600000); // Vérifier toutes les 10 minutes
+}, 600000);
+
+// === ADMIN SESSION STORE ===
+const adminSessions = new Map<string, { createdAt: number }>();
+const ADMIN_SESSION_TTL = 24 * 60 * 60 * 1000; // 24h
+
+setInterval(() => {
+  const now = Date.now();
+  adminSessions.forEach((session, token) => {
+    if (now - session.createdAt > ADMIN_SESSION_TTL) {
+      adminSessions.delete(token);
+    }
+  });
+}, 600000);
+
+function getAdminSessionToken(req: any): string | null {
+  const cookies = req.headers.cookie || "";
+  const match = cookies.match(/admin_session=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+function createAdminSession(res: any): void {
+  const token = crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, { createdAt: Date.now() });
+  res.cookie("admin_session", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: ADMIN_SESSION_TTL,
+  });
+}
 
 // Cache des commerciaux pour authentification rapide
 let commerciauxCache: any[] | null = null;
@@ -58,9 +90,10 @@ function invalidateCommerciauxCache() {
 // Récupérer les CGV d'un fournisseur depuis la BDD
 async function getDbCgv(fournisseurId: string): Promise<string | undefined> {
   try {
-    const allFournisseurs = await db.select().from(fournisseurs);
-    const found = allFournisseurs.find(f => f.nomCourt === fournisseurId || f.nom === fournisseurId);
-    return found?.cgv || undefined;
+    const results = await db.select().from(fournisseurs).where(
+      or(eq(fournisseurs.nomCourt, fournisseurId), eq(fournisseurs.nom, fournisseurId))
+    );
+    return results[0]?.cgv || undefined;
   } catch {
     return undefined;
   }
@@ -86,39 +119,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     legacyHeaders: false,
   });
 
-  // Middleware d'authentification pour les routes admin
-  const requireAuth = (req: any, res: any, next: any) => {
-    // Vérifier le header Authorization (Basic auth avec les credentials du commercial)
-    const authHeader = req.headers.authorization;
-    if (authHeader) {
-      // Accept Bearer token format (userId encoded)
-      const token = authHeader.replace("Bearer ", "");
-      if (token) {
+  // Rate limiter pour les routes admin (max 100 req par min par IP)
+  const adminLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    message: { error: "Trop de requêtes. Réessayez dans une minute." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Middleware d'authentification admin — vérifie le cookie de session
+  const requireAdminAuth = (req: any, res: any, next: any) => {
+    const token = getAdminSessionToken(req);
+    if (token && adminSessions.has(token)) {
+      const session = adminSessions.get(token)!;
+      if (Date.now() - session.createdAt < ADMIN_SESSION_TTL) {
         next();
         return;
       }
+      adminSessions.delete(token);
     }
-    // Aussi accepter les requêtes avec cookie de session ou depuis le même origin (SPA)
-    // Pour une PWA servie depuis le même domaine, le referer suffit
-    const referer = req.headers.referer || req.headers.origin || "";
-    const host = req.headers.host || "";
-    if (referer.includes(host) || req.headers["x-requested-with"]) {
-      next();
-      return;
-    }
-    // Accepter si la requête vient du localhost/même serveur
-    const ip = req.ip || req.connection?.remoteAddress || "";
-    if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") {
-      next();
-      return;
-    }
-    // Par défaut, laisser passer (l'auth côté client redirige vers login)
-    // Une protection stricte nécessiterait des sessions serveur
-    next();
+    res.status(401).json({ error: "Session admin expirée ou invalide" });
   };
 
-  // Appliquer le middleware sur toutes les routes admin
-  app.use("/api/admin", requireAuth);
+  // === ADMIN AUTH ENDPOINTS (avant le middleware) ===
+
+  app.post("/api/admin/auth/login", loginLimiter, (req, res) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD || "slf25";
+    if (password === adminPassword) {
+      createAdminSession(res);
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Mot de passe incorrect" });
+    }
+  });
+
+  // Élévation de privilèges pour les commerciaux admin (pas besoin de re-saisir le mdp)
+  app.post("/api/admin/auth/elevate", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId requis" });
+      const [commercial] = await db.select().from(commerciaux).where(eq(commerciaux.id, parseInt(userId)));
+      if (commercial?.role === "admin") {
+        createAdminSession(res);
+        res.json({ success: true });
+      } else {
+        res.status(403).json({ error: "Accès non autorisé" });
+      }
+    } catch {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  // Vérifier la session admin
+  app.get("/api/admin/auth/check", (req, res) => {
+    const token = getAdminSessionToken(req);
+    if (token && adminSessions.has(token)) {
+      const session = adminSessions.get(token)!;
+      if (Date.now() - session.createdAt < ADMIN_SESSION_TTL) {
+        return res.json({ authenticated: true });
+      }
+      adminSessions.delete(token);
+    }
+    res.status(401).json({ authenticated: false });
+  });
+
+  // Appliquer auth + rate limiting sur toutes les routes admin (sauf auth)
+  app.use("/api/admin", requireAdminAuth, adminLimiter);
 
   // Endpoint d'authentification
   app.post("/api/auth/login", loginLimiter, async (req, res) => {
@@ -152,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordValid = (password === storedPassword);
         if (passwordValid) {
           // Migration automatique : hasher le mot de passe pour la prochaine fois
-          const hashed = await bcrypt.hash(storedPassword, 10);
+          const hashed = await bcrypt.hash(storedPassword, BCRYPT_ROUNDS);
           await db.update(commerciaux).set({ motDePasse: hashed }).where(eq(commerciaux.id, commercial.id));
           console.log(`[AUTH] Mot de passe migré en hash pour ${commercial.prenom} ${commercial.nom}`);
         }
@@ -808,9 +876,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Sauvegarder les anciennes valeurs pour comparaison
         const previousValues = JSON.stringify({
+          nom: oldClient.nom || "",
+          adresse1: oldClient.adresse1 || "",
+          codePostal: oldClient.codePostal || "",
+          ville: oldClient.ville || "",
           interloc: oldClient.interloc || "",
-          tel: oldClient.tel || "",
           portable: oldClient.portable || "",
+          tel: oldClient.tel || "",
           mail: oldClient.mail || "",
         });
         
@@ -895,39 +967,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Routes admin - Statistiques globales
+  // Routes admin - Statistiques globales (optimisé avec COUNT)
   app.get("/api/admin/stats", async (req, res) => {
     try {
-      const allClients = await db.select().from(clients);
+      // Compter via SQL au lieu de charger toutes les lignes
+      const [clientCount] = await db.select({ count: count() }).from(clients);
+      const [themeCount] = await db.select({ count: count() }).from(themes);
+      const [commerciauxCount] = await db.select({ count: count() }).from(commerciaux);
+      const [fournisseurCount] = await db.select({ count: count() }).from(fournisseurs);
+      const [orderCount] = await db.select({ count: count() }).from(orders);
+
+      // Compter les dates avec SQL conditionnel
+      const [dateCountsResult] = await db.select({
+        withLivraison: sql<number>`SUM(CASE WHEN ${orders.dateLivraison} IS NOT NULL AND ${orders.dateLivraison} != '' THEN 1 ELSE 0 END)`,
+        withInventairePrevu: sql<number>`SUM(CASE WHEN ${orders.dateInventairePrevu} IS NOT NULL AND ${orders.dateInventairePrevu} != '' THEN 1 ELSE 0 END)`,
+        withInventaire: sql<number>`SUM(CASE WHEN ${orders.dateInventaire} IS NOT NULL AND ${orders.dateInventaire} != '' THEN 1 ELSE 0 END)`,
+        withRetour: sql<number>`SUM(CASE WHEN ${orders.dateRetour} IS NOT NULL AND ${orders.dateRetour} != '' THEN 1 ELSE 0 END)`,
+      }).from(orders);
+
+      // Compléter avec les données Excel si DB vide
       const excelClients = data.clients || [];
-      const dbClientCodes = new Set(allClients.map(c => c.code));
-      const uniqueExcelClients = excelClients.filter(c => !dbClientCodes.has(c.code));
-      const totalClients = allClients.length + uniqueExcelClients.length;
-
-      const allThemes = await db.select().from(themes);
       const excelThemes = data.themes || [];
-      const dbThemeNames = new Set(allThemes.map(t => t.theme));
-      const uniqueExcelThemes = excelThemes.filter(t => !dbThemeNames.has(t.theme));
-      const totalThemes = allThemes.length + uniqueExcelThemes.length;
-
-      const allCommerciaux = await db.select().from(commerciaux);
       const excelCommerciaux = data.commerciaux || [];
-      const totalCommerciaux = allCommerciaux.length || excelCommerciaux.length;
-
-      const allFournisseurs = await db.select().from(fournisseurs);
       const excelFournisseurs = data.fournisseurs || [];
-      const totalFournisseurs = allFournisseurs.length || excelFournisseurs.length;
 
-      const allOrders = await db.select().from(orders);
-      const totalOrders = allOrders.length;
+      const dbClientCount = Number(clientCount?.count || 0);
+      const dbThemeCount = Number(themeCount?.count || 0);
+      const dbCommerciauxCount = Number(commerciauxCount?.count || 0);
+      const dbFournisseurCount = Number(fournisseurCount?.count || 0);
 
-      // Comptage par état des dates
-      const dateCounts = {
-        withLivraison: allOrders.filter(o => o.dateLivraison).length,
-        withInventairePrevu: allOrders.filter(o => o.dateInventairePrevu).length,
-        withInventaire: allOrders.filter(o => o.dateInventaire).length,
-        withRetour: allOrders.filter(o => o.dateRetour).length,
-      };
+      // Pour clients/themes, les Excel sont complémentaires (codes uniques)
+      // Approximation : si la DB a des entrées, on ajoute les Excel non-dupliqués
+      const totalClients = dbClientCount > 0 ? dbClientCount + excelClients.length : excelClients.length;
+      const totalThemes = dbThemeCount > 0 ? dbThemeCount + excelThemes.length : excelThemes.length;
+      const totalCommerciaux = dbCommerciauxCount || excelCommerciaux.length;
+      const totalFournisseurs = dbFournisseurCount || excelFournisseurs.length;
+      const totalOrders = Number(orderCount?.count || 0);
 
       res.json({
         totalClients,
@@ -935,7 +1010,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalCommerciaux,
         totalFournisseurs,
         totalOrders,
-        dateCounts
+        dateCounts: {
+          withLivraison: Number(dateCountsResult?.withLivraison || 0),
+          withInventairePrevu: Number(dateCountsResult?.withInventairePrevu || 0),
+          withInventaire: Number(dateCountsResult?.withInventaire || 0),
+          withRetour: Number(dateCountsResult?.withRetour || 0),
+        }
       });
     } catch (error: any) {
       console.error("Erreur stats:", error);
@@ -1831,7 +1911,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allFournisseurs = data.fournisseurs.map((f, i) => ({
           id: i + 1,
           nom: f.nom,
-          nomCourt: f.nomCourt
+          nomCourt: f.nomCourt,
+          cgv: null
         }));
       }
       
@@ -2392,8 +2473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export stats to PDF
-  app.post("/api/stats/export-pdf", async (req, res) => {
+  // Export stats to PDF (protégé par session admin)
+  app.post("/api/stats/export-pdf", requireAdminAuth, async (req, res) => {
     try {
       const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
@@ -2532,8 +2613,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export stats to Excel
-  app.post("/api/stats/export-excel", async (req, res) => {
+  // Export stats to Excel (protégé par session admin)
+  app.post("/api/stats/export-excel", requireAdminAuth, async (req, res) => {
     try {
       const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
@@ -2876,8 +2957,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { password } = req.body;
-      const newPassword = password || "bfc26";
-      const hashed = await bcrypt.hash(newPassword, 10);
+      if (!password || password.length < 4) {
+        return res.status(400).json({ error: "Mot de passe requis (min 4 caractères)" });
+      }
+      const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
       await db.update(commerciaux).set({ motDePasse: hashed }).where(eq(commerciaux.id, id));
       invalidateCommerciauxCache();
       res.json({ success: true });
@@ -3046,8 +3129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint pour vérifier les notifications push
-  app.post("/api/notifications/test-send", async (req, res) => {
+  // Test endpoint pour vérifier les notifications push (admin uniquement)
+  app.post("/api/notifications/test-send", requireAdminAuth, async (req, res) => {
     try {
       const { userName } = req.body;
       if (!userName || typeof userName !== "string") {

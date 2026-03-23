@@ -63,6 +63,7 @@ async function loadHeaderImage(): Promise<string | null> {
     const timer = setTimeout(() => controller.abort(), 2000);
     const response = await fetch(headerImageUrl, { signal: controller.signal });
     clearTimeout(timer);
+    if (!response.ok) return null;
     const blob = await response.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();

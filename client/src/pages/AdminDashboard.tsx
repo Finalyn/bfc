@@ -279,18 +279,31 @@ export default function AdminDashboard() {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("authenticated") === "true";
     const isAdminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
-    
+
     if (!isAuthenticated) {
       window.location.href = "/login";
       return;
     }
-    
+
     if (!isAdminAuthenticated) {
       setLocation("/admin/login");
       return;
     }
-    
-    setIsCheckingAuth(false);
+
+    // Validate admin session server-side
+    fetch("/api/admin/auth/check", { credentials: "include" })
+      .then((res) => {
+        if (res.ok) {
+          setIsCheckingAuth(false);
+        } else {
+          localStorage.removeItem("adminAuthenticated");
+          setLocation("/admin/login");
+        }
+      })
+      .catch(() => {
+        // Allow access if offline (already passed localStorage check)
+        setIsCheckingAuth(false);
+      });
   }, [setLocation]);
 
   const buildQueryParams = () => {
@@ -744,16 +757,25 @@ export default function AdminDashboard() {
                     size="sm"
                     className="shrink-0"
                     onClick={async () => {
+                      if (!editFormData._newPassword || editFormData._newPassword.length < 4) {
+                        toast({ title: "Erreur", description: "Le mot de passe doit contenir au moins 4 caractères", variant: "destructive" });
+                        return;
+                      }
                       try {
-                        await fetch(`/api/admin/commerciaux/${editingItem?.id}/reset-password`, {
+                        const res = await fetch(`/api/admin/commerciaux/${editingItem?.id}/reset-password`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ password: editFormData._newPassword || "bfc26" }),
+                          body: JSON.stringify({ password: editFormData._newPassword }),
+                          credentials: "include",
                         });
-                        toast({ title: "Mot de passe réinitialisé", description: editFormData._newPassword ? "Nouveau mot de passe défini" : "Mot de passe remis à bfc26" });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          throw new Error(data.error || "Erreur");
+                        }
+                        toast({ title: "Mot de passe réinitialisé", description: "Nouveau mot de passe défini" });
                         setEditFormData({...editFormData, _newPassword: ""});
-                      } catch {
-                        toast({ title: "Erreur", variant: "destructive" });
+                      } catch (e: any) {
+                        toast({ title: "Erreur", description: e.message || "Impossible de réinitialiser le mot de passe", variant: "destructive" });
                       }
                     }}
                     data-testid="button-reset-password"

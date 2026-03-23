@@ -56,7 +56,8 @@ export async function saveSubscription(subscription: PushSubscription, userName:
     const response = await fetch('/api/notifications/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription, userName })
+      body: JSON.stringify({ subscription, userName }),
+      credentials: 'include',
     });
     return response.ok;
   } catch (error) {
@@ -70,7 +71,8 @@ export async function removeSubscription(userName: string): Promise<boolean> {
     const response = await fetch('/api/notifications/unsubscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userName })
+      body: JSON.stringify({ userName }),
+      credentials: 'include',
     });
     return response.ok;
   } catch (error) {

@@ -180,7 +180,9 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'close') return;
 
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  const rawUrl = (event.notification.data && event.notification.data.url) || '/';
+  // Validate URL is a relative path within our app (prevent open-redirect)
+  const targetUrl = rawUrl.startsWith('/') ? rawUrl : '/';
   const fullUrl = new URL(targetUrl, self.location.origin).href;
 
   event.waitUntil(
@@ -217,7 +219,11 @@ self.addEventListener('fetch', (event) => {
         try {
           const networkResponse = await fetch(request);
           if (networkResponse.ok) {
-            cache.put(request, networkResponse.clone());
+            // Only cache valid JSON responses to prevent cache poisoning
+            const contentType = networkResponse.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              cache.put(request, networkResponse.clone());
+            }
           }
           return networkResponse;
         } catch (error) {
@@ -242,7 +248,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cachedResponse) => {
       // Return cache immediately if available
       const fetchPromise = fetch(request).then((networkResponse) => {
-        if (networkResponse.ok && request.url.startsWith(self.location.origin)) {
+        if (networkResponse.ok && networkResponse.type === 'basic' && request.url.startsWith(self.location.origin)) {
           const responseClone = networkResponse.clone();
           caches.open(STATIC_CACHE).then((cache) => {
             cache.put(request, responseClone);

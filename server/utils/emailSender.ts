@@ -40,7 +40,7 @@ export async function sendOrderEmails(
       pass: process.env.SMTP_PASSWORD,
     },
     tls: {
-      rejectUnauthorized: false,
+      rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false",
     },
     connectionTimeout: 8000,
     greetingTimeout: 8000,

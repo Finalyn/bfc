@@ -23,7 +23,34 @@ export default function HubPage() {
     localStorage.removeItem("user");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("pendingClientChanges");
     setLocation("/login");
+  };
+
+  const handleAdminAccess = async () => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      setLocation("/admin/login");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/auth/elevate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: parseInt(userId) }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        localStorage.setItem("adminAuthenticated", "true");
+        setLocation("/admin");
+      } else {
+        setLocation("/admin/login");
+      }
+    } catch {
+      setLocation("/admin/login");
+    }
   };
 
   return (
@@ -116,10 +143,7 @@ export default function HubPage() {
           {isAdmin && (
             <Card 
               className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
-              onClick={() => {
-                localStorage.setItem("adminAuthenticated", "true");
-                setLocation("/admin");
-              }}
+              onClick={handleAdminAccess}
               data-testid="card-database"
             >
               <CardContent className="p-0">
