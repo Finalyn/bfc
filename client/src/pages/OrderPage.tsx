@@ -182,7 +182,7 @@ export default function OrderPage() {
         setCurrentStep("success");
         toast({
           title: "Commande sauvegardée",
-          description: "La commande sera envoyée automatiquement dès que le réseau sera disponible",
+          description: "La commande sera synchronisée automatiquement quand vous reviendrez dans l'application",
         });
         return;
       }
@@ -227,7 +227,7 @@ export default function OrderPage() {
         setCurrentStep("success");
         toast({
           title: "Commande sauvegardée",
-          description: "La commande sera envoyée automatiquement dès le retour du réseau",
+          description: "La commande sera synchronisée automatiquement quand vous reviendrez dans l'application",
         });
         return;
       } catch (e) {
