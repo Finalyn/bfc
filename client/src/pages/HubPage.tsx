@@ -144,7 +144,7 @@ export default function HubPage() {
         </div>
         </div>
       </div>
-      <footer className="py-2 text-center space-y-1">
+      <footer className="py-2 text-center space-y-1 shrink-0" style={{ paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
         <Link href="/legal" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 inline-flex items-center gap-1" data-testid="link-legal">
           <FileText className="w-3 h-3" />
           Mentions légales et CGU
