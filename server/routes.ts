@@ -1796,7 +1796,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/commerciaux/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validated = insertCommercialSchema.partial().parse(req.body);
+      const { motDePasse, _newPassword, ...rest } = req.body;
+      const validated = insertCommercialSchema.partial().parse(rest);
       await db.update(commerciaux).set(validated).where(eq(commerciaux.id, id));
       const [updated] = await db.select().from(commerciaux).where(eq(commerciaux.id, id));
       if (!updated) return res.status(404).json({ message: "Non trouvé" });
@@ -2865,6 +2866,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(Buffer.from(buffer as ArrayBuffer));
     } catch (error: any) {
       console.error("Erreur backup:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // === RESET MOT DE PASSE ===
+
+  app.post("/api/admin/commerciaux/:id/reset-password", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { password } = req.body;
+      const newPassword = password || "bfc26";
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await db.update(commerciaux).set({ motDePasse: hashed }).where(eq(commerciaux.id, id));
+      invalidateCommerciauxCache();
+      res.json({ success: true });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });

@@ -719,15 +719,49 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div>
-              <Label htmlFor="motDePasse">Mot de passe</Label>
-              <Input 
-                id="motDePasse" 
-                type="text"
-                value={editFormData.motDePasse || "bfc26"} 
-                onChange={e => setEditFormData({...editFormData, motDePasse: e.target.value})} 
-                data-testid="input-mot-de-passe"
-                placeholder="bfc26"
-              />
+              <Label>Mot de passe</Label>
+              {isCreating ? (
+                <Input
+                  id="motDePasse"
+                  type="text"
+                  value={editFormData.motDePasse || "bfc26"}
+                  onChange={e => setEditFormData({...editFormData, motDePasse: e.target.value})}
+                  data-testid="input-mot-de-passe"
+                  placeholder="bfc26"
+                />
+              ) : (
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    type="text"
+                    placeholder="Nouveau mot de passe"
+                    value={editFormData._newPassword || ""}
+                    onChange={e => setEditFormData({...editFormData, _newPassword: e.target.value})}
+                    data-testid="input-new-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={async () => {
+                      try {
+                        await fetch(`/api/admin/commerciaux/${editingItem?.id}/reset-password`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ password: editFormData._newPassword || "bfc26" }),
+                        });
+                        toast({ title: "Mot de passe réinitialisé", description: editFormData._newPassword ? "Nouveau mot de passe défini" : "Mot de passe remis à bfc26" });
+                        setEditFormData({...editFormData, _newPassword: ""});
+                      } catch {
+                        toast({ title: "Erreur", variant: "destructive" });
+                      }
+                    }}
+                    data-testid="button-reset-password"
+                  >
+                    Réinitialiser
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="p-3 bg-muted rounded-lg">
               <Label className="text-xs text-muted-foreground">Identifiant</Label>
