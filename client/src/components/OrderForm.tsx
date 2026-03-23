@@ -674,9 +674,31 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     
     if (originalClientData && dbId && originalClientData.isFromDb) {
       const changes = detectClientChanges(data);
-      
+
       if (changes.length > 0) {
-        // Des modifications ont été détectées, proposer de sauvegarder
+        if (!navigator.onLine) {
+          // En mode offline, sauvegarder les modifications localement sans dialog
+          const updates: any = {};
+          if (data.livraisonEnseigne !== (originalClientData.nom || "")) updates.nom = data.livraisonEnseigne;
+          const originalAdresse = originalClientData.adresse2 ? `${originalClientData.adresse1}, ${originalClientData.adresse2}` : originalClientData.adresse1 || "";
+          if (data.livraisonAdresse !== originalAdresse) updates.adresse1 = data.livraisonAdresse;
+          const originalCpVille = `${originalClientData.codePostal || ""} ${originalClientData.ville || ""}`.trim();
+          if (data.livraisonCpVille !== originalCpVille) {
+            const cpVilleParts = (data.livraisonCpVille || "").match(/^(\d{5})\s*(.*)$/);
+            if (cpVilleParts) { updates.codePostal = cpVilleParts[1]; updates.ville = cpVilleParts[2]; }
+            else updates.ville = data.livraisonCpVille;
+          }
+          if (data.responsableName !== (originalClientData.interloc || "")) updates.interloc = data.responsableName;
+          if (data.responsableTel !== (originalClientData.portable || originalClientData.tel || "")) updates.portable = data.responsableTel;
+          if (data.responsableEmail !== (originalClientData.mail || "")) updates.mail = data.responsableEmail;
+
+          if (Object.keys(updates).length > 0) {
+            updateClientMutation.mutate({ id: dbId, updates });
+          }
+          proceedWithSubmit(data);
+          return;
+        }
+        // En ligne, afficher le dialog de confirmation
         setClientChanges(changes);
         setPendingFormData(data);
         setUpdateDialogOpen(true);

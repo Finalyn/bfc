@@ -75,7 +75,14 @@ export async function syncPendingClientChanges(): Promise<number> {
       if (change.mode === "create") {
         await apiRequest("POST", "/api/clients", change.data);
       } else {
-        await apiRequest("PATCH", `/api/clients/${change.code}`, change.data);
+        // Essayer d'abord par ID admin, sinon par code
+        const code = change.code;
+        const isNumericId = typeof code === "number" || /^\d+$/.test(String(code));
+        if (isNumericId) {
+          await apiRequest("PATCH", `/api/admin/clients/${code}`, change.data);
+        } else {
+          await apiRequest("PATCH", `/api/clients/${code}`, change.data);
+        }
       }
       synced++;
     } catch {
