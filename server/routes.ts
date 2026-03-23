@@ -1652,7 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allClients = allClients.filter(c => {
           const createdAt = c.createdAt ? new Date(c.createdAt) : null;
           const isNew = createdAt && createdAt > oneMonthAgo && !c.isFromExcel;
-          const hasPendingModification = c.modificationApproved === false && c.previousValues;
+          const hasPendingModification = !c.modificationApproved && c.previousValues;
           
           if (badgeFilter === "NEW") {
             return isNew;
@@ -1749,7 +1749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If tracked fields changed, store previous values and mark as pending approval
       if (hasChanges) {
         // Only store if not already pending (to keep original values)
-        if (currentClient.modificationApproved !== false) {
+        if (currentClient.modificationApproved) {
           updateData.previousValues = JSON.stringify({
             nom: currentClient.nom || "",
             adresse1: currentClient.adresse1 || "",

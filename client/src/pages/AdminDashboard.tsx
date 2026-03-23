@@ -998,7 +998,7 @@ export default function AdminDashboard() {
                             const createdAt = client.createdAt ? new Date(client.createdAt) : null;
                             const approvedAt = client.approvedAt ? new Date(client.approvedAt) : null;
                             const isNew = createdAt && createdAt > oneMonthAgo && !client.isFromExcel;
-                            const hasPendingModification = client.modificationApproved === false && client.previousValues;
+                            const hasPendingModification = !client.modificationApproved && client.previousValues;
                             const hasRecentlyApproved = approvedAt && approvedAt > twoMonthsAgo;
                             
                             let previousData: { nom?: string; adresse1?: string; codePostal?: string; ville?: string; interloc?: string; tel?: string; portable?: string; mail?: string } = {};
