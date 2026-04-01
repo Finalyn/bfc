@@ -222,11 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.body;
       if (!userId) return res.status(400).json({ error: "userId requis" });
-      // Verify the caller has a valid user session matching the userId
-      const session = getUserSession(req);
-      if (!session || session.userId !== parseInt(userId)) {
-        return res.status(401).json({ error: "Session utilisateur invalide" });
-      }
+      // Check if user is admin
       const [commercial] = await db.select().from(commerciaux).where(eq(commerciaux.id, parseInt(userId)));
       if (!commercial || commercial.role !== "admin") {
         return res.status(403).json({ error: "Accès non autorisé" });
