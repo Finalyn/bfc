@@ -681,32 +681,25 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       const changes = detectClientChanges(data);
 
       if (changes.length > 0) {
-        if (!navigator.onLine) {
-          // En mode offline, sauvegarder les modifications localement sans dialog
-          const updates: any = {};
-          if (data.livraisonEnseigne !== (originalClientData.nom || "")) updates.nom = data.livraisonEnseigne;
-          const originalAdresse = originalClientData.adresse2 ? `${originalClientData.adresse1}, ${originalClientData.adresse2}` : originalClientData.adresse1 || "";
-          if (data.livraisonAdresse !== originalAdresse) updates.adresse1 = data.livraisonAdresse;
-          const originalCpVille = `${originalClientData.codePostal || ""} ${originalClientData.ville || ""}`.trim();
-          if (data.livraisonCpVille !== originalCpVille) {
-            const cpVilleParts = (data.livraisonCpVille || "").match(/^(\d{5})\s*(.*)$/);
-            if (cpVilleParts) { updates.codePostal = cpVilleParts[1]; updates.ville = cpVilleParts[2]; }
-            else updates.ville = data.livraisonCpVille;
-          }
-          if (data.responsableName !== (originalClientData.interloc || "")) updates.interloc = data.responsableName;
-          if (data.responsableTel !== (originalClientData.portable || originalClientData.tel || "")) updates.portable = data.responsableTel;
-          if (data.responsableEmail !== (originalClientData.mail || "")) updates.mail = data.responsableEmail;
-
-          if (Object.keys(updates).length > 0) {
-            updateClientMutation.mutate({ id: dbId, updates });
-          }
-          proceedWithSubmit(data);
-          return;
+        // Sauvegarder automatiquement les modifications du client (sans dialog)
+        const updates: any = {};
+        if (data.livraisonEnseigne !== (originalClientData.nom || "")) updates.nom = data.livraisonEnseigne;
+        const originalAdresse = originalClientData.adresse2 ? `${originalClientData.adresse1}, ${originalClientData.adresse2}` : originalClientData.adresse1 || "";
+        if (data.livraisonAdresse !== originalAdresse) updates.adresse1 = data.livraisonAdresse;
+        const originalCpVille = `${originalClientData.codePostal || ""} ${originalClientData.ville || ""}`.trim();
+        if (data.livraisonCpVille !== originalCpVille) {
+          const cpVilleParts = (data.livraisonCpVille || "").match(/^(\d{5})\s*(.*)$/);
+          if (cpVilleParts) { updates.codePostal = cpVilleParts[1]; updates.ville = cpVilleParts[2]; }
+          else updates.ville = data.livraisonCpVille;
         }
-        // En ligne, afficher le dialog de confirmation
-        setClientChanges(changes);
-        setPendingFormData(data);
-        setUpdateDialogOpen(true);
+        if (data.responsableName !== (originalClientData.interloc || "")) updates.interloc = data.responsableName;
+        if (data.responsableTel !== (originalClientData.portable || originalClientData.tel || "")) updates.portable = data.responsableTel;
+        if (data.responsableEmail !== (originalClientData.mail || "")) updates.mail = data.responsableEmail;
+
+        if (Object.keys(updates).length > 0) {
+          updateClientMutation.mutate({ id: dbId, updates });
+        }
+        proceedWithSubmit(data);
         return;
       }
     }
@@ -1386,49 +1379,6 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       />
 
       {/* Dialogue de proposition de mise à jour du client */}
-      <AlertDialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mettre à jour le client ?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div>
-                <p className="mb-3">
-                  Vous avez modifié les informations de contact de ce client. 
-                  Voulez-vous sauvegarder ces modifications dans la base de données ?
-                </p>
-                <div className="bg-muted rounded-md p-3 space-y-2">
-                  {clientChanges.map((change, idx) => (
-                    <div key={idx} className="text-sm">
-                      <span className="font-medium">{change.field} :</span>{" "}
-                      <span className="text-muted-foreground line-through">{change.old}</span>
-                      {" → "}
-                      <span className="text-primary font-medium">{change.new}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleSkipUpdate}>
-              Non, continuer sans sauvegarder
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleUpdateClient}
-              disabled={updateClientMutation.isPending}
-            >
-              {updateClientMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sauvegarde...
-                </>
-              ) : (
-                "Oui, mettre à jour le client"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
