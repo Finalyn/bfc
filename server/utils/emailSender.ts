@@ -14,7 +14,7 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-const AGENCY_EMAIL = process.env.AGENCY_EMAIL || "slf@orange.fr";
+const AGENCY_EMAIL = process.env.AGENCY_EMAIL || "jack@finalyn.com";
 const FROM_EMAIL = process.env.SMTP_USER || "";
 
 function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
