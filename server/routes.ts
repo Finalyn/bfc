@@ -446,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .filter((d: any) => d && typeof d === "string");
         if (dates.length > 0) {
           // Prendre la première date de livraison des thèmes
-          dateLivraison = dates[0];
+          dateLivraison = dates.join(", ");
         }
       } catch (e) {}
 
@@ -595,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .map((t: any) => t.deliveryDate)
             .filter((d: any) => d && typeof d === "string");
           if (dates.length > 0) {
-            dateLivraison = dates[0];
+            dateLivraison = dates.join(", ");
           }
         } catch (e) {}
 
