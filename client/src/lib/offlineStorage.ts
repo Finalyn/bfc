@@ -223,16 +223,18 @@ export function onOfflineOrdersChange(callback: OfflineOrdersChangeListener): ()
 // Enregistrer le Background Sync pour synchroniser les commandes quand le réseau revient
 export async function registerBackgroundSync(): Promise<boolean> {
   try {
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-      const registration = await navigator.serviceWorker.ready;
-      await (registration as any).sync.register('sync-orders');
-      console.log('Background sync enregistré');
-      return true;
-    }
-  } catch (error) {
-    console.error('Erreur enregistrement background sync:', error);
+    if (!('serviceWorker' in navigator) || !('SyncManager' in window)) return false;
+    // Timeout de 2s pour éviter le blocage
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+    ]);
+    if (!registration) return false;
+    await (registration as any).sync.register('sync-orders');
+    return true;
+  } catch {
+    return false;
   }
-  return false;
 }
 
 // Récupérer le PDF d'une commande stockée localement

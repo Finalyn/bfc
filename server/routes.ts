@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { 
-  insertOrderSchema, type Order, 
+import crypto from "crypto";
+import {
+  insertOrderSchema, type Order,
   clients, insertClientSchema, updateClientSchema,
   commerciaux, insertCommercialSchema,
   fournisseurs, insertFournisseurSchema,
@@ -21,6 +22,8 @@ import { eq, or, sql, count, asc, desc } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcrypt";
 
+const BCRYPT_ROUNDS = 12;
+
 // Stockage en mémoire des fichiers générés (avec TTL)
 const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order; createdAt: number }>();
 
@@ -28,15 +31,103 @@ const fileStorage = new Map<string, { pdf: Buffer; excel: Buffer; order: Order; 
 setInterval(() => {
   const now = Date.now();
   let cleaned = 0;
-  const entries = Array.from(fileStorage.entries());
-  for (const [key, value] of entries) {
+  fileStorage.forEach((value, key) => {
     if (now - value.createdAt > 3600000) {
       fileStorage.delete(key);
       cleaned++;
     }
-  }
+  });
   if (cleaned > 0) console.log(`[STORAGE] Nettoyé ${cleaned} fichier(s) en mémoire`);
-}, 600000); // Vérifier toutes les 10 minutes
+}, 600000);
+
+// === ADMIN SESSION STORE ===
+const adminSessions = new Map<string, { createdAt: number }>();
+const ADMIN_SESSION_TTL = 24 * 60 * 60 * 1000; // 24h
+
+const userSessions = new Map<string, { createdAt: number; userId: number; userName: string }>();
+const USER_SESSION_TTL = 24 * 60 * 60 * 1000; // 24h
+
+setInterval(() => {
+  const now = Date.now();
+  adminSessions.forEach((session, token) => {
+    if (now - session.createdAt > ADMIN_SESSION_TTL) {
+      adminSessions.delete(token);
+    }
+  });
+}, 600000);
+
+setInterval(() => {
+  const now = Date.now();
+  userSessions.forEach((session, token) => {
+    if (now - session.createdAt > USER_SESSION_TTL) {
+      userSessions.delete(token);
+    }
+  });
+}, 600000);
+
+function getAdminSessionToken(req: any): string | null {
+  const cookies = req.headers.cookie || "";
+  const match = cookies.match(/admin_session=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+function createAdminSession(res: any): void {
+  const token = crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, { createdAt: Date.now() });
+  res.cookie("admin_session", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: ADMIN_SESSION_TTL,
+  });
+}
+
+function getUserSessionToken(req: any): string | null {
+  const cookies = req.headers.cookie || "";
+  const match = cookies.match(/user_session=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+function createUserSession(res: any, userId: number, userName: string): void {
+  const token = crypto.randomBytes(32).toString("hex");
+  userSessions.set(token, { createdAt: Date.now(), userId, userName });
+  res.cookie("user_session", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: USER_SESSION_TTL,
+  });
+}
+
+function getUserSession(req: any): { userId: number; userName: string } | null {
+  const token = getUserSessionToken(req);
+  if (!token) return null;
+  const session = userSessions.get(token);
+  if (!session) return null;
+  if (Date.now() - session.createdAt > USER_SESSION_TTL) {
+    userSessions.delete(token);
+    return null;
+  }
+  return { userId: session.userId, userName: session.userName };
+}
+
+// Middleware for authenticated user routes
+const requireUserAuth = (req: any, res: any, next: any) => {
+  if (getUserSession(req)) {
+    next();
+    return;
+  }
+  res.status(401).json({ error: "Authentification requise" });
+};
+
+// Rate limiter for general API routes
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  message: { error: "Trop de requêtes. Réessayez dans une minute." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Cache des commerciaux pour authentification rapide
 let commerciauxCache: any[] | null = null;
@@ -59,9 +150,10 @@ function invalidateCommerciauxCache() {
 // Récupérer les CGV d'un fournisseur depuis la BDD
 async function getDbCgv(fournisseurId: string): Promise<string | undefined> {
   try {
-    const allFournisseurs = await db.select().from(fournisseurs);
-    const found = allFournisseurs.find(f => f.nomCourt === fournisseurId || f.nom === fournisseurId);
-    return found?.cgv || undefined;
+    const results = await db.select().from(fournisseurs).where(
+      or(eq(fournisseurs.nomCourt, fournisseurId), eq(fournisseurs.nom, fournisseurId))
+    );
+    return results[0]?.cgv || undefined;
   } catch {
     return undefined;
   }
@@ -72,7 +164,7 @@ function generateOrderCode(): string {
   const year = parisTime.getFullYear();
   const month = String(parisTime.getMonth() + 1).padStart(2, "0");
   const day = String(parisTime.getDate()).padStart(2, "0");
-  const sequence = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  const sequence = String(crypto.randomInt(10000)).padStart(4, "0");
   return `CMD-${year}-${month}${day}-${sequence}`;
 }
 
@@ -87,39 +179,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     legacyHeaders: false,
   });
 
-  // Middleware d'authentification pour les routes admin
-  const requireAuth = (req: any, res: any, next: any) => {
-    // Vérifier le header Authorization (Basic auth avec les credentials du commercial)
-    const authHeader = req.headers.authorization;
-    if (authHeader) {
-      // Accept Bearer token format (userId encoded)
-      const token = authHeader.replace("Bearer ", "");
-      if (token) {
+  // Rate limiter pour les routes admin (max 100 req par min par IP)
+  const adminLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    message: { error: "Trop de requêtes. Réessayez dans une minute." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Middleware d'authentification admin — vérifie le cookie de session
+  const requireAdminAuth = (req: any, res: any, next: any) => {
+    const token = getAdminSessionToken(req);
+    if (token && adminSessions.has(token)) {
+      const session = adminSessions.get(token)!;
+      if (Date.now() - session.createdAt < ADMIN_SESSION_TTL) {
         next();
         return;
       }
+      adminSessions.delete(token);
     }
-    // Aussi accepter les requêtes avec cookie de session ou depuis le même origin (SPA)
-    // Pour une PWA servie depuis le même domaine, le referer suffit
-    const referer = req.headers.referer || req.headers.origin || "";
-    const host = req.headers.host || "";
-    if (referer.includes(host) || req.headers["x-requested-with"]) {
-      next();
-      return;
-    }
-    // Accepter si la requête vient du localhost/même serveur
-    const ip = req.ip || req.connection?.remoteAddress || "";
-    if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") {
-      next();
-      return;
-    }
-    // Par défaut, laisser passer (l'auth côté client redirige vers login)
-    // Une protection stricte nécessiterait des sessions serveur
-    next();
+    res.status(401).json({ error: "Session admin expirée ou invalide" });
   };
 
-  // Appliquer le middleware sur toutes les routes admin
-  app.use("/api/admin", requireAuth);
+  // === ADMIN AUTH ENDPOINTS (avant le middleware) ===
+
+  app.post("/api/admin/auth/login", loginLimiter, (req, res) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      return res.status(503).json({ error: "Configuration serveur incomplète" });
+    }
+    if (password === adminPassword) {
+      createAdminSession(res);
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Mot de passe incorrect" });
+    }
+  });
+
+  app.post("/api/admin/auth/elevate", loginLimiter, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId requis" });
+      // Verify the caller has a valid user session matching the userId
+      const session = getUserSession(req);
+      if (!session || session.userId !== parseInt(userId)) {
+        return res.status(401).json({ error: "Session utilisateur invalide" });
+      }
+      const [commercial] = await db.select().from(commerciaux).where(eq(commerciaux.id, parseInt(userId)));
+      if (!commercial || commercial.role !== "admin") {
+        return res.status(403).json({ error: "Accès non autorisé" });
+      }
+      createAdminSession(res);
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  // Vérifier la session admin
+  app.get("/api/admin/auth/check", (req, res) => {
+    const token = getAdminSessionToken(req);
+    if (token && adminSessions.has(token)) {
+      const session = adminSessions.get(token)!;
+      if (Date.now() - session.createdAt < ADMIN_SESSION_TTL) {
+        return res.json({ authenticated: true });
+      }
+      adminSessions.delete(token);
+    }
+    res.status(401).json({ authenticated: false });
+  });
+
+  // Appliquer auth + rate limiting sur toutes les routes admin (sauf auth)
+  app.use("/api/admin", requireAdminAuth, adminLimiter);
 
   // Endpoint d'authentification
   app.post("/api/auth/login", loginLimiter, async (req, res) => {
@@ -142,7 +275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Vérifier le mot de passe
-      const storedPassword = commercial.motDePasse || "bfc26";
+      const storedPassword = commercial.motDePasse;
+      if (!storedPassword) {
+        return res.status(401).json({ error: "Mot de passe non configuré. Contactez un administrateur." });
+      }
       let passwordValid = false;
 
       if (storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2a$")) {
@@ -153,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordValid = (password === storedPassword);
         if (passwordValid) {
           // Migration automatique : hasher le mot de passe pour la prochaine fois
-          const hashed = await bcrypt.hash(storedPassword, 10);
+          const hashed = await bcrypt.hash(storedPassword, BCRYPT_ROUNDS);
           await db.update(commerciaux).set({ motDePasse: hashed }).where(eq(commerciaux.id, commercial.id));
           console.log(`[AUTH] Mot de passe migré en hash pour ${commercial.prenom} ${commercial.nom}`);
         }
@@ -166,7 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!commercial.actif) {
         return res.status(401).json({ error: "Accès révoqué. Contactez un administrateur." });
       }
-      
+
+      createUserSession(res, commercial.id, `${commercial.prenom} ${commercial.nom}`.trim() || commercial.nom);
       res.json({
         success: true,
         user: {
@@ -182,6 +319,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Erreur auth:", error);
       res.status(500).json({ error: "Erreur serveur" });
     }
+  });
+
+  // Endpoint de déconnexion
+  app.post("/api/auth/logout", (req, res) => {
+    const token = getUserSessionToken(req);
+    if (token) {
+      userSessions.delete(token);
+    }
+    res.clearCookie("user_session");
+    res.clearCookie("admin_session");
+    res.json({ success: true });
   });
 
   // Validation de la signature
@@ -222,6 +370,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { valid: true };
   };
 
+  // Apply auth middleware on user API routes
+  app.use("/api/user", requireUserAuth, apiLimiter);
+  app.use("/api/notifications", requireUserAuth, apiLimiter);
+
   // Récupérer toutes les commandes (avec pagination)
   app.get("/api/orders", async (req, res) => {
     try {
@@ -254,21 +406,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Générer une commande avec PDF et Excel
   app.post("/api/orders/generate", async (req, res) => {
     try {
-      // Debug: log raw themeSelections from request
-      const rawThemeSelections = req.body?.themeSelections;
-      console.log(`📋 /api/orders/generate - themeSelections type: ${typeof rawThemeSelections}, length: ${(rawThemeSelections || "").length}`);
-      if (typeof rawThemeSelections === "string") {
-        try {
-          const parsed = JSON.parse(rawThemeSelections);
-          console.log(`📋 /api/orders/generate - parsed ${Array.isArray(parsed) ? parsed.length : 0} theme entries`);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`📋 /api/orders/generate - first entries:`, parsed.slice(0, 3).map((t: any) => `${t.theme} [${t.category}] qty=${t.quantity}`));
-          }
-        } catch (e) {
-          console.error(`❌ /api/orders/generate - Failed to parse themeSelections:`, rawThemeSelections?.substring(0, 200));
-        }
-      }
-
       const validatedData = insertOrderSchema.parse(req.body);
 
       // Valider la signature
@@ -359,20 +496,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emailError = error.message || "Erreur lors de l'envoi des emails";
       }
 
-      // Debug: include themeSelections count in response
-      let themeCount = 0;
-      try {
-        const parsedThemes = JSON.parse(order.themeSelections || "[]");
-        themeCount = Array.isArray(parsedThemes) ? parsedThemes.length : 0;
-      } catch (e) {}
-
       res.json({
         orderCode,
         pdfUrl: `/api/orders/${orderCode}/pdf`,
         excelUrl: `/api/orders/${orderCode}/excel`,
         emailsSent,
         emailError,
-        _debug_themeCount: themeCount,
       });
     } catch (error: any) {
       console.error("Erreur lors de la génération de la commande:", error);
@@ -414,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Envoyer les emails
-  app.post("/api/orders/send-emails", async (req, res) => {
+  app.post("/api/orders/send-emails", requireUserAuth, async (req, res) => {
     try {
       const { orderCode, clientEmail } = req.body;
 
@@ -538,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Erreur sync offline:", error);
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ message: "Erreur lors de la synchronisation" });
     }
   });
 
@@ -813,9 +942,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Sauvegarder les anciennes valeurs pour comparaison
         const previousValues = JSON.stringify({
+          nom: oldClient.nom || "",
+          adresse1: oldClient.adresse1 || "",
+          codePostal: oldClient.codePostal || "",
+          ville: oldClient.ville || "",
           interloc: oldClient.interloc || "",
-          tel: oldClient.tel || "",
           portable: oldClient.portable || "",
+          tel: oldClient.tel || "",
           mail: oldClient.mail || "",
         });
         
@@ -900,39 +1033,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Routes admin - Statistiques globales
+  // Routes admin - Statistiques globales (optimisé avec COUNT)
   app.get("/api/admin/stats", async (req, res) => {
     try {
-      const allClients = await db.select().from(clients);
+      // Compter via SQL au lieu de charger toutes les lignes
+      const [clientCount] = await db.select({ count: count() }).from(clients);
+      const [themeCount] = await db.select({ count: count() }).from(themes);
+      const [commerciauxCount] = await db.select({ count: count() }).from(commerciaux);
+      const [fournisseurCount] = await db.select({ count: count() }).from(fournisseurs);
+      const [orderCount] = await db.select({ count: count() }).from(orders);
+
+      // Compter les dates avec SQL conditionnel
+      const [dateCountsResult] = await db.select({
+        withLivraison: sql<number>`SUM(CASE WHEN ${orders.dateLivraison} IS NOT NULL AND ${orders.dateLivraison} != '' THEN 1 ELSE 0 END)`,
+        withInventairePrevu: sql<number>`SUM(CASE WHEN ${orders.dateInventairePrevu} IS NOT NULL AND ${orders.dateInventairePrevu} != '' THEN 1 ELSE 0 END)`,
+        withInventaire: sql<number>`SUM(CASE WHEN ${orders.dateInventaire} IS NOT NULL AND ${orders.dateInventaire} != '' THEN 1 ELSE 0 END)`,
+        withRetour: sql<number>`SUM(CASE WHEN ${orders.dateRetour} IS NOT NULL AND ${orders.dateRetour} != '' THEN 1 ELSE 0 END)`,
+      }).from(orders);
+
+      // Compléter avec les données Excel si DB vide
       const excelClients = data.clients || [];
-      const dbClientCodes = new Set(allClients.map(c => c.code));
-      const uniqueExcelClients = excelClients.filter(c => !dbClientCodes.has(c.code));
-      const totalClients = allClients.length + uniqueExcelClients.length;
-
-      const allThemes = await db.select().from(themes);
       const excelThemes = data.themes || [];
-      const dbThemeNames = new Set(allThemes.map(t => t.theme));
-      const uniqueExcelThemes = excelThemes.filter(t => !dbThemeNames.has(t.theme));
-      const totalThemes = allThemes.length + uniqueExcelThemes.length;
-
-      const allCommerciaux = await db.select().from(commerciaux);
       const excelCommerciaux = data.commerciaux || [];
-      const totalCommerciaux = allCommerciaux.length || excelCommerciaux.length;
-
-      const allFournisseurs = await db.select().from(fournisseurs);
       const excelFournisseurs = data.fournisseurs || [];
-      const totalFournisseurs = allFournisseurs.length || excelFournisseurs.length;
 
-      const allOrders = await db.select().from(orders);
-      const totalOrders = allOrders.length;
+      const dbClientCount = Number(clientCount?.count || 0);
+      const dbThemeCount = Number(themeCount?.count || 0);
+      const dbCommerciauxCount = Number(commerciauxCount?.count || 0);
+      const dbFournisseurCount = Number(fournisseurCount?.count || 0);
 
-      // Comptage par état des dates
-      const dateCounts = {
-        withLivraison: allOrders.filter(o => o.dateLivraison).length,
-        withInventairePrevu: allOrders.filter(o => o.dateInventairePrevu).length,
-        withInventaire: allOrders.filter(o => o.dateInventaire).length,
-        withRetour: allOrders.filter(o => o.dateRetour).length,
-      };
+      // Pour clients/themes, les Excel sont complémentaires (codes uniques)
+      // Approximation : si la DB a des entrées, on ajoute les Excel non-dupliqués
+      const totalClients = dbClientCount > 0 ? dbClientCount + excelClients.length : excelClients.length;
+      const totalThemes = dbThemeCount > 0 ? dbThemeCount + excelThemes.length : excelThemes.length;
+      const totalCommerciaux = dbCommerciauxCount || excelCommerciaux.length;
+      const totalFournisseurs = dbFournisseurCount || excelFournisseurs.length;
+      const totalOrders = Number(orderCount?.count || 0);
 
       res.json({
         totalClients,
@@ -940,7 +1076,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalCommerciaux,
         totalFournisseurs,
         totalOrders,
-        dateCounts
+        dateCounts: {
+          withLivraison: Number(dateCountsResult?.withLivraison || 0),
+          withInventairePrevu: Number(dateCountsResult?.withInventairePrevu || 0),
+          withInventaire: Number(dateCountsResult?.withInventaire || 0),
+          withRetour: Number(dateCountsResult?.withRetour || 0),
+        }
       });
     } catch (error: any) {
       console.error("Erreur stats:", error);
@@ -1474,80 +1615,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { page, pageSize, search, sortField, sortDir, offset } = getPaginationParams(req);
       
-      // Get DB clients
-      const dbClients = await db.select().from(clients);
-      const dbClientsByCode = new Map(dbClients.map(c => [c.code, c]));
-      
-      // Merge with Excel clients
-      let allClients = data.clients.map(excelClient => {
-        const dbClient = dbClientsByCode.get(excelClient.code);
-        if (dbClient) {
-          return {
-            id: dbClient.id,
-            code: dbClient.code,
-            nom: dbClient.nom,
-            adresse1: dbClient.adresse1 || "",
-            codePostal: dbClient.codePostal || "",
-            ville: dbClient.ville || "",
-            interloc: dbClient.interloc || "",
-            tel: dbClient.tel || "",
-            portable: dbClient.portable || "",
-            mail: dbClient.mail || "",
-            siret: dbClient.siret || "",
-            createdAt: dbClient.createdAt,
-            updatedAt: dbClient.updatedAt,
-            isFromExcel: dbClient.isFromExcel || false,
-            previousValues: dbClient.previousValues,
-            modificationApproved: dbClient.modificationApproved ?? true,
-            approvedAt: dbClient.approvedAt,
-          };
-        }
-        return {
-          id: 0,
-          code: excelClient.code,
-          nom: excelClient.nom,
-          adresse1: excelClient.adresse1,
-          codePostal: excelClient.codePostal,
-          ville: excelClient.ville,
-          interloc: excelClient.interloc,
-          tel: excelClient.tel,
-          portable: excelClient.portable,
-          mail: excelClient.mail,
-          siret: "",
-          createdAt: null,
-          updatedAt: null,
-          isFromExcel: true,
-          previousValues: null,
-          modificationApproved: true,
-          approvedAt: null,
-        };
-      });
-
-      // Add new DB clients not in Excel
-      const excelCodes = new Set(data.clients.map(c => c.code));
-      const newDbClients = dbClients
-        .filter(c => !excelCodes.has(c.code))
-        .map(c => ({
-          id: c.id,
-          code: c.code,
-          nom: c.nom,
-          adresse1: c.adresse1 || "",
-          codePostal: c.codePostal || "",
-          ville: c.ville || "",
-          interloc: c.interloc || "",
-          tel: c.tel || "",
-          portable: c.portable || "",
-          mail: c.mail || "",
-          siret: c.siret || "",
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-          isFromExcel: c.isFromExcel || false,
-          previousValues: c.previousValues,
-          modificationApproved: c.modificationApproved ?? true,
-          approvedAt: c.approvedAt,
-        }));
-      
-      allClients = [...allClients, ...newDbClients];
+      // All clients from database (single source of truth)
+      let allClients = (await db.select().from(clients)).map(c => ({
+        id: c.id,
+        code: c.code,
+        nom: c.nom,
+        adresse1: c.adresse1 || "",
+        codePostal: c.codePostal || "",
+        ville: c.ville || "",
+        interloc: c.interloc || "",
+        tel: c.tel || "",
+        portable: c.portable || "",
+        mail: c.mail || "",
+        siret: c.siret || "",
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        isFromExcel: c.isFromExcel || false,
+        previousValues: c.previousValues,
+        modificationApproved: c.modificationApproved ?? true,
+        approvedAt: c.approvedAt,
+      }));
       
       // Filter by search
       if (search) {
@@ -1580,7 +1667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allClients = allClients.filter(c => {
           const createdAt = c.createdAt ? new Date(c.createdAt) : null;
           const isNew = createdAt && createdAt > oneMonthAgo && !c.isFromExcel;
-          const hasPendingModification = c.modificationApproved === false && c.previousValues;
+          const hasPendingModification = !c.modificationApproved && c.previousValues;
           
           if (badgeFilter === "NEW") {
             return isNew;
@@ -1677,7 +1764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If tracked fields changed, store previous values and mark as pending approval
       if (hasChanges) {
         // Only store if not already pending (to keep original values)
-        if (currentClient.modificationApproved !== false) {
+        if (currentClient.modificationApproved) {
           updateData.previousValues = JSON.stringify({
             nom: currentClient.nom || "",
             adresse1: currentClient.adresse1 || "",
@@ -1753,9 +1840,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: i + 1,
           prenom: "",
           nom: c.displayName || c.nom,
+          email: "",
           role: "commercial",
           actif: true,
-          motDePasse: "bfc26"
+          motDePasse: ""
         })) as typeof allCommerciaux;
       }
       
@@ -1769,21 +1857,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Sort
+      const allowedCommerciauxSortFields = ["id", "prenom", "nom", "email", "role", "actif"];
+      const safeSortField = allowedCommerciauxSortFields.includes(sortField) ? sortField : "nom";
       allCommerciaux.sort((a, b) => {
-        const aVal = String((a as any)[sortField] || "").toLowerCase();
-        const bVal = String((b as any)[sortField] || "").toLowerCase();
+        const aVal = String((a as any)[safeSortField] || "").toLowerCase();
+        const bVal = String((b as any)[safeSortField] || "").toLowerCase();
         return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       });
       
       const total = allCommerciaux.length;
       const paginated = allCommerciaux.slice(offset, offset + pageSize);
-      
+
+      const sanitized = paginated.map(({ motDePasse, ...rest }) => rest);
       res.json({
-        data: paginated,
+        data: sanitized,
         pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
@@ -1839,7 +1930,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allFournisseurs = data.fournisseurs.map((f, i) => ({
           id: i + 1,
           nom: f.nom,
-          nomCourt: f.nomCourt
+          nomCourt: f.nomCourt,
+          cgv: null
         }));
       }
       
@@ -2400,8 +2492,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export stats to PDF
-  app.post("/api/stats/export-pdf", async (req, res) => {
+  // Export stats to PDF (protégé par session admin)
+  app.post("/api/stats/export-pdf", requireAdminAuth, async (req, res) => {
     try {
       const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
@@ -2540,8 +2632,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export stats to Excel
-  app.post("/api/stats/export-excel", async (req, res) => {
+  // Export stats to Excel (protégé par session admin)
+  app.post("/api/stats/export-excel", requireAdminAuth, async (req, res) => {
     try {
       const { fournisseurData, allThemes, clientAnalytics, monthlyData, totalQuantity, chartImages } = req.body;
       
@@ -2740,6 +2832,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === IMPORT EXCEL → BDD ===
+  app.post("/api/admin/import-excel-clients", async (req, res) => {
+    try {
+      const dbClients = await db.select().from(clients);
+      const dbCodes = new Set(dbClients.map(c => c.code));
+
+      let imported = 0;
+      for (const excelClient of data.clients) {
+        if (!dbCodes.has(excelClient.code)) {
+          await db.insert(clients).values({
+            code: excelClient.code,
+            nom: excelClient.nom,
+            adresse1: excelClient.adresse1 || "",
+            adresse2: (excelClient as any).adresse2 || "",
+            codePostal: excelClient.codePostal || "",
+            ville: excelClient.ville || "",
+            pays: (excelClient as any).pays || "",
+            interloc: excelClient.interloc || "",
+            tel: excelClient.tel || "",
+            portable: excelClient.portable || "",
+            fax: (excelClient as any).fax || "",
+            mail: excelClient.mail || "",
+            isFromExcel: true,
+          });
+          imported++;
+        }
+      }
+
+      res.json({ success: true, imported, total: data.clients.length, alreadyInDb: data.clients.length - imported });
+    } catch (error: any) {
+      console.error("Erreur import Excel:", error);
+      res.status(500).json({ error: "Erreur lors de l'import" });
+    }
+  });
+
   // === BACKUP BASE DE DONNÉES ===
 
   app.get("/api/admin/backup", async (req, res) => {
@@ -2823,12 +2950,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { header: "Email", key: "email", width: 30 },
         { header: "Rôle", key: "role", width: 15 },
         { header: "Actif", key: "actif", width: 8 },
-        { header: "Mot de passe", key: "motDePasse", width: 15 },
       ];
-      allCommerciaux.forEach(c => commSheet.addRow({
-        ...c,
-        actif: c.actif ? "Oui" : "Non",
-      }));
+      allCommerciaux.forEach(c => { const { motDePasse, ...safe } = c; commSheet.addRow({...safe, actif: c.actif ? "Oui" : "Non",}); });
       styleHeader(commSheet);
 
       // 4. Fournisseurs
@@ -2874,7 +2997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(Buffer.from(buffer as ArrayBuffer));
     } catch (error: any) {
       console.error("Erreur backup:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur lors du backup" });
     }
   });
 
@@ -2884,13 +3007,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { password } = req.body;
-      const newPassword = password || "bfc26";
-      const hashed = await bcrypt.hash(newPassword, 10);
+      if (!password || password.length < 8) {
+        return res.status(400).json({ error: "Mot de passe requis (min 8 caractères)" });
+      }
+      const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
       await db.update(commerciaux).set({ motDePasse: hashed }).where(eq(commerciaux.id, id));
       invalidateCommerciauxCache();
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  // === DASHBOARD UTILISATEUR (endpoints accessibles aux commerciaux authentifiés) ===
+
+  // Commandes de l'utilisateur (ou toutes si admin)
+  app.get("/api/user/orders", async (req, res) => {
+    try {
+      const session = getUserSession(req);
+      if (!session) return res.status(401).json({ error: "Authentification requise" });
+
+      const pageSize = parseInt(req.query.pageSize as string) || 10000;
+
+      let allOrders = await db.select().from(orders);
+
+      // Filtrer par commercial si pas admin
+      const allCommerciaux = (await getCommerciauxCached()) || [];
+      const commercial = allCommerciaux.find(c => c.id === session.userId);
+      const isAdmin = commercial?.role === "admin";
+
+      if (!isAdmin) {
+        allOrders = allOrders.filter(o => o.salesRepName === session.userName);
+      }
+
+      // Tri par date décroissante
+      allOrders.sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
+
+      const paginated = allOrders.slice(0, pageSize);
+
+      res.json({
+        data: paginated,
+        pagination: { page: 1, pageSize, total: allOrders.length, totalPages: 1 }
+      });
+    } catch (error: any) {
+      console.error("Erreur user orders:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Mise à jour des dates d'une commande (vérification propriétaire)
+  app.patch("/api/user/orders/:id/dates", async (req, res) => {
+    try {
+      const session = getUserSession(req);
+      if (!session) return res.status(401).json({ error: "Authentification requise" });
+
+      const id = parseInt(req.params.id);
+      const { dateLivraison, dateInventairePrevu, dateInventaire, dateRetour } = updateOrderDatesSchema.parse(req.body);
+
+      const [currentOrder] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!currentOrder) return res.status(404).json({ message: "Commande non trouvée" });
+
+      // Vérifier que l'utilisateur est propriétaire ou admin
+      const allCommerciaux = await getCommerciauxCached();
+      const commercial = allCommerciaux.find(c => c.id === session.userId);
+      const isAdmin = commercial?.role === "admin";
+      if (!isAdmin && currentOrder.salesRepName !== session.userName) {
+        return res.status(403).json({ error: "Non autorisé" });
+      }
+
+      const updateData: any = {};
+      if (dateLivraison !== undefined) updateData.dateLivraison = dateLivraison;
+      if (dateInventairePrevu !== undefined) updateData.dateInventairePrevu = dateInventairePrevu;
+      if (dateInventaire !== undefined) updateData.dateInventaire = dateInventaire;
+      if (dateRetour !== undefined) updateData.dateRetour = dateRetour;
+
+      if (Object.keys(updateData).length > 0) {
+        await db.update(orders).set(updateData).where(eq(orders.id, id));
+      }
+
+      const [updated] = await db.select().from(orders).where(eq(orders.id, id));
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Erreur update dates:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // PDF/Excel d'une commande utilisateur
+  app.get("/api/user/orders/:id/pdf", async (req, res) => {
+    try {
+      const session = getUserSession(req);
+      if (!session) return res.status(401).json({ error: "Authentification requise" });
+
+      const id = parseInt(req.params.id);
+      const [order] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!order) return res.status(404).json({ message: "Commande non trouvée" });
+
+      // Vérifier propriétaire ou admin
+      const allCommerciaux = await getCommerciauxCached();
+      const commercial = allCommerciaux.find(c => c.id === session.userId);
+      const isAdmin = commercial?.role === "admin";
+      if (!isAdmin && order.salesRepName !== session.userName) {
+        return res.status(403).json({ error: "Non autorisé" });
+      }
+
+      const dbCgv = await getDbCgv(order.fournisseur || "BDIS");
+      const pdfBuffer = generateOrderPDF(order as any, dbCgv);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${order.orderCode}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      console.error("Erreur PDF user:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/user/orders/:id/excel", async (req, res) => {
+    try {
+      const session = getUserSession(req);
+      if (!session) return res.status(401).json({ error: "Authentification requise" });
+
+      const id = parseInt(req.params.id);
+      const [order] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!order) return res.status(404).json({ message: "Commande non trouvée" });
+
+      // Vérifier propriétaire ou admin
+      const allCommerciaux = await getCommerciauxCached();
+      const commercial = allCommerciaux.find(c => c.id === session.userId);
+      const isAdmin = commercial?.role === "admin";
+      if (!isAdmin && order.salesRepName !== session.userName) {
+        return res.status(403).json({ error: "Non autorisé" });
+      }
+
+      const excelBuffer = await generateOrderExcel(order as any);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${order.orderCode}.xlsx"`);
+      res.send(excelBuffer);
+    } catch (error: any) {
+      console.error("Erreur Excel user:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Liste des commerciaux pour le dashboard (noms seulement, pas de mots de passe)
+  app.get("/api/user/commerciaux", async (req, res) => {
+    try {
+      const session = getUserSession(req);
+      if (!session) return res.status(401).json({ error: "Authentification requise" });
+
+      const allCommerciaux = await getCommerciauxCached();
+      const result = allCommerciaux.map(c => ({
+        id: c.id,
+        prenom: c.prenom,
+        nom: c.nom,
+      }));
+      res.json({ data: result });
+    } catch (error: any) {
+      console.error("Erreur user commerciaux:", error);
+      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
@@ -2903,6 +3181,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId || typeof email !== "string") {
         return res.status(400).json({ error: "userId et email requis" });
       }
+      const session = getUserSession(req);
+      if (!session || session.userId !== userId) {
+        return res.status(403).json({ error: "Non autorisé" });
+      }
       await db.update(commerciaux).set({ email: email.trim() }).where(eq(commerciaux.id, userId));
       res.json({ success: true });
     } catch (error: any) {
@@ -2911,8 +3193,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === VAPID PUBLIC KEY ===
+  app.get("/api/vapid-public-key", (_req, res) => {
+    const key = process.env.VAPID_PUBLIC_KEY || "";
+    if (!key) {
+      return res.status(404).json({ error: "VAPID non configuré" });
+    }
+    res.json({ key });
+  });
+
   // === NOTIFICATIONS PUSH ===
-  
+
   // Enregistrer une souscription push
   app.post("/api/notifications/subscribe", async (req, res) => {
     try {
@@ -2948,7 +3239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error subscribing to push:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 
@@ -2970,7 +3261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error unsubscribing from push:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 
@@ -2985,7 +3276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ subscribed: subscriptions.length > 0 });
     } catch (error: any) {
       console.error("Error checking notification status:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 
@@ -3050,12 +3341,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ events });
     } catch (error: any) {
       console.error("Error fetching notification events:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 
-  // Test endpoint pour vérifier les notifications push
-  app.post("/api/notifications/test-send", async (req, res) => {
+  // Test endpoint pour vérifier les notifications push (admin uniquement)
+  app.post("/api/notifications/test-send", requireAdminAuth, async (req, res) => {
     try {
       const { userName } = req.body;
       if (!userName || typeof userName !== "string") {
@@ -3082,7 +3373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, ...result });
     } catch (error: any) {
       console.error("Error sending test notification:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 

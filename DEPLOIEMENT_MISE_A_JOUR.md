@@ -68,15 +68,16 @@ npm run db:push
 Dans le fichier `.env` sur le serveur, vérifier que ces variables sont présentes :
 
 ```env
-DATABASE_URL=mysql://USER:PASSWORD@HOST:PORT/DATABASE
+DATABASE_URL=mysql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE>
+ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN_FORT>
+SESSION_SECRET=<GENERE_AVEC_openssl_rand_-hex_32>
 
 # Notifications push (OBLIGATOIRE pour que les notifications marchent)
-VAPID_PUBLIC_KEY=BENT7AYR6TeM2pfS1-HEbOZA0SrU6NZ1uWWOrvCwE0EioFss_vJ909Iu74JIGMbA5HfBWbd5yV8X7QBtPi3uYmY
-VAPID_PRIVATE_KEY=votre_clé_privée_ici
+VAPID_PUBLIC_KEY=<VOTRE_CLE_PUBLIQUE_VAPID>
+VAPID_PRIVATE_KEY=<VOTRE_CLE_PRIVEE_VAPID>
 
-# Si vous n'avez pas de clés VAPID, en générer :
+# Pour générer des clés VAPID :
 # npx web-push generate-vapid-keys
-# Puis mettre la public key ci-dessus ET dans client/src/lib/notifications.ts
 ```
 
 ## Étape 4 : Redémarrer le serveur

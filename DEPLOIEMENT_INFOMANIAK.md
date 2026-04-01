@@ -27,7 +27,7 @@ DATABASE_URL=mysql://USER:PASSWORD@HOST:PORT/DATABASE
 Exemple :
 
 ```bash
-DATABASE_URL=mysql://bfc_user:VotreMotDePasse@localhost:3306/bfc_commande
+DATABASE_URL=mysql://<UTILISATEUR>:<MOT_DE_PASSE>@<HOTE>:3306/<NOM_DE_BASE>
 ```
 
 ### Migrer les données depuis l’ancienne base

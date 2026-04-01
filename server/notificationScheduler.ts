@@ -10,6 +10,10 @@ import {
   type NotificationPayload,
 } from "./utils/notificationSender";
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // Envoyer un email de rappel au commercial
 async function sendReminderEmail(
   email: string,
@@ -30,7 +34,7 @@ async function sendReminderEmail(
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
-      tls: { rejectUnauthorized: false },
+      tls: { rejectUnauthorized: process.env.NODE_ENV === "production" ? true : (process.env.SMTP_REJECT_UNAUTHORIZED !== "false") },
       connectionTimeout: 8000,
     });
 
@@ -44,10 +48,10 @@ async function sendReminderEmail(
             <h2 style="margin: 0; font-size: 18px;">BFC APP - Rappel</h2>
           </div>
           <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p style="font-size: 16px; color: #333; margin-top: 0;">Bonjour <strong>${userName}</strong>,</p>
+            <p style="font-size: 16px; color: #333; margin-top: 0;">Bonjour <strong>${escapeHtml(userName)}</strong>,</p>
             <div style="background: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 15px 0; border-radius: 4px;">
-              <p style="margin: 0; font-size: 15px; color: #1e40af;"><strong>${title}</strong></p>
-              <p style="margin: 8px 0 0; color: #333;">${body}</p>
+              <p style="margin: 0; font-size: 15px; color: #1e40af;"><strong>${escapeHtml(title)}</strong></p>
+              <p style="margin: 8px 0 0; color: #333;">${escapeHtml(body)}</p>
             </div>
             <p style="color: #666; font-size: 13px;">Connectez-vous à l'application pour plus de détails.</p>
           </div>
@@ -148,6 +152,27 @@ async function checkAndSendNotifications(
 
   console.log(`[NOTIF] Found ${allOrders.length} orders for subscribed users`);
 
+  // Pré-charger les logs de dédup pour cette date et ce type en UNE seule requête
+  const existingLogs = await db
+    .select()
+    .from(notificationLogs)
+    .where(
+      and(
+        eq(notificationLogs.eventDate, targetDate),
+        eq(notificationLogs.notifType, notifType)
+      )
+    );
+  const dedupSet = new Set(
+    existingLogs.map(l => `${l.userName}|${l.orderId}|${l.eventType}`)
+  );
+
+  // Pré-charger les commerciaux en UNE seule requête (pour l'envoi d'email)
+  const allCommerciaux = await db.select().from(commerciaux);
+  const commerciauxByName = new Map<string, typeof allCommerciaux[0]>();
+  for (const c of allCommerciaux) {
+    commerciauxByName.set(`${c.prenom} ${c.nom}`.trim(), c);
+  }
+
   let totalSent = 0;
   let totalMatched = 0;
 
@@ -156,37 +181,15 @@ async function checkAndSendNotifications(
       const rawEventDate = order[eventDef.field];
       if (!rawEventDate) continue;
 
-      // Normalize the date to handle various formats
       const eventDate = normalizeDateToISO(rawEventDate);
-      if (!eventDate) {
-        console.log(`[NOTIF] ⚠️ Could not parse date for order ${order.orderCode} ${eventDef.field}: "${rawEventDate}"`);
-        continue;
-      }
-
-      if (eventDate !== targetDate) continue;
+      if (!eventDate || eventDate !== targetDate) continue;
 
       totalMatched++;
       const userName = order.salesRepName;
-      console.log(`[NOTIF] ✅ Match: ${eventDef.label} for ${userName} - ${order.orderCode} (date: ${eventDate})`);
 
-      // Check deduplication
-      const existing = await db
-        .select()
-        .from(notificationLogs)
-        .where(
-          and(
-            eq(notificationLogs.userName, userName),
-            eq(notificationLogs.orderId, order.id),
-            eq(notificationLogs.eventType, eventDef.type),
-            eq(notificationLogs.eventDate, eventDate),
-            eq(notificationLogs.notifType, notifType)
-          )
-        );
-
-      if (existing.length > 0) {
-        console.log(`[NOTIF] Already sent for ${order.orderCode} ${eventDef.type} ${notifType}, skipping`);
-        continue;
-      }
+      // Dédup via le Set pré-chargé (plus de requête N+1)
+      const dedupKey = `${userName}|${order.id}|${eventDef.type}`;
+      if (dedupSet.has(dedupKey)) continue;
 
       const isVeille = notifType === "veille";
       const dateFormatted = eventDate.split("-").reverse().join("/");
@@ -207,19 +210,12 @@ async function checkAndSendNotifications(
         },
       };
 
-      // 1. Envoi push notification
       const result = await sendPushToUser(userName, payload);
-      console.log(`[NOTIF] Push result for ${userName}: sent=${result.sent}, failed=${result.failed}, cleaned=${result.cleaned}`);
 
-      // 2. Envoi email si le commercial a un email configuré
+      // Envoi email via le Map pré-chargé (plus de requête N+1)
       let emailSent = false;
       try {
-        // Chercher l'email du commercial par son nom complet (prénom + nom)
-        const allCommerciaux = await db.select().from(commerciaux);
-        const commercial = allCommerciaux.find(c => {
-          const fullName = `${c.prenom} ${c.nom}`.trim();
-          return fullName === userName;
-        });
+        const commercial = commerciauxByName.get(userName);
         if (commercial?.email) {
           emailSent = await sendReminderEmail(
             commercial.email,
@@ -227,7 +223,6 @@ async function checkAndSendNotifications(
             payload.title,
             payload.body
           );
-          console.log(`[NOTIF] Email ${emailSent ? "envoyé" : "échoué"} à ${commercial.email} pour ${userName}`);
         }
       } catch (emailError) {
         console.error(`[NOTIF] Erreur email pour ${userName}:`, emailError);
@@ -241,13 +236,8 @@ async function checkAndSendNotifications(
           eventDate,
           notifType,
         });
+        dedupSet.add(dedupKey);
         totalSent++;
-      }
-
-      if (result.cleaned > 0) {
-        console.log(
-          `[NOTIF] Cleaned ${result.cleaned} expired sub(s) for ${userName}`
-        );
       }
     }
   }

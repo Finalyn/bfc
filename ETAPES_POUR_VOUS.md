@@ -25,7 +25,7 @@ Si après avoir cherché vous ne trouvez toujours pas où créer une base MariaD
 
 ## Étape 2 — Créer le fichier `.env` (sur votre PC, dans le dossier du projet)
 
-1. Ouvrez le dossier du projet : `C:\Users\switc\Desktop\BFC-COMMANDE`  
+1. Ouvrez le dossier du projet sur votre PC  
 2. Copiez le fichier **`.env.example`** et renommez la copie en **`.env`**  
    - Clic droit sur `.env.example` → Copier → Coller → Renommer la copie en `.env`  
 3. Ouvrez **`.env`** avec Bloc-notes (clic droit → Ouvrir avec → Bloc-notes).  
@@ -45,17 +45,19 @@ Remplacez :
 Exemple (fictif) :
 
 ```env
-DATABASE_URL=mysql://bfc_user:MonMotDePasse123@localhost:3306/bfc_commande
+DATABASE_URL=mysql://<UTILISATEUR>:<MOT_DE_PASSE>@<HOTE>:3306/<NOM_DE_BASE>
 ```
 
 5. Ajoutez aussi (pour que l’app fonctionne correctement) :
 
 ```env
 PORT=5000
-SESSION_SECRET=une-longue-chaine-aleatoire-ici-au-moins-32-caracteres
+ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN_FORT_ICI>
+SESSION_SECRET=<CHAINE_ALEATOIRE_DE_32_CARACTERES_MINIMUM>
 ```
 
-Pour `SESSION_SECRET`, vous pouvez inventer une longue phrase (ex. `ma-super-phrase-secrete-bfc-2025-tres-longue`).  
+Pour `SESSION_SECRET`, générez une chaîne aléatoire avec la commande : `openssl rand -hex 32`
+Pour `ADMIN_PASSWORD`, choisissez un mot de passe fort d’au moins 12 caractères.  
 6. Enregistrez et fermez le fichier.
 
 **Important :** ne partagez jamais votre fichier `.env` et ne le mettez pas sur internet (il est déjà ignoré par Git).

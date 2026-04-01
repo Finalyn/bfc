@@ -11,10 +11,10 @@ export async function apiRequest<T = any>(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { timeout?: number },
 ): Promise<T> {
   const controller = new AbortController();
-  // Timeout court si hors ligne pour éviter le chargement infini
-  const timeout = navigator.onLine ? 30000 : 3000;
+  const timeout = options?.timeout ?? (navigator.onLine ? 5000 : 2000);
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
@@ -41,16 +41,27 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), navigator.onLine ? 5000 : 2000);
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    try {
+      const res = await fetch(queryKey.join("/") as string, {
+        credentials: "include",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({
@@ -59,11 +70,14 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 5 * 60 * 1000, // 5 minutes avant de considérer les données périmées
+      gcTime: 10 * 60 * 1000, // Libérer la mémoire après 10 minutes d'inactivité
       retry: false,
+      networkMode: "always",
     },
     mutations: {
       retry: false,
+      networkMode: "always",
     },
   },
 });

@@ -171,7 +171,7 @@ export const commerciaux = mysqlTable("commerciaux", {
   email: text("email").default(""),
   role: text("role").notNull().default("commercial"), // "admin" ou "commercial"
   actif: boolean("actif").notNull().default(true), // accès activé ou révoqué
-  motDePasse: text("mot_de_passe").notNull().default("bfc26"), // mot de passe par défaut
+  motDePasse: text("mot_de_passe").notNull().default(""), // mot de passe par défaut
 });
 
 export const insertCommercialSchema = createInsertSchema(commerciaux).omit({

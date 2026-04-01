@@ -191,7 +191,7 @@ export default function AdminDashboard() {
   const downloadPdf = async (order: OrderDb) => {
     setDownloadingPdf(true);
     try {
-      const response = await fetch(`/api/admin/orders/${order.id}/pdf`);
+      const response = await fetch(`/api/admin/orders/${order.id}/pdf`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors du téléchargement");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -213,7 +213,7 @@ export default function AdminDashboard() {
   const downloadExcel = async (order: OrderDb) => {
     setDownloadingExcel(true);
     try {
-      const response = await fetch(`/api/admin/orders/${order.id}/excel`);
+      const response = await fetch(`/api/admin/orders/${order.id}/excel`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors du téléchargement");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
   const exportAllDatabase = async () => {
     setExportingAll(true);
     try {
-      const response = await fetch("/api/admin/export-all");
+      const response = await fetch("/api/admin/export-all", { credentials: "include" });
       if (!response.ok) throw new Error("Erreur lors de l'export");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -279,18 +279,37 @@ export default function AdminDashboard() {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("authenticated") === "true";
     const isAdminAuthenticated = localStorage.getItem("adminAuthenticated") === "true";
-    
+
     if (!isAuthenticated) {
       window.location.href = "/login";
       return;
     }
-    
+
     if (!isAdminAuthenticated) {
       setLocation("/admin/login");
       return;
     }
-    
-    setIsCheckingAuth(false);
+
+    // Validate admin session server-side
+    fetch("/api/admin/auth/check", { credentials: "include" })
+      .then((res) => {
+        if (res.ok) {
+          setIsCheckingAuth(false);
+        } else {
+          localStorage.removeItem("adminAuthenticated");
+          setLocation("/admin/login");
+        }
+      })
+      .catch(() => {
+        // Deny access if we cannot verify the session
+        if (navigator.onLine) {
+          localStorage.removeItem("adminAuthenticated");
+          setLocation("/admin/login");
+        } else {
+          // Offline: allow if admin session was previously verified
+          setIsCheckingAuth(false);
+        }
+      });
   }, [setLocation]);
 
   const buildQueryParams = () => {
@@ -300,38 +319,38 @@ export default function AdminDashboard() {
   // Charger les totaux de toutes les entités dès le départ pour les compteurs des onglets
   const { data: clientsTotals } = useQuery<PaginatedResponse<Client>>({
     queryKey: ["/api/admin/clients", "totals"],
-    queryFn: () => fetch(`/api/admin/clients?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/clients?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: themesTotals } = useQuery<PaginatedResponse<Theme>>({
     queryKey: ["/api/admin/themes", "totals"],
-    queryFn: () => fetch(`/api/admin/themes?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/themes?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: commerciauxTotals } = useQuery<PaginatedResponse<Commercial>>({
     queryKey: ["/api/admin/commerciaux", "totals"],
-    queryFn: () => fetch(`/api/admin/commerciaux?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/commerciaux?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: fournisseursTotals } = useQuery<PaginatedResponse<Fournisseur>>({
     queryKey: ["/api/admin/fournisseurs", "totals"],
-    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   // Liste complète des fournisseurs pour les formulaires (thèmes)
   const { data: allFournisseurs } = useQuery<PaginatedResponse<Fournisseur>>({
     queryKey: ["/api/admin/fournisseurs", "all"],
-    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=100`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/fournisseurs?page=1&pageSize=100`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
   const { data: ordersTotals } = useQuery<PaginatedResponse<OrderDb>>({
     queryKey: ["/api/admin/orders", "totals"],
-    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/orders?page=1&pageSize=1`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth,
   });
 
@@ -346,37 +365,37 @@ export default function AdminDashboard() {
   }
   const { data: statsData } = useQuery<StatsData>({
     queryKey: ["/api/admin/stats"],
-    queryFn: () => fetch(`/api/admin/stats`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/stats`, { credentials: "include" }).then(r => r.json()),
     enabled: false,
   });
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<PaginatedResponse<Client>>({
     queryKey: ["/api/admin/clients", currentPage, debouncedSearch, sortField, sortDirection, clientBadgeFilter],
-    queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}&badgeFilter=${clientBadgeFilter}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/clients${buildQueryParams()}&badgeFilter=${clientBadgeFilter}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "clients",
   });
 
   const { data: themesData, isLoading: themesLoading } = useQuery<PaginatedResponse<Theme>>({
     queryKey: ["/api/admin/themes", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/themes${buildQueryParams()}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/themes${buildQueryParams()}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "themes",
   });
 
   const { data: commerciauxData, isLoading: commerciauxLoading } = useQuery<PaginatedResponse<Commercial>>({
     queryKey: ["/api/admin/commerciaux", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/commerciaux${buildQueryParams()}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/commerciaux${buildQueryParams()}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "commerciaux",
   });
 
   const { data: fournisseursData, isLoading: fournisseursLoading } = useQuery<PaginatedResponse<Fournisseur>>({
     queryKey: ["/api/admin/fournisseurs", currentPage, debouncedSearch, sortField, sortDirection],
-    queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/fournisseurs${buildQueryParams()}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "fournisseurs",
   });
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery<PaginatedResponse<OrderDb>>({
     queryKey: ["/api/admin/orders", currentPage, debouncedSearch, sortField, sortDirection, orderFournisseurFilter],
-    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin/orders${buildQueryParams()}${orderFournisseurFilter !== "ALL" ? `&fournisseur=${orderFournisseurFilter}` : ""}`, { credentials: "include" }).then(r => r.json()),
     enabled: !isCheckingAuth && activeTab === "orders",
   });
 
@@ -469,7 +488,7 @@ export default function AdminDashboard() {
 
   const handleExport = async (entity: string) => {
     try {
-      const response = await fetch(`/api/admin/export/${entity}`);
+      const response = await fetch(`/api/admin/export/${entity}`, { credentials: "include" });
       if (!response.ok) throw new Error("Erreur d'export");
       
       const blob = await response.blob();
@@ -515,7 +534,7 @@ export default function AdminDashboard() {
       case "themes":
         return { theme: "", fournisseur: "" };
       case "commerciaux":
-        return { prenom: "", nom: "", role: "commercial", actif: true, motDePasse: "bfc26" };
+        return { prenom: "", nom: "", role: "commercial", actif: true, motDePasse: "" };
       case "fournisseurs":
         return { nom: "", nomCourt: "" };
       default:
@@ -727,16 +746,16 @@ export default function AdminDashboard() {
               {isCreating ? (
                 <Input
                   id="motDePasse"
-                  type="text"
-                  value={editFormData.motDePasse || "bfc26"}
+                  type="password"
+                  value={editFormData.motDePasse || ""}
                   onChange={e => setEditFormData({...editFormData, motDePasse: e.target.value})}
                   data-testid="input-mot-de-passe"
-                  placeholder="bfc26"
+                  placeholder="Mot de passe initial"
                 />
               ) : (
                 <div className="flex gap-2 mt-1">
                   <Input
-                    type="text"
+                    type="password"
                     placeholder="Nouveau mot de passe"
                     value={editFormData._newPassword || ""}
                     onChange={e => setEditFormData({...editFormData, _newPassword: e.target.value})}
@@ -748,16 +767,25 @@ export default function AdminDashboard() {
                     size="sm"
                     className="shrink-0"
                     onClick={async () => {
+                      if (!editFormData._newPassword || editFormData._newPassword.length < 4) {
+                        toast({ title: "Erreur", description: "Le mot de passe doit contenir au moins 4 caractères", variant: "destructive" });
+                        return;
+                      }
                       try {
-                        await fetch(`/api/admin/commerciaux/${editingItem?.id}/reset-password`, {
+                        const res = await fetch(`/api/admin/commerciaux/${editingItem?.id}/reset-password`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ password: editFormData._newPassword || "bfc26" }),
+                          body: JSON.stringify({ password: editFormData._newPassword }),
+                          credentials: "include",
                         });
-                        toast({ title: "Mot de passe réinitialisé", description: editFormData._newPassword ? "Nouveau mot de passe défini" : "Mot de passe remis à bfc26" });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          throw new Error(data.error || "Erreur");
+                        }
+                        toast({ title: "Mot de passe réinitialisé", description: "Nouveau mot de passe défini" });
                         setEditFormData({...editFormData, _newPassword: ""});
-                      } catch {
-                        toast({ title: "Erreur", variant: "destructive" });
+                      } catch (e: any) {
+                        toast({ title: "Erreur", description: e.message || "Impossible de réinitialiser le mot de passe", variant: "destructive" });
                       }
                     }}
                     data-testid="button-reset-password"
@@ -981,7 +1009,7 @@ export default function AdminDashboard() {
                             const createdAt = client.createdAt ? new Date(client.createdAt) : null;
                             const approvedAt = client.approvedAt ? new Date(client.approvedAt) : null;
                             const isNew = createdAt && createdAt > oneMonthAgo && !client.isFromExcel;
-                            const hasPendingModification = client.modificationApproved === false && client.previousValues;
+                            const hasPendingModification = !client.modificationApproved && client.previousValues;
                             const hasRecentlyApproved = approvedAt && approvedAt > twoMonthsAgo;
                             
                             let previousData: { nom?: string; adresse1?: string; codePostal?: string; ville?: string; interloc?: string; tel?: string; portable?: string; mail?: string } = {};
@@ -1014,62 +1042,33 @@ export default function AdminDashboard() {
                                         <div className="space-y-3">
                                           <h4 className="font-medium text-sm">Modifications en attente</h4>
                                           <div className="space-y-2 text-xs">
-                                            {previousData.nom !== undefined && previousData.nom !== client.nom && (
-                                              <div>
-                                                <span className="font-medium">Nom:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.nom || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.nom || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.adresse1 !== undefined && previousData.adresse1 !== client.adresse1 && (
-                                              <div>
-                                                <span className="font-medium">Adresse:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.adresse1 || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.adresse1 || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.codePostal !== undefined && previousData.codePostal !== client.codePostal && (
-                                              <div>
-                                                <span className="font-medium">Code postal:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.codePostal || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.codePostal || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.ville !== undefined && previousData.ville !== client.ville && (
-                                              <div>
-                                                <span className="font-medium">Ville:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.ville || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.ville || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.interloc !== undefined && previousData.interloc !== client.interloc && (
-                                              <div>
-                                                <span className="font-medium">Interlocuteur:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.interloc || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.interloc || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.portable !== undefined && previousData.portable !== client.portable && (
-                                              <div>
-                                                <span className="font-medium">Portable:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.portable || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.portable || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.tel !== undefined && previousData.tel !== client.tel && (
-                                              <div>
-                                                <span className="font-medium">Téléphone:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.tel || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.tel || "(vide)"}</div>
-                                              </div>
-                                            )}
-                                            {previousData.mail !== undefined && previousData.mail !== client.mail && (
-                                              <div>
-                                                <span className="font-medium">Email:</span>
-                                                <div className="text-muted-foreground line-through">{previousData.mail || "(vide)"}</div>
-                                                <div className="text-primary font-medium">{client.mail || "(vide)"}</div>
-                                              </div>
-                                            )}
+                                            {(() => {
+                                              const fields: { key: string; label: string }[] = [
+                                                { key: "nom", label: "Nom" },
+                                                { key: "adresse1", label: "Adresse" },
+                                                { key: "codePostal", label: "Code postal" },
+                                                { key: "ville", label: "Ville" },
+                                                { key: "interloc", label: "Interlocuteur" },
+                                                { key: "portable", label: "Portable" },
+                                                { key: "tel", label: "Téléphone" },
+                                                { key: "mail", label: "Email" },
+                                              ];
+                                              const diffs = fields.filter(f => {
+                                                const prev = (previousData as any)[f.key];
+                                                const curr = (client as any)[f.key];
+                                                return prev !== undefined && (prev || "") !== (curr || "");
+                                              });
+                                              if (diffs.length === 0) {
+                                                return <p className="text-muted-foreground">Ce client a été modifié (les détails des changements ne sont pas disponibles).</p>;
+                                              }
+                                              return diffs.map(f => (
+                                                <div key={f.key}>
+                                                  <span className="font-medium">{f.label}:</span>
+                                                  <div className="text-muted-foreground line-through">{(previousData as any)[f.key] || "(vide)"}</div>
+                                                  <div className="text-primary font-medium">{(client as any)[f.key] || "(vide)"}</div>
+                                                </div>
+                                              ));
+                                            })()}
                                           </div>
                                           <Button 
                                             size="sm" 

@@ -26,13 +26,30 @@ export default function AdminLoginPage() {
 
     setIsLoading(true);
 
-    if (password === "slf25") {
-      localStorage.setItem("adminAuthenticated", "true");
-      setLocation("/admin");
-    } else {
+    try {
+      const res = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        localStorage.setItem("adminAuthenticated", "true");
+        setLocation("/admin");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({
+          title: "Accès refusé",
+          description: data.error || "Mot de passe administrateur incorrect",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
+    } catch {
       toast({
-        title: "Accès refusé",
-        description: "Mot de passe administrateur incorrect",
+        title: "Erreur",
+        description: "Impossible de contacter le serveur",
         variant: "destructive",
       });
       setIsLoading(false);

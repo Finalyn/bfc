@@ -157,29 +157,17 @@ export default function OrderPage() {
 
   const generateOrderMutation = useMutation({
     mutationFn: async (data: InsertOrder) => {
-      // Timeout global de 15s — si tout bloque, on force le résultat offline
-      const globalTimeout = new Promise<GeneratedOrder & { isOffline: boolean }>((resolve) =>
-        setTimeout(() => {
-          const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
-          resolve({ orderCode, pdfUrl: "", excelUrl: "", emailsSent: false, emailError: null, isOffline: true } as any);
-        }, 15000)
-      );
-
-      const mainFlow = async (): Promise<GeneratedOrder & { isOffline: boolean }> => {
-        // Mode offline détecté
-        if (!navigator.onLine) {
-          return await saveOrderOffline(data);
-        }
-        // Mode online — essayer l'API avec fallback offline
-        try {
-          const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
-          return { ...response, isOffline: false };
-        } catch (e) {
-          return await saveOrderOffline(data);
-        }
-      };
-
-      return Promise.race([mainFlow(), globalTimeout]);
+      // Mode offline détecté
+      if (!navigator.onLine) {
+        return await saveOrderOffline(data);
+      }
+      // Mode online — essayer l'API avec timeout court pour détecter hors-ligne rapidement
+      try {
+        const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data, { timeout: 5000 });
+        return { ...response, isOffline: false };
+      } catch (e) {
+        return await saveOrderOffline(data);
+      }
     },
     onSuccess: (data) => {
       if ((data as any).isOffline) {
@@ -194,7 +182,7 @@ export default function OrderPage() {
         setCurrentStep("success");
         toast({
           title: "Commande sauvegardée",
-          description: "La commande sera envoyée automatiquement dès que le réseau sera disponible",
+          description: "La commande sera synchronisée automatiquement quand vous reviendrez dans l'application",
         });
         return;
       }
@@ -239,7 +227,7 @@ export default function OrderPage() {
         setCurrentStep("success");
         toast({
           title: "Commande sauvegardée",
-          description: "La commande sera envoyée automatiquement dès le retour du réseau",
+          description: "La commande sera synchronisée automatiquement quand vous reviendrez dans l'application",
         });
         return;
       } catch (e) {
@@ -303,14 +291,11 @@ export default function OrderPage() {
   // Vérifier l'authentification au chargement
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("authenticated") === "true";
-
-    if (!isAuthenticated && navigator.onLine) {
+    if (!isAuthenticated) {
       window.location.href = "/login";
       return;
     }
-
-    // En mode offline, on laisse passer même sans auth stricte
-    // car on ne peut pas vérifier avec le serveur
+    // User is authenticated (at least has a localStorage session)
     setIsCheckingAuth(false);
   }, [setLocation]);
 
@@ -327,14 +312,6 @@ export default function OrderPage() {
   }
 
   const handleFormNext = (data: Partial<InsertOrder>) => {
-    // Debug: log what the form sends
-    console.log(`📋 handleFormNext - received themeSelections type: ${typeof data.themeSelections}, length: ${(data.themeSelections || "").length}`);
-    try {
-      const parsed = JSON.parse(data.themeSelections || "[]");
-      console.log(`📋 handleFormNext - parsed ${parsed.length} themes:`, parsed.slice(0, 3));
-    } catch (e) {
-      console.error(`❌ handleFormNext - themeSelections parse error`);
-    }
     setOrderData({ ...orderData, ...data });
     setCurrentStep("preview");
   };
@@ -356,16 +333,6 @@ export default function OrderPage() {
   };
 
   const handleGenerate = () => {
-    // Debug: log themeSelections before sending
-    console.log(`📋 handleGenerate - orderData.themeSelections type: ${typeof orderData.themeSelections}`);
-    console.log(`📋 handleGenerate - orderData.themeSelections length: ${(orderData.themeSelections || "").length}`);
-    try {
-      const parsed = JSON.parse(orderData.themeSelections || "[]");
-      console.log(`📋 handleGenerate - parsed ${parsed.length} themes:`, parsed.slice(0, 3));
-    } catch (e) {
-      console.error(`❌ handleGenerate - Failed to parse themeSelections:`, orderData.themeSelections);
-    }
-
     if (orderData.clientName && orderData.signature) {
       generateOrderMutation.mutate(orderData as InsertOrder);
     }
