@@ -216,6 +216,7 @@ const formSchema = z.object({
   livraisonHoraires: z.string().optional(),
   livraisonHayon: z.boolean(),
   facturationRaisonSociale: z.string().min(1, "La raison sociale est requise"),
+  siret: z.string().min(14, "Le SIRET doit contenir 14 chiffres").max(14, "Le SIRET doit contenir 14 chiffres").regex(/^\d{14}$/, "Le SIRET doit contenir 14 chiffres"),
   facturationAdresse: z.string().min(1, "L'adresse de facturation est requise"),
   facturationCpVille: z.string().min(1, "Le CP/Ville de facturation est requis"),
   facturationMode: z.enum(["VIREMENT", "CHEQUE", "LCR"]),
@@ -320,6 +321,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       livraisonHoraires: initialData?.livraisonHoraires || "",
       livraisonHayon: initialData?.livraisonHayon || false,
       facturationRaisonSociale: initialData?.facturationRaisonSociale || "",
+      siret: initialData?.siret || "",
       facturationAdresse: initialData?.facturationAdresse || "",
       facturationCpVille: initialData?.facturationCpVille || "",
       facturationMode: initialData?.facturationMode || "VIREMENT",
@@ -452,6 +454,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       setValue("livraisonCpVille", cpVille);
       
       setValue("facturationRaisonSociale", clientAsLocal.nom);
+      setValue("siret", clientAsLocal.siret || "");
       setValue("facturationAdresse", adresseComplete);
       setValue("facturationCpVille", cpVille);
       
@@ -513,9 +516,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     setValue("livraisonCpVille", cpVille);
     
     setValue("facturationRaisonSociale", client.nom);
+    setValue("siret", client.siret || "");
     setValue("facturationAdresse", adresseComplete);
     setValue("facturationCpVille", cpVille);
-    
+
     if (client.interloc) {
       setValue("responsableName", client.interloc);
     }
@@ -1222,6 +1226,20 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
                     />
                     {errors.facturationRaisonSociale && (
                       <p className="text-xs text-destructive">{errors.facturationRaisonSociale.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">N° SIRET <span className="text-destructive">*</span></Label>
+                    <Input
+                      {...register("siret")}
+                      className="h-11 text-base"
+                      placeholder="14 chiffres"
+                      maxLength={14}
+                      inputMode="numeric"
+                      data-testid="input-siret"
+                    />
+                    {errors.siret && (
+                      <p className="text-xs text-destructive">{errors.siret.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">

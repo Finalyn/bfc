@@ -216,6 +216,9 @@ export function ReviewStep({
             </CardHeader>
             <CardContent className="text-sm space-y-1">
               <p className="font-medium" data-testid="text-facturation-raison">{orderData.facturationRaisonSociale}</p>
+              {orderData.siret && (
+                <p className="text-muted-foreground">SIRET: {orderData.siret}</p>
+              )}
               <p className="text-muted-foreground">{orderData.facturationAdresse}</p>
               <p className="text-muted-foreground">{orderData.facturationCpVille}</p>
               <Badge variant="outline" className="mt-2">
