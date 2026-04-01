@@ -379,6 +379,7 @@ export default function OrderPage() {
           totalSteps={5}
           fournisseur={orderData.fournisseur || "BDIS"}
           defaultCity={orderData.livraisonCpVille ? orderData.livraisonCpVille.replace(/^\d{4,5}\s*/, "") : ""}
+          defaultSignedName={orderData.responsableName || ""}
         />
       )}
       {currentStep === "review" && orderData.signature && (
