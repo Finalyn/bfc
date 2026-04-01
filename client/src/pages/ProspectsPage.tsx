@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Plus,
@@ -49,7 +50,11 @@ import {
   Building2,
   MessageSquare,
   ChevronRight,
+  ChevronLeft,
+  List,
 } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO, isAfter, isBefore, addDays } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface Prospect {
   id: number;
@@ -122,6 +127,8 @@ export default function ProspectsPage() {
   const [deletingProspect, setDeletingProspect] = useState<Prospect | null>(null);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [activeTab, setActiveTab] = useState("liste");
 
   const [formData, setFormData] = useState({
     nom: "",
@@ -163,8 +170,49 @@ export default function ProspectsPage() {
     enabled: !!selectedProspect,
   });
 
+  interface EnrichedEvent extends ProspectEvent {
+    prospectNom: string;
+    prospectEnseigne: string;
+  }
+
+  const calendarEventsKey = isAdmin
+    ? ["/api/prospect-events/all"]
+    : [`/api/prospect-events/all?commercial=${encodeURIComponent(userName)}`];
+
+  const { data: calendarEventsResponse } = useQuery<{ data: EnrichedEvent[] }>({
+    queryKey: calendarEventsKey,
+  });
+
   const allProspects = prospectsResponse?.data || [];
   const events = eventsResponse?.data || [];
+  const allCalendarEvents = calendarEventsResponse?.data || [];
+
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return allCalendarEvents
+      .filter(e => {
+        try {
+          const d = parseISO(e.dateEvenement);
+          return isAfter(d, addDays(today, -1));
+        } catch { return false; }
+      })
+      .sort((a, b) => a.dateEvenement.localeCompare(b.dateEvenement));
+  }, [allCalendarEvents]);
+
+  const getEventsForDate = (date: Date) => {
+    return allCalendarEvents.filter(e => {
+      try {
+        return isSameDay(parseISO(e.dateEvenement), date);
+      } catch { return false; }
+    });
+  };
+
+  const calendarDays = useMemo(() => {
+    const start = startOfMonth(calendarMonth);
+    const end = endOfMonth(calendarMonth);
+    return eachDayOfInterval({ start, end });
+  }, [calendarMonth]);
 
   const filteredProspects = useMemo(() => {
     let list = allProspects;
@@ -465,7 +513,7 @@ export default function ProspectsPage() {
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/hub")}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Menu
           </Button>
@@ -478,61 +526,159 @@ export default function ProspectsPage() {
           </Button>
         </div>
 
-        {/* Filtres */}
-        <div className="flex gap-2 mb-4">
-          <div className="flex-1 relative">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <Select value={filterStatut} onValueChange={setFilterStatut}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              {STATUTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="liste">
+              <List className="w-4 h-4 mr-1" /> Prospects
+            </TabsTrigger>
+            <TabsTrigger value="calendrier">
+              <Calendar className="w-4 h-4 mr-1" /> Calendrier
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Liste */}
-        {isLoading ? (
-          <Card><CardContent className="py-8 text-center text-muted-foreground">Chargement...</CardContent></Card>
-        ) : filteredProspects.length === 0 ? (
-          <Card><CardContent className="py-8 text-center text-muted-foreground">Aucun prospect trouvé</CardContent></Card>
-        ) : (
-          <div className="space-y-2">
-            {filteredProspects.map((p) => (
-              <Card key={p.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedProspect(p)}>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{p.nom}</p>
-                        {getStatutBadge(p.statut)}
+          <TabsContent value="liste">
+            {/* Filtres */}
+            <div className="flex gap-2 mb-4">
+              <div className="flex-1 relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                <Input className="pl-9" placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+              <Select value={filterStatut} onValueChange={setFilterStatut}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  {STATUTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Liste */}
+            {isLoading ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Chargement...</CardContent></Card>
+            ) : filteredProspects.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Aucun prospect trouvé</CardContent></Card>
+            ) : (
+              <div className="space-y-2">
+                {filteredProspects.map((p) => (
+                  <Card key={p.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedProspect(p)}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">{p.nom}</p>
+                            {getStatutBadge(p.statut)}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            {p.enseigne && <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{p.enseigne}</span>}
+                            {p.ville && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{p.ville}</span>}
+                            {p.tel && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{p.tel}</span>}
+                          </div>
+                          {isAdmin && <p className="text-xs text-primary mt-1">{p.commercialName}</p>}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEdit(p); }}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeletingProspect(p); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        {p.enseigne && <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{p.enseigne}</span>}
-                        {p.ville && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{p.ville}</span>}
-                        {p.tel && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{p.tel}</span>}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="calendrier">
+            {/* Navigation mois */}
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <h2 className="font-semibold capitalize">
+                {format(calendarMonth, "MMMM yyyy", { locale: fr })}
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Grille calendrier */}
+            <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden mb-4">
+              {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(d => (
+                <div key={d} className="bg-muted p-1 text-center text-xs font-medium">{d}</div>
+              ))}
+              {/* Padding pour le premier jour */}
+              {Array.from({ length: (calendarDays[0]?.getDay() || 7) - 1 }).map((_, i) => (
+                <div key={`pad-${i}`} className="bg-background p-1 min-h-[60px]" />
+              ))}
+              {calendarDays.map(day => {
+                const dayEvents = getEventsForDate(day);
+                const isToday = isSameDay(day, new Date());
+                return (
+                  <div key={day.toISOString()} className={`bg-background p-1 min-h-[60px] ${isToday ? "ring-2 ring-primary ring-inset" : ""}`}>
+                    <p className={`text-xs font-medium mb-0.5 ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</p>
+                    {dayEvents.slice(0, 2).map(evt => (
+                      <div key={evt.id} className={`text-[10px] px-1 py-0.5 rounded mb-0.5 truncate ${
+                        evt.type === "rdv" ? "bg-purple-100 text-purple-700" :
+                        evt.type === "appel" ? "bg-blue-100 text-blue-700" :
+                        evt.type === "relance" ? "bg-orange-100 text-orange-700" :
+                        "bg-gray-100 text-gray-700"
+                      }`}>
+                        {evt.heureEvenement ? `${evt.heureEvenement} ` : ""}{evt.titre}
                       </div>
-                      {isAdmin && <p className="text-xs text-primary mt-1">{p.commercialName}</p>}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEdit(p); }}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeletingProspect(p); setDeleteDialogOpen(true); }}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                    ))}
+                    {dayEvents.length > 2 && (
+                      <p className="text-[10px] text-muted-foreground">+{dayEvents.length - 2}</p>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                );
+              })}
+            </div>
+
+            {/* Prochains événements */}
+            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+              <Clock className="w-4 h-4" /> Prochains RDV & relances
+            </h3>
+            {upcomingEvents.length === 0 ? (
+              <Card><CardContent className="py-6 text-center text-muted-foreground text-sm">Aucun événement à venir</CardContent></Card>
+            ) : (
+              <div className="space-y-2">
+                {upcomingEvents.slice(0, 15).map(evt => (
+                  <Card key={evt.id}>
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">
+                              {EVENT_TYPES.find(t => t.value === evt.type)?.label || evt.type}
+                            </Badge>
+                            <span className="text-xs font-medium">
+                              {(() => { try { return format(parseISO(evt.dateEvenement), "dd/MM/yyyy", { locale: fr }); } catch { return evt.dateEvenement; } })()}
+                              {evt.heureEvenement ? ` à ${evt.heureEvenement}` : ""}
+                            </span>
+                            {evt.rappel && !evt.rappelEnvoye && <Bell className="w-3 h-3 text-orange-500" />}
+                          </div>
+                          <p className="text-sm font-medium">{evt.titre}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(evt as EnrichedEvent).prospectNom}
+                            {(evt as EnrichedEvent).prospectEnseigne ? ` - ${(evt as EnrichedEvent).prospectEnseigne}` : ""}
+                          </p>
+                          {isAdmin && <p className="text-xs text-primary">{evt.commercialName}</p>}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Dialog création/édition prospect */}

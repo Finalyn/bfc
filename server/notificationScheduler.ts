@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import nodemailer from "nodemailer";
 import { db } from "./db";
-import { orders, commerciaux, pushSubscriptions, notificationLogs } from "@shared/schema";
+import { orders, commerciaux, pushSubscriptions, notificationLogs, prospectEvents } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import {
@@ -264,6 +264,61 @@ async function ensureNotificationLogsTable(): Promise<void> {
   }
 }
 
+// Check and send prospect reminders
+async function checkProspectReminders(): Promise<void> {
+  const today = formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd");
+  console.log(`[NOTIF] === prospect reminders check START === (target: ${today})`);
+
+  try {
+    const pendingReminders = await db.select().from(prospectEvents)
+      .where(and(
+        eq(prospectEvents.rappelDate, today),
+        eq(prospectEvents.rappel, true),
+        eq(prospectEvents.rappelEnvoye, false)
+      ));
+
+    console.log(`[NOTIF] Found ${pendingReminders.length} prospect reminder(s) for today`);
+
+    for (const reminder of pendingReminders) {
+      const payload: NotificationPayload = {
+        title: `Rappel prospect: ${reminder.titre}`,
+        body: `${reminder.type === "rdv" ? "RDV" : reminder.type === "appel" ? "Appel" : "Relance"} prévu le ${reminder.dateEvenement}${reminder.heureEvenement ? ` à ${reminder.heureEvenement}` : ""}`,
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/icon-72x72.png",
+        tag: `prospect-reminder-${reminder.id}`,
+        data: {
+          url: "/prospects",
+          eventType: "prospect_reminder",
+          orderCode: `P-${reminder.prospectId}`,
+          eventDate: reminder.dateEvenement,
+        },
+      };
+
+      const result = await sendPushToUser(reminder.commercialName, payload);
+
+      // Also send email
+      const allCommerciaux = await db.select().from(commerciaux);
+      const commercial = allCommerciaux.find(c => `${c.prenom} ${c.nom}`.trim() === reminder.commercialName);
+      if (commercial?.email) {
+        await sendReminderEmail(commercial.email, reminder.commercialName, payload.title, payload.body);
+      }
+
+      // Mark as sent
+      await db.update(prospectEvents)
+        .set({ rappelEnvoye: true })
+        .where(eq(prospectEvents.id, reminder.id));
+
+      if (result.sent > 0) {
+        console.log(`[NOTIF] Prospect reminder sent to ${reminder.commercialName}: ${reminder.titre}`);
+      }
+    }
+
+    console.log(`[NOTIF] === prospect reminders DONE === sent=${pendingReminders.length}`);
+  } catch (error) {
+    console.error("[NOTIF] Error checking prospect reminders:", error);
+  }
+}
+
 export async function startNotificationScheduler(): Promise<void> {
   const configured = initializeWebPush();
   if (!configured) {
@@ -287,6 +342,8 @@ export async function startNotificationScheduler(): Promise<void> {
     if (parisHour >= 18) {
       await checkAndSendNotifications("veille");
     }
+    // Always check prospect reminders at startup
+    await checkProspectReminders();
   } catch (error) {
     console.error("[NOTIF] Error in startup catch-up:", error);
   }
@@ -317,6 +374,19 @@ export async function startNotificationScheduler(): Promise<void> {
     { timezone: "Europe/Paris" }
   );
 
+  // Prospect reminders - 08h00 Europe/Paris
+  cron.schedule(
+    "0 8 * * *",
+    async () => {
+      try {
+        await checkProspectReminders();
+      } catch (error) {
+        console.error("[NOTIF] Error in prospect reminders cron:", error);
+      }
+    },
+    { timezone: "Europe/Paris" }
+  );
+
   // Nettoyage des logs > 30 jours - 03h00
   cron.schedule(
     "0 3 * * *",
@@ -336,6 +406,6 @@ export async function startNotificationScheduler(): Promise<void> {
   );
 
   console.log(
-    "[NOTIF] ✅ Scheduler started (veille 18:00, jour_meme 07:30, cleanup 03:00)"
+    "[NOTIF] ✅ Scheduler started (veille 18:00, jour_meme 07:30, prospects 08:00, cleanup 03:00)"
   );
 }

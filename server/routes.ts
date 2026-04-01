@@ -3450,6 +3450,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all events for calendar (filtered by commercial or all for admin)
+  app.get("/api/prospect-events/all", async (req, res) => {
+    try {
+      const allEvents = await db.select().from(prospectEvents);
+      const allProspectsList = await db.select().from(prospects);
+      const prospectMap = new Map(allProspectsList.map(p => [p.id, p]));
+
+      const commercial = req.query.commercial as string;
+      const filtered = commercial
+        ? allEvents.filter(e => e.commercialName === commercial)
+        : allEvents;
+
+      const enriched = filtered.map(e => ({
+        ...e,
+        prospectNom: prospectMap.get(e.prospectId)?.nom || "",
+        prospectEnseigne: prospectMap.get(e.prospectId)?.enseigne || "",
+      }));
+
+      res.json({ data: enriched });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
