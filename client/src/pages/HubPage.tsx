@@ -91,8 +91,8 @@ export default function HubPage() {
 
       {/* Contenu principal */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg">
-          <div className="text-center mb-4">
+        <div className="w-full max-w-md mx-auto">
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               BFC APP
             </h1>

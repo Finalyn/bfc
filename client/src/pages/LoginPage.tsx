@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { APP_VERSION } from "@/lib/version";
+import { requestNotificationPermission, subscribeToPush, saveSubscription } from "@/lib/notifications";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -42,6 +43,18 @@ export default function LoginPage() {
         localStorage.setItem("userName", data.user.fullName);
         localStorage.setItem("userId", String(data.user.id));
         localStorage.setItem("userEmail", data.user.email || "");
+
+        // Auto-subscribe to push notifications
+        try {
+          const granted = await requestNotificationPermission();
+          if (granted) {
+            const subscription = await subscribeToPush();
+            if (subscription) {
+              await saveSubscription(subscription, data.user.fullName);
+            }
+          }
+        } catch {}
+
         setLocation("/hub");
       } else {
         throw new Error(data.error || "Erreur de connexion");
