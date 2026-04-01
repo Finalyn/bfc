@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import nodemailer from "nodemailer";
 import { db } from "./db";
-import { orders, commerciaux, pushSubscriptions, notificationLogs, prospectEvents } from "@shared/schema";
+import { orders, commerciaux, pushSubscriptions, notificationLogs, prospectEvents, prospects } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import {
@@ -279,10 +279,25 @@ async function checkProspectReminders(): Promise<void> {
 
     console.log(`[NOTIF] Found ${pendingReminders.length} prospect reminder(s) for today`);
 
+    // Load all prospects to get names
+    const allProspectsList = await db.select().from(prospects);
+    const prospectMap = new Map(allProspectsList.map(p => [p.id, p]));
+
+    // Load commerciaux once
+    const allCommerciaux = await db.select().from(commerciaux);
+    const commerciauxByName = new Map<string, typeof allCommerciaux[0]>();
+    for (const c of allCommerciaux) {
+      commerciauxByName.set(`${c.prenom} ${c.nom}`.trim(), c);
+    }
+
     for (const reminder of pendingReminders) {
+      const prospect = prospectMap.get(reminder.prospectId);
+      const prospectName = prospect ? `${prospect.nom}${prospect.enseigne ? ` (${prospect.enseigne})` : ""}` : "Prospect inconnu";
+      const typeLabel = reminder.type === "rdv" ? "RDV" : reminder.type === "appel" ? "Appel" : "Relance";
+
       const payload: NotificationPayload = {
-        title: `Rappel prospect: ${reminder.titre}`,
-        body: `${reminder.type === "rdv" ? "RDV" : reminder.type === "appel" ? "Appel" : "Relance"} prévu le ${reminder.dateEvenement}${reminder.heureEvenement ? ` à ${reminder.heureEvenement}` : ""}`,
+        title: `Rappel: ${typeLabel} - ${prospectName}`,
+        body: `${reminder.titre} - ${reminder.dateEvenement}${reminder.heureEvenement ? ` à ${reminder.heureEvenement}` : ""}`,
         icon: "/icons/icon-192x192.png",
         badge: "/icons/icon-72x72.png",
         tag: `prospect-reminder-${reminder.id}`,
@@ -296,11 +311,15 @@ async function checkProspectReminders(): Promise<void> {
 
       const result = await sendPushToUser(reminder.commercialName, payload);
 
-      // Also send email
-      const allCommerciaux = await db.select().from(commerciaux);
-      const commercial = allCommerciaux.find(c => `${c.prenom} ${c.nom}`.trim() === reminder.commercialName);
+      // Also send email with prospect name
+      const commercial = commerciauxByName.get(reminder.commercialName);
       if (commercial?.email) {
-        await sendReminderEmail(commercial.email, reminder.commercialName, payload.title, payload.body);
+        await sendReminderEmail(
+          commercial.email,
+          reminder.commercialName,
+          payload.title,
+          `${typeLabel} avec ${prospectName}\n${reminder.titre}\nDate: ${reminder.dateEvenement}${reminder.heureEvenement ? ` à ${reminder.heureEvenement}` : ""}${reminder.description ? `\nDétails: ${reminder.description}` : ""}`
+        );
       }
 
       // Mark as sent
