@@ -632,6 +632,10 @@ export default function AdminDashboard() {
               <Input id="mail" type="email" value={editFormData.mail || ""} onChange={e => setEditFormData({...editFormData, mail: e.target.value})} />
             </div>
             <div>
+              <Label htmlFor="siret" className="text-sm">SIRET <span className="text-destructive">*</span></Label>
+              <Input id="siret" value={editFormData.siret || ""} onChange={e => setEditFormData({...editFormData, siret: e.target.value})} placeholder="14 chiffres" maxLength={14} />
+            </div>
+            <div>
               <Label htmlFor="interloc" className="text-sm">Interlocuteur</Label>
               <Input id="interloc" value={editFormData.interloc || ""} onChange={e => setEditFormData({...editFormData, interloc: e.target.value})} />
             </div>
@@ -965,6 +969,7 @@ export default function AdminDashboard() {
                             </TableHead>
                             <TableHead className="hidden lg:table-cell">Téléphone</TableHead>
                             <TableHead className="hidden lg:table-cell">Email</TableHead>
+                            <TableHead className="hidden xl:table-cell">SIRET</TableHead>
                             <TableHead className="w-24">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1098,6 +1103,9 @@ export default function AdminDashboard() {
                               </TableCell>
                               <TableCell className="hidden lg:table-cell">
                                 {client.mail || "-"}
+                              </TableCell>
+                              <TableCell className="hidden xl:table-cell">
+                                {client.siret || "-"}
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">

@@ -1,0 +1,1 @@
+ALTER TABLE clients ADD COLUMN siret VARCHAR(14) DEFAULT '' AFTER mail;

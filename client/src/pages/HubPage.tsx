@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Database, LogOut, User, LayoutDashboard } from "lucide-react";
+import { ClipboardList, Database, LogOut, User, LayoutDashboard, Users } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
 export default function HubPage() {
@@ -113,8 +113,31 @@ export default function HubPage() {
             </CardContent>
           </Card>
 
+          <Card
+            className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
+            onClick={() => setLocation("/prospects")}
+            data-testid="card-prospects"
+          >
+            <CardContent className="p-0">
+              <div className="flex items-stretch">
+                <div className="w-1 bg-orange-500" />
+                <div className="flex items-center gap-4 p-4 flex-1">
+                  <Users className="w-6 h-6 text-orange-600" />
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Suivi Prospects
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Contacts, RDV et relances
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {isAdmin && (
-            <Card 
+            <Card
               className="cursor-pointer transition-shadow hover:shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden"
               onClick={() => {
                 localStorage.setItem("adminAuthenticated", "true");

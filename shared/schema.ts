@@ -17,6 +17,7 @@ export const clients = mysqlTable("clients", {
   portable: text("portable").default(""),
   fax: text("fax").default(""),
   mail: text("mail").default(""),
+  siret: text("siret").default(""),
   isFromExcel: boolean("is_from_excel").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -326,3 +327,61 @@ export const notificationLogs = mysqlTable("notification_logs", {
   notifType: text("notif_type").notNull(),
   sentAt: timestamp("sent_at").defaultNow(),
 });
+
+// Table des prospects
+export const prospects = mysqlTable("prospects", {
+  id: serial("id").primaryKey(),
+  nom: text("nom").notNull(),
+  enseigne: text("enseigne").default(""),
+  adresse: text("adresse").default(""),
+  codePostal: text("code_postal").default(""),
+  ville: text("ville").default(""),
+  tel: text("tel").default(""),
+  email: text("email").default(""),
+  notes: text("notes").default(""),
+  commercialId: int("commercial_id"),
+  commercialName: text("commercial_name").notNull(),
+  statut: text("statut").notNull().default("nouveau"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_prospects_commercial").on(table.commercialName),
+  index("idx_prospects_statut").on(table.statut),
+]);
+
+export const insertProspectSchema = createInsertSchema(prospects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Prospect = typeof prospects.$inferSelect;
+export type InsertProspect = z.infer<typeof insertProspectSchema>;
+
+// Table des événements prospects (rdv, appels, relances)
+export const prospectEvents = mysqlTable("prospect_events", {
+  id: serial("id").primaryKey(),
+  prospectId: int("prospect_id").notNull(),
+  type: text("type").notNull(),
+  titre: text("titre").notNull(),
+  description: text("description").default(""),
+  dateEvenement: text("date_evenement").notNull(),
+  heureEvenement: text("heure_evenement").default(""),
+  rappel: boolean("rappel").default(false),
+  rappelDate: text("rappel_date"),
+  rappelEnvoye: boolean("rappel_envoye").default(false),
+  commercialName: text("commercial_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_prospect_events_prospect").on(table.prospectId),
+  index("idx_prospect_events_rappel").on(table.rappelDate),
+]);
+
+export const insertProspectEventSchema = createInsertSchema(prospectEvents).omit({
+  id: true,
+  createdAt: true,
+  rappelEnvoye: true,
+});
+
+export type ProspectEvent = typeof prospectEvents.$inferSelect;
+export type InsertProspectEvent = z.infer<typeof insertProspectEventSchema>;

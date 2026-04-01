@@ -157,17 +157,29 @@ export default function OrderPage() {
 
   const generateOrderMutation = useMutation({
     mutationFn: async (data: InsertOrder) => {
-      // Mode offline détecté
-      if (!navigator.onLine) {
-        return await saveOrderOffline(data);
-      }
-      // Mode online — essayer l'API avec fallback offline
-      try {
-        const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
-        return { ...response, isOffline: false };
-      } catch (e) {
-        return await saveOrderOffline(data);
-      }
+      // Timeout global de 15s — si tout bloque, on force le résultat offline
+      const globalTimeout = new Promise<GeneratedOrder & { isOffline: boolean }>((resolve) =>
+        setTimeout(() => {
+          const orderCode = `CMD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;
+          resolve({ orderCode, pdfUrl: "", excelUrl: "", emailsSent: false, emailError: null, isOffline: true } as any);
+        }, 15000)
+      );
+
+      const mainFlow = async (): Promise<GeneratedOrder & { isOffline: boolean }> => {
+        // Mode offline détecté
+        if (!navigator.onLine) {
+          return await saveOrderOffline(data);
+        }
+        // Mode online — essayer l'API avec fallback offline
+        try {
+          const response = await apiRequest<GeneratedOrder>("POST", "/api/orders/generate", data);
+          return { ...response, isOffline: false };
+        } catch (e) {
+          return await saveOrderOffline(data);
+        }
+      };
+
+      return Promise.race([mainFlow(), globalTimeout]);
     },
     onSuccess: (data) => {
       if ((data as any).isOffline) {
@@ -399,6 +411,7 @@ export default function OrderPage() {
           stepNumber={3}
           totalSteps={5}
           fournisseur={orderData.fournisseur || "BDIS"}
+          defaultCity={orderData.livraisonCpVille ? orderData.livraisonCpVille.replace(/^\d{4,5}\s*/, "") : ""}
         />
       )}
       {currentStep === "review" && orderData.signature && (

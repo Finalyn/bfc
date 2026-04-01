@@ -196,6 +196,7 @@ interface Client {
   portable: string;
   fax?: string;
   mail: string;
+  siret?: string;
   displayName: string;
   isFromDb?: boolean;
 }

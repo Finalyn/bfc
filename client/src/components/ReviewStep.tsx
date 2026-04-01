@@ -171,7 +171,7 @@ export function ReviewStep({
                           <span className="text-muted-foreground">
                             {t.quantity && `Qté: ${t.quantity}`}
                             {t.quantity && t.deliveryDate && " - "}
-                            {t.deliveryDate && format(new Date(t.deliveryDate), "dd/MM/yy")}
+                            {t.deliveryDate && format(new Date(t.deliveryDate), "dd/MM/yyyy")}
                           </span>
                         </div>
                       ))}

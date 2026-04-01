@@ -30,9 +30,10 @@ interface SignatureStepProps {
   stepNumber?: number;
   totalSteps?: number;
   fournisseur?: string;
+  defaultCity?: string;
 }
 
-export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, fournisseur = "BDIS" }: SignatureStepProps) {
+export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, fournisseur = "BDIS", defaultCity }: SignatureStepProps) {
   const signatureRef = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const [error, setError] = useState<string>("");
@@ -44,7 +45,7 @@ export function SignatureStep({ onNext, onBack, stepNumber = 2, totalSteps = 4, 
   
   const { register, handleSubmit, watch, control, formState: { errors } } = useForm({
     defaultValues: {
-      signatureLocation: "",
+      signatureLocation: defaultCity || "",
       signatureDate: formatInTimeZone(new Date(), "Europe/Paris", "yyyy-MM-dd"),
       clientSignedName: "",
       newsletterAccepted: true,

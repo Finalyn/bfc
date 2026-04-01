@@ -7,7 +7,8 @@ import {
   fournisseurs, insertFournisseurSchema,
   themes, insertThemeSchema,
   orders, insertOrderDbSchema, updateOrderDatesSchema,
-  pushSubscriptions, insertPushSubscriptionSchema
+  pushSubscriptions, insertPushSubscriptionSchema,
+  prospects, prospectEvents
 } from "@shared/schema";
 import { generateOrderPDF } from "./utils/pdfGenerator";
 import { generateOrderExcel } from "./utils/excelGenerator";
@@ -586,13 +587,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tel: dbClient.tel || "",
             portable: dbClient.portable || "",
             mail: dbClient.mail || "",
+            siret: dbClient.siret || "",
             displayName: `${dbClient.nom} - ${dbClient.ville || ""}`.trim(),
             isFromDb: true,
           };
         }
         return excelClient;
       });
-      
+
       // Ajouter les clients BDD qui ne sont pas dans Excel
       const excelCodes = new Set(data.clients.map(c => c.code));
       dbClients.forEach(dbClient => {
@@ -608,6 +610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tel: dbClient.tel || "",
             portable: dbClient.portable || "",
             mail: dbClient.mail || "",
+            siret: dbClient.siret || "",
             displayName: `${dbClient.nom} - ${dbClient.ville || ""}`.trim(),
             isFromDb: true,
           });
@@ -715,13 +718,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             portable: dbClient.portable || "",
             fax: dbClient.fax || "",
             mail: dbClient.mail || "",
+            siret: dbClient.siret || "",
             displayName: `${dbClient.nom} - ${dbClient.ville || ""}`.trim(),
             isFromDb: true,
           };
         }
         return { ...excelClient, isFromDb: false };
       });
-      
+
       // Ajouter les clients DB qui ne sont pas dans Excel (nouveaux clients)
       const excelCodes = new Set(data.clients.map(c => c.code));
       const newDbClients = dbClients
@@ -740,6 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           portable: c.portable || "",
           fax: c.fax || "",
           mail: c.mail || "",
+          siret: c.siret || "",
           displayName: `${c.nom} - ${c.ville || ""}`.trim(),
           isFromDb: true,
         }));
@@ -1488,6 +1493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tel: dbClient.tel || "",
             portable: dbClient.portable || "",
             mail: dbClient.mail || "",
+            siret: dbClient.siret || "",
             createdAt: dbClient.createdAt,
             updatedAt: dbClient.updatedAt,
             isFromExcel: dbClient.isFromExcel || false,
@@ -1507,6 +1513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tel: excelClient.tel,
           portable: excelClient.portable,
           mail: excelClient.mail,
+          siret: "",
           createdAt: null,
           updatedAt: null,
           isFromExcel: true,
@@ -1515,7 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           approvedAt: null,
         };
       });
-      
+
       // Add new DB clients not in Excel
       const excelCodes = new Set(data.clients.map(c => c.code));
       const newDbClients = dbClients
@@ -1531,6 +1538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tel: c.tel || "",
           portable: c.portable || "",
           mail: c.mail || "",
+          siret: c.siret || "",
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
           isFromExcel: c.isFromExcel || false,
@@ -3075,6 +3083,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error sending test notification:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== PROSPECTS ====================
+
+  app.get("/api/prospects", async (req, res) => {
+    try {
+      const allProspects = await db.select().from(prospects);
+      const userName = req.query.commercial as string;
+      const filtered = userName ? allProspects.filter(p => p.commercialName === userName) : allProspects;
+      res.json({ data: filtered });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/prospects", async (req, res) => {
+    try {
+      const result = await db.insert(prospects).values(req.body);
+      res.json({ success: true, id: result[0].insertId });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur lors de la création" });
+    }
+  });
+
+  app.patch("/api/prospects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.update(prospects).set({ ...req.body, updatedAt: new Date() }).where(eq(prospects.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur lors de la mise à jour" });
+    }
+  });
+
+  app.delete("/api/prospects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(prospectEvents).where(eq(prospectEvents.prospectId, id));
+      await db.delete(prospects).where(eq(prospects.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur lors de la suppression" });
+    }
+  });
+
+  app.get("/api/prospects/:id/events", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const events = await db.select().from(prospectEvents).where(eq(prospectEvents.prospectId, id));
+      res.json({ data: events });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/prospects/:id/events", async (req, res) => {
+    try {
+      const prospectId = parseInt(req.params.id);
+      const result = await db.insert(prospectEvents).values({ ...req.body, prospectId });
+      res.json({ success: true, id: result[0].insertId });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur lors de la création" });
+    }
+  });
+
+  app.delete("/api/prospect-events/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(prospectEvents).where(eq(prospectEvents.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erreur lors de la suppression" });
     }
   });
 

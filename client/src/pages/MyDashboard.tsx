@@ -55,7 +55,7 @@ import type { OrderDb } from "@shared/schema";
 const formatDateShort = (date: string | null | undefined): string => {
   if (!date) return "-";
   try {
-    return format(parseISO(date), "dd/MM/yy", { locale: fr });
+    return format(parseISO(date), "dd/MM/yyyy", { locale: fr });
   } catch {
     return date;
   }
@@ -405,6 +405,17 @@ export default function MyDashboard() {
     }
   };
 
+  const getAllDeliveryDates = (order: OrderDb): string[] => {
+    const themes = parseThemeSelections(order.themeSelections);
+    const dates = themes
+      .filter(t => t.deliveryDate)
+      .map(t => formatDateShort(t.deliveryDate!));
+    if (dates.length === 0 && order.dateLivraison) {
+      return [formatDateShort(order.dateLivraison)];
+    }
+    return [...new Set(dates)];
+  };
+
   const filteredOrders = useMemo(() => {
     let orders = allOrders;
     
@@ -484,7 +495,7 @@ export default function MyDashboard() {
         
         const d = parseFlexibleDate(dateStr);
         if (d && isSameDay(d, date)) {
-          events.push({ order, eventType, dateLabel: format(d, "dd/MM/yy", { locale: fr }), themeName });
+          events.push({ order, eventType, dateLabel: format(d, "dd/MM/yyyy", { locale: fr }), themeName });
         }
       };
 
@@ -1027,11 +1038,13 @@ export default function MyDashboard() {
                           <Badge variant="secondary" className="text-xs">
                             {order.fournisseur || "BDIS"}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Liv: {formatDateShort(order.dateLivraison)}
-                          </Badge>
+                          {getAllDeliveryDates(order).map((d, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              Liv: {d}
+                            </Badge>
+                          ))}
                           <span className="text-xs text-muted-foreground ml-auto">
-                            {order.orderDate}
+                            {formatDateShort(order.orderDate)}
                           </span>
                         </div>
                       </div>
@@ -1102,13 +1115,18 @@ export default function MyDashboard() {
                               <TableCell>
                                 <Badge variant="outline">{order.fournisseur || '-'}</Badge>
                               </TableCell>
-                              <TableCell className="text-sm">{order.orderDate || '-'}</TableCell>
+                              <TableCell className="text-sm">{formatDateShort(order.orderDate) || '-'}</TableCell>
                               <TableCell>
-                                <Badge variant="secondary">{order.dateLivraison || '-'}</Badge>
+                                {(() => {
+                                  const dates = getAllDeliveryDates(order);
+                                  return dates.length > 0
+                                    ? dates.map((d, i) => <Badge key={i} variant="secondary" className="mr-1 mb-1">{d}</Badge>)
+                                    : '-';
+                                })()}
                               </TableCell>
-                              <TableCell className="text-sm">{order.dateInventairePrevu || '-'}</TableCell>
-                              <TableCell className="text-sm">{order.dateInventaire || '-'}</TableCell>
-                              <TableCell className="text-sm">{order.dateRetour || '-'}</TableCell>
+                              <TableCell className="text-sm">{formatDateShort(order.dateInventairePrevu) || '-'}</TableCell>
+                              <TableCell className="text-sm">{formatDateShort(order.dateInventaire) || '-'}</TableCell>
+                              <TableCell className="text-sm">{formatDateShort(order.dateRetour) || '-'}</TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
                                   <Button
@@ -2017,7 +2035,10 @@ export default function MyDashboard() {
                   </div>
                   <div className="p-2 bg-background rounded">
                     <p className="text-muted-foreground">Livraison</p>
-                    <p className="font-medium">{formatDateShort(previewOrder.dateLivraison)}</p>
+                    {getAllDeliveryDates(previewOrder).map((d, i) => (
+                      <p key={i} className="font-medium">{d}</p>
+                    ))}
+                    {getAllDeliveryDates(previewOrder).length === 0 && <p className="font-medium">-</p>}
                   </div>
                   <div className="p-2 bg-background rounded">
                     <p className="text-muted-foreground">Inv. prévu</p>
@@ -2095,11 +2116,13 @@ export default function MyDashboard() {
               <div className="space-y-2">
                 <h3 className="font-semibold text-sm text-muted-foreground">Dates clés</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <p>Commande: {previewOrder.orderDate}</p>
-                  {previewOrder.dateLivraison && <p>Livraison: {previewOrder.dateLivraison}</p>}
-                  {previewOrder.dateInventairePrevu && <p>Inventaire prévu: {previewOrder.dateInventairePrevu}</p>}
-                  {previewOrder.dateInventaire && <p>Inventaire: {previewOrder.dateInventaire}</p>}
-                  {previewOrder.dateRetour && <p>Retour: {previewOrder.dateRetour}</p>}
+                  <p>Commande: {formatDateShort(previewOrder.orderDate)}</p>
+                  {getAllDeliveryDates(previewOrder).length > 0 && (
+                    <p>Livraison: {getAllDeliveryDates(previewOrder).join(", ")}</p>
+                  )}
+                  {previewOrder.dateInventairePrevu && <p>Inventaire prévu: {formatDateShort(previewOrder.dateInventairePrevu)}</p>}
+                  {previewOrder.dateInventaire && <p>Inventaire: {formatDateShort(previewOrder.dateInventaire)}</p>}
+                  {previewOrder.dateRetour && <p>Retour: {formatDateShort(previewOrder.dateRetour)}</p>}
                 </div>
               </div>
             </div>
