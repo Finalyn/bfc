@@ -593,6 +593,15 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
       });
     }
 
+    // Comparer le SIRET
+    if (data.siret !== (originalClientData.siret || "") && data.siret) {
+      changes.push({
+        field: "SIRET",
+        old: originalClientData.siret || "(vide)",
+        new: data.siret
+      });
+    }
+
     return changes;
   };
 
@@ -720,7 +729,10 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
     if (pendingFormData.responsableEmail !== (originalClientData.mail || "")) {
       updates.mail = pendingFormData.responsableEmail;
     }
-    
+    if (pendingFormData.siret !== (originalClientData.siret || "")) {
+      updates.siret = pendingFormData.siret;
+    }
+
     try {
       await updateClientMutation.mutateAsync({ id: dbId, updates });
     } catch (e) {
