@@ -3301,14 +3301,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
 
       for (const order of userOrders) {
-        // Vérifier les livraisons
-        if (order.dateLivraison && order.dateLivraison >= parisNow && order.dateLivraison <= futureStr) {
-          events.push({
-            type: 'livraison',
-            date: order.dateLivraison,
-            orderCode: order.orderCode,
-            clientName: order.clientName || '',
-          });
+        // Vérifier les livraisons (peut contenir plusieurs dates séparées par virgule)
+        if (order.dateLivraison) {
+          const livDates = order.dateLivraison.split(",").map(d => d.trim()).filter(Boolean);
+          for (const livDate of livDates) {
+            if (livDate >= parisNow && livDate <= futureStr) {
+              events.push({
+                type: 'livraison',
+                date: livDate,
+                orderCode: order.orderCode,
+                clientName: order.clientName || '',
+              });
+            }
+          }
         }
 
         // Vérifier les inventaires prévus

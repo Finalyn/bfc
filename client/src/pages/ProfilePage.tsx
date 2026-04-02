@@ -73,8 +73,10 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    setNotifPermission(getNotificationPermission());
-    isSubscribedToPush().then(setIsPushSubscribed);
+    try {
+      setNotifPermission(getNotificationPermission());
+      isSubscribedToPush().then(setIsPushSubscribed).catch(() => {});
+    } catch {}
   }, []);
 
   if (!isAuthenticated) {
@@ -354,7 +356,7 @@ export default function ProfilePage() {
                     <p className="text-xs text-muted-foreground truncate">{event.clientName}</p>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {format(parseISO(event.date), 'dd MMM', { locale: fr })}
+                    {(() => { try { return format(parseISO(event.date), 'dd MMM', { locale: fr }); } catch { return event.date || '-'; } })()}
                   </Badge>
                 </div>
               ))}
