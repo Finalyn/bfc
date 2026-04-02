@@ -224,7 +224,7 @@ export default function MyDashboard() {
   }
 
   const { data: ordersResponse, isLoading } = useQuery<OrdersResponse>({
-    queryKey: ["/api/user/orders?pageSize=10000"],
+    queryKey: ["/api/orders?limit=10000"],
   });
 
   interface CommerciauxResponse {
@@ -232,7 +232,7 @@ export default function MyDashboard() {
   }
   
   const { data: commerciauxResponse } = useQuery<CommerciauxResponse>({
-    queryKey: ["/api/user/commerciaux"],
+    queryKey: ["/api/data/commerciaux"],
     enabled: isAdmin,
   });
 
@@ -263,7 +263,7 @@ export default function MyDashboard() {
     },
     onSuccess: () => {
       toast({ title: "Dates mises à jour", description: "Les dates de la commande ont été modifiées avec succès." });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/orders?pageSize=10000"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders?limit=10000"] });
       setDatesDialogOpen(false);
       setSelectedOrder(null);
     },

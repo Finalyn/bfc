@@ -193,7 +193,7 @@ export default function OrderPage() {
       setEmailError(data.emailError || "");
       setCurrentStep("success");
       
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders?pageSize=10000"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders?limit=10000"] });
       
       if (data.emailsSent) {
         toast({
