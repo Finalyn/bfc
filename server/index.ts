@@ -16,6 +16,9 @@ if (process.env.NODE_ENV === "production") {
 
 const app = express();
 
+// Trust proxy (Infomaniak reverse proxy)
+app.set("trust proxy", 1);
+
 // Compression des réponses (gzip/brotli)
 app.use(compression());
 
