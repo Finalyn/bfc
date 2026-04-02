@@ -90,7 +90,7 @@ export default function HubPage() {
       </header>
 
       {/* Contenu principal */}
-      <div className="flex-1 flex items-start justify-center p-4 pt-8 overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
         <div className="w-full max-w-md mx-auto">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
