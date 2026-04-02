@@ -275,7 +275,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
         return { _offline: true };
       }
       try {
-        return await apiRequest("PATCH", `/api/admin/clients/${data.id}`, data.updates);
+        return await apiRequest("PATCH", `/api/clients/${data.id}/update`, data.updates);
       } catch (e) {
         const pending = JSON.parse(localStorage.getItem("pendingClientChanges") || "[]");
         pending.push({ mode: "edit", data: data.updates, code: data.id, timestamp: new Date().toISOString() });
@@ -747,7 +747,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
         mail: pendingFormData.responsableEmail || "",
         siret: pendingFormData.siret || "",
       };
-      await apiRequest("POST", "/api/admin/clients", newClient);
+      await apiRequest("POST", "/api/clients/create", newClient);
       queryClient.invalidateQueries({ queryKey: ["/api/data/clients"] });
       toast({ title: "Client créé", description: `${newClient.nom} a été ajouté à la base de données` });
     } catch (e) {

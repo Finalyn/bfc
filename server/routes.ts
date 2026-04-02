@@ -3373,6 +3373,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== CLIENT CREATE/UPDATE (accessible sans admin) ====================
+
+  app.post("/api/clients/create", async (req, res) => {
+    try {
+      const validated = insertClientSchema.parse(req.body);
+      await db.insert(clients).values({
+        ...validated,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const [rows] = await pool.execute("SELECT LAST_INSERT_ID() as id");
+      const insertId = Number((rows as any[])[0]?.id);
+      const [created] = await db.select().from(clients).where(eq(clients.id, insertId));
+      res.json(created);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/clients/:id/update", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [currentClient] = await db.select().from(clients).where(eq(clients.id, id));
+      if (!currentClient) {
+        return res.status(404).json({ message: "Non trouvé" });
+      }
+      await db.update(clients).set({
+        ...req.body,
+        updatedAt: new Date(),
+      }).where(eq(clients.id, id));
+      const [updated] = await db.select().from(clients).where(eq(clients.id, id));
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // ==================== PROSPECTS ====================
 
   app.get("/api/prospects", async (req, res) => {
