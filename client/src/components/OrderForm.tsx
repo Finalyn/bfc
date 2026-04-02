@@ -439,6 +439,7 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
         portable: selectedClient.portable || "",
         fax: selectedClient.fax,
         mail: selectedClient.mail || "",
+        siret: selectedClient.siret || "",
         displayName: selectedClient.displayName || `${selectedClient.code} - ${selectedClient.nom}`,
         isFromDb: selectedClient.isFromDb,
       };
