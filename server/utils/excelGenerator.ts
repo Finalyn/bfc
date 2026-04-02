@@ -210,6 +210,10 @@ export async function generateOrderExcel(order: Order): Promise<Buffer> {
   worksheet.getCell(`F${currentRow}`).value = order.facturationRaisonSociale;
   currentRow++;
 
+  worksheet.getCell(`E${currentRow}`).value = "N° SIRET";
+  worksheet.getCell(`F${currentRow}`).value = (order as any).siret || "";
+  currentRow++;
+
   worksheet.getCell(`A${currentRow}`).value = "Adresse";
   worksheet.getCell(`B${currentRow}`).value = order.livraisonAdresse;
   worksheet.getCell(`E${currentRow}`).value = "Adresse";

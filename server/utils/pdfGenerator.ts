@@ -401,6 +401,8 @@ export function generateOrderPDF(order: Order, dbCgv?: string): Buffer {
   let facY = yPos + 11;
   doc.text(`RAISON SOCIALE : ${order.facturationRaisonSociale || ""}`, margin + boxWidth + gap + 2, facY);
   facY += 5;
+  doc.text(`N° SIRET : ${(order as any).siret || ""}`, margin + boxWidth + gap + 2, facY);
+  facY += 5;
   doc.text(`ADRESSE : ${order.facturationAdresse || ""}`, margin + boxWidth + gap + 2, facY);
   facY += 5;
   doc.text(`CP / VILLE : ${order.facturationCpVille || ""}`, margin + boxWidth + gap + 2, facY);
