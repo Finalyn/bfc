@@ -227,13 +227,10 @@ export default function MyDashboard() {
     queryKey: ["/api/orders?limit=10000"],
   });
 
-  interface CommerciauxResponse {
-    data: Array<{ id: number; prenom: string; nom: string }>;
-  }
-  
-  const { data: commerciauxResponse } = useQuery<CommerciauxResponse>({
+  type CommerciauxItem = { id: number; nom: string; displayName?: string; prenom?: string };
+
+  const { data: commerciauxRaw } = useQuery<CommerciauxItem[]>({
     queryKey: ["/api/data/commerciaux"],
-    enabled: isAdmin,
   });
 
   type FournisseurItem = { id: number; nom: string; nomCourt: string };
@@ -251,11 +248,11 @@ export default function MyDashboard() {
 
   const allOrders = ordersResponse?.data || [];
   const commerciaux = useMemo(() => {
-    return (commerciauxResponse?.data || []).map(c => ({
+    return (commerciauxRaw || []).map(c => ({
       ...c,
-      displayName: c.prenom ? `${c.prenom} ${c.nom}`.trim() : c.nom
+      displayName: c.displayName || (c.prenom ? `${c.prenom} ${c.nom}`.trim() : c.nom)
     }));
-  }, [commerciauxResponse]);
+  }, [commerciauxRaw]);
 
   const updateDatesMutation = useMutation({
     mutationFn: async ({ orderId, data }: { orderId: number; data: DateUpdateData }) => {
@@ -417,7 +414,7 @@ export default function MyDashboard() {
   const filteredOrders = useMemo(() => {
     let orders = allOrders;
     
-    if (!isAdmin || selectedCommercial === "mine") {
+    if (selectedCommercial === "mine") {
       orders = orders.filter(order => order.salesRepName === userName);
     } else if (selectedCommercial !== "all") {
       orders = orders.filter(order => order.salesRepName === selectedCommercial);
@@ -902,25 +899,23 @@ export default function MyDashboard() {
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
               <div className="flex items-center gap-3 flex-1">
                 <Filter className="w-5 h-5 text-muted-foreground" />
-                {isAdmin && (
-                  <Select value={selectedCommercial} onValueChange={setSelectedCommercial}>
-                    <SelectTrigger className="flex-1" data-testid="select-commercial-filter">
-                      <SelectValue placeholder="Filtrer par commercial" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous les commerciaux</SelectItem>
-                      <SelectItem value="mine">Mes commandes ({userName})</SelectItem>
-                      {commerciaux.filter(c => c.displayName).map(commercial => (
-                        <SelectItem key={commercial.id} value={commercial.displayName}>
-                          {commercial.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select value={selectedCommercial} onValueChange={setSelectedCommercial}>
+                  <SelectTrigger className="flex-1" data-testid="select-commercial-filter">
+                    <SelectValue placeholder="Commercial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les commerciaux</SelectItem>
+                    <SelectItem value="mine">Mes commandes ({userName})</SelectItem>
+                    {commerciaux.filter(c => c.displayName).map(commercial => (
+                      <SelectItem key={commercial.id} value={commercial.displayName}>
+                        {commercial.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={selectedFournisseur} onValueChange={setSelectedFournisseur}>
                   <SelectTrigger className="flex-1" data-testid="select-fournisseur-filter">
-                    <SelectValue placeholder="Filtrer par fournisseur" />
+                    <SelectValue placeholder="Fournisseur" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les fournisseurs</SelectItem>

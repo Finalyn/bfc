@@ -677,8 +677,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Si on a des données en BDD, les utiliser
         const result = dbCommerciaux.map(c => ({
           id: c.id,
+          prenom: c.prenom || "",
           nom: c.nom,
-          displayName: c.nom
+          displayName: c.prenom ? `${c.prenom} ${c.nom}`.trim() : c.nom
         }));
         res.json(result);
       } else {
