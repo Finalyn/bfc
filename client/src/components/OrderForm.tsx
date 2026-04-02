@@ -735,10 +735,15 @@ export function OrderForm({ onNext, initialData }: OrderFormProps) {
 
     try {
       await updateClientMutation.mutateAsync({ id: dbId, updates });
+      // Mettre à jour originalClientData pour éviter que le dialog réapparaisse
+      if (originalClientData) {
+        const updated = { ...originalClientData, ...updates };
+        setOriginalClientData(updated);
+      }
     } catch (e) {
       // Erreur déjà gérée par le mutation
     }
-    
+
     setUpdateDialogOpen(false);
     proceedWithSubmit(pendingFormData);
   };
