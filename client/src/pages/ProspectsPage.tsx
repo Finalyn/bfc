@@ -129,6 +129,8 @@ export default function ProspectsPage() {
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [activeTab, setActiveTab] = useState("liste");
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [dayDetailOpen, setDayDetailOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     nom: "",
@@ -513,15 +515,14 @@ export default function ProspectsPage() {
   return (
     <div className="min-h-screen bg-background p-4 pb-24">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="sm" onClick={() => setLocation("/hub")}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Menu
+        <div className="flex items-center gap-2 mb-4">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setLocation("/hub")}>
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold">Suivi Prospects</h1>
-            <p className="text-sm text-muted-foreground">{filteredProspects.length} prospect(s)</p>
-          </div>
-          <Button onClick={openCreate}>
+          <h1 className="text-lg font-bold whitespace-nowrap">Prospects</h1>
+          <Badge variant="secondary" className="shrink-0">{filteredProspects.length}</Badge>
+          <div className="flex-1" />
+          <Button size="sm" onClick={openCreate} className="shrink-0">
             <Plus className="w-4 h-4 mr-1" /> Nouveau
           </Button>
         </div>
@@ -621,7 +622,7 @@ export default function ProspectsPage() {
                 const dayEvents = getEventsForDate(day);
                 const isToday = isSameDay(day, new Date());
                 return (
-                  <div key={day.toISOString()} className={`bg-background p-1 min-h-[60px] ${isToday ? "ring-2 ring-primary ring-inset" : ""}`}>
+                  <div key={day.toISOString()} className={`bg-background p-1 min-h-[60px] cursor-pointer hover:bg-muted/50 transition-colors ${isToday ? "ring-2 ring-primary ring-inset" : ""}`} onClick={() => { if (dayEvents.length > 0) { setSelectedDay(day); setDayDetailOpen(true); } }}>
                     <p className={`text-xs font-medium mb-0.5 ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</p>
                     {dayEvents.slice(0, 2).map(evt => (
                       <div key={evt.id} className={`text-[10px] px-1 py-0.5 rounded mb-0.5 truncate ${
@@ -679,6 +680,52 @@ export default function ProspectsPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Dialog détail du jour */}
+        <Dialog open={dayDetailOpen} onOpenChange={setDayDetailOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedDay ? format(selectedDay, "EEEE d MMMM yyyy", { locale: fr }) : ""}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {selectedDay && getEventsForDate(selectedDay).length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">Aucun événement ce jour</p>
+              ) : (
+                selectedDay && getEventsForDate(selectedDay).map(evt => (
+                  <Card key={evt.id}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className={`text-xs ${
+                          evt.type === "rdv" ? "bg-purple-100 text-purple-700 border-purple-200" :
+                          evt.type === "appel" ? "bg-blue-100 text-blue-700 border-blue-200" :
+                          evt.type === "relance" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                          "bg-gray-100 text-gray-700"
+                        }`}>
+                          {EVENT_TYPES.find(t => t.value === evt.type)?.label || evt.type}
+                        </Badge>
+                        {evt.heureEvenement && (
+                          <span className="text-xs font-medium flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {evt.heureEvenement}
+                          </span>
+                        )}
+                        {evt.rappel && <Bell className="w-3 h-3 text-orange-500" />}
+                      </div>
+                      <p className="text-sm font-medium">{evt.titre}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(evt as any).prospectNom}
+                        {(evt as any).prospectEnseigne ? ` - ${(evt as any).prospectEnseigne}` : ""}
+                      </p>
+                      {evt.description && <p className="text-xs text-muted-foreground mt-1">{evt.description}</p>}
+                      {isAdmin && <p className="text-xs text-primary mt-1">{evt.commercialName}</p>}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Dialog création/édition prospect */}
